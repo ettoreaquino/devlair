@@ -13,9 +13,9 @@ ESSENTIALS = [
 
 
 def run(ctx: SetupContext) -> ModuleResult:
-    runner.run("apt-get update -qq", check=True)
-    runner.run("apt-get upgrade -y -qq", check=True)
-    runner.apt_install(*ESSENTIALS)
+    runner.run("apt-get update -qq", capture=True)
+    runner.run("apt-get upgrade -y -qq", capture=True)
+    runner.apt_install(*ESSENTIALS, quiet=True)
     return ModuleResult(status="ok", detail="packages up to date")
 
 

@@ -24,10 +24,10 @@ bantime  = 3h
 
 def run(ctx: SetupContext) -> ModuleResult:
     # UFW
-    runner.run("ufw --force reset", check=False)
-    runner.run("ufw default deny incoming")
-    runner.run("ufw default allow outgoing")
-    runner.run_shell("echo 'y' | ufw enable")
+    runner.run("ufw --force reset", check=False, capture=True)
+    runner.run("ufw default deny incoming", capture=True)
+    runner.run("ufw default allow outgoing", capture=True)
+    runner.run_shell("echo 'y' | ufw enable", quiet=True)
 
     # Fail2Ban
     existing = FAIL2BAN_JAIL.read_text() if FAIL2BAN_JAIL.exists() else ""
@@ -35,8 +35,8 @@ def run(ctx: SetupContext) -> ModuleResult:
         FAIL2BAN_JAIL.parent.mkdir(parents=True, exist_ok=True)
         FAIL2BAN_JAIL.write_text(FAIL2BAN_CONF)
 
-    runner.run("systemctl enable fail2ban")
-    runner.run("systemctl restart fail2ban")
+    runner.run("systemctl enable fail2ban", capture=True)
+    runner.run("systemctl restart fail2ban", capture=True)
 
     return ModuleResult(status="ok", detail="ufw active, fail2ban running")
 

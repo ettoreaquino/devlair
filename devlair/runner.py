@@ -37,16 +37,22 @@ def run_as(
     return run(["sudo", "-u", user] + cmd, capture=capture, check=check, cwd=cwd)
 
 
-def run_shell(script: str, *, check: bool = True) -> subprocess.CompletedProcess:
+def run_shell(script: str, *, check: bool = True, quiet: bool = False) -> subprocess.CompletedProcess:
     """Run a multi-line shell script via bash -c."""
-    return subprocess.run(["bash", "-c", script], text=True, check=check)
+    return subprocess.run(
+        ["bash", "-c", script],
+        text=True,
+        check=check,
+        capture_output=quiet,
+    )
 
 
-def run_shell_as(user: str, script: str, *, check: bool = True) -> subprocess.CompletedProcess:
+def run_shell_as(user: str, script: str, *, check: bool = True, quiet: bool = False) -> subprocess.CompletedProcess:
     return subprocess.run(
         ["sudo", "-u", user, "bash", "-c", script],
         text=True,
         check=check,
+        capture_output=quiet,
     )
 
 
@@ -54,8 +60,8 @@ def cmd_exists(name: str) -> bool:
     return shutil.which(name) is not None
 
 
-def apt_install(*packages: str) -> None:
-    run(["apt-get", "install", "-y", "-qq"] + list(packages))
+def apt_install(*packages: str, quiet: bool = False) -> None:
+    run(["apt-get", "install", "-y", "-qq"] + list(packages), capture=quiet)
 
 
 def get_output(cmd: str | list) -> str:

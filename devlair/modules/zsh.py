@@ -44,7 +44,7 @@ source "$ZIM_HOME/zimfw.zsh" init -q
 def run(ctx: SetupContext) -> ModuleResult:
     # Install zsh if missing
     if not runner.cmd_exists("zsh"):
-        runner.apt_install("zsh")
+        runner.apt_install("zsh", quiet=True)
 
     zsh_bin = runner.get_output("which zsh")
 
@@ -67,21 +67,22 @@ def run(ctx: SetupContext) -> ModuleResult:
         shutil.chown(zshrc, ctx.username, ctx.username)
 
     # Bootstrap zimfw and install modules as the user
-    console.print(f"\n  [info]Installing zimfw and Dracula theme...[/info]")
     runner.run_shell_as(
         ctx.username,
         f"""
-        ZIM_HOME="{zim_home}"
+        export ZIM_HOME="{zim_home}"
+        export ZDOTDIR="{ctx.user_home}"
         mkdir -p "$ZIM_HOME"
-        curl -fsSL --create-dirs -o "$ZIM_HOME/zimfw.zsh" \\
+        curl -fsSL --create-dirs -o "$ZIM_HOME/zimfw.zsh" \
             https://github.com/zimfw/zimfw/releases/latest/download/zimfw.zsh
-        zsh "$ZIM_HOME/zimfw.zsh" install 2>&1 || true
+        zsh -c 'source "$ZIM_HOME/zimfw.zsh" install' 2>&1 || true
         """,
+        quiet=True,
     )
 
     shutil.chown(zim_home, ctx.username, ctx.username)
 
-    return ModuleResult(status="ok", detail=f"zsh with Dracula via zimfw")
+    return ModuleResult(status="ok", detail="zsh with Dracula via zimfw")
 
 
 def check() -> list[CheckItem]:

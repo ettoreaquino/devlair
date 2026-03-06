@@ -13,13 +13,14 @@ TOOLS = ["uv", "pyenv", "nvm", "fzf", "docker", "gh", "aws"]
 def run(ctx: SetupContext) -> ModuleResult:
     installed: list[str] = []
     skipped: list[str] = []
+    next_steps: list[str] = []
 
     # ── uv ────────────────────────────────────────────────────────────────────
     if runner.cmd_exists("uv"):
         skipped.append("uv")
     else:
-        console.print("\n  Installing uv...")
-        runner.run_shell_as(ctx.username, "curl -LsSf https://astral.sh/uv/install.sh | sh")
+        console.print("    [muted]uv...[/muted]")
+        runner.run_shell_as(ctx.username, "INSTALLER_NO_MODIFY_PATH=1 curl -LsSf https://astral.sh/uv/install.sh | sh", quiet=True)
         installed.append("uv")
 
     # ── pyenv ─────────────────────────────────────────────────────────────────
@@ -27,15 +28,17 @@ def run(ctx: SetupContext) -> ModuleResult:
     if pyenv_dir.exists():
         skipped.append("pyenv")
     else:
-        console.print("\n  Installing pyenv...")
+        console.print("    [muted]pyenv...[/muted]")
         runner.apt_install(
             "libssl-dev", "libbz2-dev", "libreadline-dev", "libsqlite3-dev",
             "libncursesw5-dev", "xz-utils", "tk-dev", "libxml2-dev",
             "libxmlsec1-dev", "libffi-dev", "liblzma-dev",
+            quiet=True,
         )
         runner.run_shell_as(
             ctx.username,
             "curl -fsSL https://pyenv.run | bash",
+            quiet=True,
         )
         installed.append("pyenv")
 
@@ -44,27 +47,38 @@ def run(ctx: SetupContext) -> ModuleResult:
     if nvm_dir.exists():
         skipped.append("nvm")
     else:
-        console.print("\n  Installing nvm + Node LTS...")
+        console.print("    [muted]nvm + Node LTS...[/muted]")
         runner.run_shell_as(
             ctx.username,
-            "curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/HEAD/install.sh | bash",
+            "PROFILE=/dev/null curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/HEAD/install.sh | bash",
+            quiet=True,
         )
-        runner.run_shell_as(
+        result = runner.run_shell_as(
             ctx.username,
             f'export NVM_DIR="{nvm_dir}" && source "$NVM_DIR/nvm.sh" && nvm install --lts',
+            quiet=True,
         )
+        # Extract installed node version
+        node_ver = ""
+        if result.stdout:
+            for line in result.stdout.splitlines():
+                if "Now using node" in line:
+                    node_ver = line.split("node ")[1].split(" ")[0] if "node " in line else ""
+        if node_ver:
+            next_steps.append(f"node {node_ver} installed via nvm")
         installed.append("nvm+node")
 
     # ── fzf ──────────────────────────────────────────────────────────────────
     if runner.cmd_exists("fzf"):
         skipped.append("fzf")
     else:
-        console.print("\n  Installing fzf...")
+        console.print("    [muted]fzf...[/muted]")
         fzf_dir = ctx.user_home / ".fzf"
         runner.run_shell_as(
             ctx.username,
             f'git clone --depth 1 https://github.com/junegunn/fzf.git "{fzf_dir}" '
             f'&& "{fzf_dir}/install" --all --no-update-rc',
+            quiet=True,
         )
         installed.append("fzf")
 
@@ -72,7 +86,7 @@ def run(ctx: SetupContext) -> ModuleResult:
     if runner.cmd_exists("docker"):
         skipped.append("docker")
     else:
-        console.print("\n  Installing Docker...")
+        console.print("    [muted]docker...[/muted]")
         runner.run_shell("""
             install -m 0755 -d /etc/apt/keyrings
             curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
@@ -84,7 +98,7 @@ def run(ctx: SetupContext) -> ModuleResult:
             apt-get update -qq
             apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin
             systemctl enable docker
-        """)
+        """, quiet=True)
         installed.append("docker")
 
     # Ensure user is in docker group
@@ -96,7 +110,7 @@ def run(ctx: SetupContext) -> ModuleResult:
     if runner.cmd_exists("gh"):
         skipped.append("gh")
     else:
-        console.print("\n  Installing GitHub CLI...")
+        console.print("    [muted]gh...[/muted]")
         runner.run_shell("""
             curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
                 | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
@@ -106,14 +120,14 @@ def run(ctx: SetupContext) -> ModuleResult:
                 | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
             apt-get update -qq
             apt-get install -y -qq gh
-        """)
+        """, quiet=True)
         installed.append("gh")
 
     # ── AWS CLI v2 ────────────────────────────────────────────────────────────
     if runner.cmd_exists("aws"):
         skipped.append("aws")
     else:
-        console.print("\n  Installing AWS CLI v2...")
+        console.print("    [muted]aws cli...[/muted]")
         arch = runner.get_output("dpkg --print-architecture")
         aws_arch = "x86_64" if arch == "amd64" else "aarch64"
         runner.run_shell(f"""
@@ -121,7 +135,7 @@ def run(ctx: SetupContext) -> ModuleResult:
             unzip -qo /tmp/awscliv2.zip -d /tmp
             /tmp/aws/install
             rm -rf /tmp/awscliv2.zip /tmp/aws
-        """)
+        """, quiet=True)
         installed.append("aws")
 
     parts = []
