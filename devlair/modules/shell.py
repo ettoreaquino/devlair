@@ -66,6 +66,6 @@ def run(ctx: SetupContext) -> ModuleResult:
 
 
 def check() -> list[CheckItem]:
-    zshrc = Path("~/.zshrc").expanduser()
+    zshrc = Path.home() / ".zshrc"
     has_aliases = zshrc.exists() and MARKER in zshrc.read_text()
     return [CheckItem(label="shell aliases", status="ok" if has_aliases else "warn")]

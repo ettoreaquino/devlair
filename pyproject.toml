@@ -24,4 +24,6 @@ packages = ["devlair"]
 [dependency-groups]
 dev = [
     "pyinstaller>=6",
+    "pytest>=8",
+    "pytest-mock>=3.14",
 ]
