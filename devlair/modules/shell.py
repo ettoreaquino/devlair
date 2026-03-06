@@ -49,17 +49,45 @@ _devlair_banner
 MARKER = "# ── devlair aliases ─"
 
 
+def _clean_zshrc(text: str) -> str:
+    """Remove lines injected by third-party installers (nvm, uv, pyenv) outside the devlair block."""
+    clean_lines = []
+    skip_patterns = [
+        '. "$HOME/.local/bin/env"',
+        "export NVM_DIR=",
+        "\\. \"$NVM_DIR/nvm.sh\"",
+        "\\. \"$NVM_DIR/bash_completion\"",
+        "# This loads nvm",
+    ]
+    in_devlair_block = False
+    for line in text.splitlines(keepends=True):
+        if MARKER in line:
+            in_devlair_block = True
+        if in_devlair_block:
+            clean_lines.append(line)
+            continue
+        if any(p in line for p in skip_patterns):
+            continue
+        clean_lines.append(line)
+    return "".join(clean_lines)
+
+
 def run(ctx: SetupContext) -> ModuleResult:
     zshrc = ctx.user_home / ".zshrc"
 
-    # Read existing content (zsh module may have already written a header)
     existing = zshrc.read_text() if zshrc.exists() else ""
 
     if MARKER in existing:
-        return ModuleResult(status="skip", detail="aliases already in .zshrc")
+        # Clean any third-party pollution and refresh the aliases block
+        header = existing[:existing.index(MARKER)]
+        header = _clean_zshrc(header)
+        zshrc.write_text(header + ZSHRC_ALIASES.lstrip("\n"))
+        shutil.chown(zshrc, ctx.username, ctx.username)
+        return ModuleResult(status="ok", detail="aliases refreshed in .zshrc")
 
-    with zshrc.open("a") as f:
-        f.write(ZSHRC_ALIASES)
+    # Clean any junk before appending
+    cleaned = _clean_zshrc(existing)
+    zshrc.write_text(cleaned + ZSHRC_ALIASES)
     shutil.chown(zshrc, ctx.username, ctx.username)
 
     return ModuleResult(status="ok", detail="aliases added to .zshrc")
