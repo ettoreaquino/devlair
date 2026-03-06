@@ -41,10 +41,12 @@ def run(ctx: SetupContext) -> ModuleResult:
         "use-theme-transparency": "false",
     }
 
+    dbus_env = "export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus"
+
     for key, value in dconf_settings.items():
         runner.run_shell_as(
             ctx.username,
-            f'dconf write {path}{key} "{value}"',
+            f'{dbus_env}; dconf write {path}{key} "{value}"',
             quiet=True,
         )
 
