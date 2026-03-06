@@ -44,6 +44,11 @@ jobs:
       - name: Install dependencies
         run: uv sync --group dev
 
+      - name: Stamp version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          sed -i "s/__version__ = \"dev\"/__version__ = \"${VERSION}\"/" devlair/__init__.py
+
       - name: Build binary
         run: |
           uv run pyinstaller \
