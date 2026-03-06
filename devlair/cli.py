@@ -112,11 +112,11 @@ def init(
 
     for i, (key, label, mod) in enumerate(selected, 1):
         prefix = f"[muted]\\[{i}/{total}][/muted] [step]{label}[/step]"
-        with console.status(f"{prefix} ...", spinner="dots", spinner_style=D_PURPLE):
-            try:
-                result = mod.run(ctx)
-            except Exception as exc:
-                result = ModuleResult(status="fail", detail=str(exc))
+        console.print(f"  ⏳ {prefix} ...")
+        try:
+            result = mod.run(ctx)
+        except Exception as exc:
+            result = ModuleResult(status="fail", detail=str(exc))
         icon = STATUS_ICON[result.status]
         detail = f"  [detail]{result.detail}[/detail]" if result.detail else ""
         console.print(f"  {icon}  {prefix}{detail}")
