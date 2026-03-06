@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # devlair installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | sudo bash
 set -euo pipefail
 
 REPO="ettoreaquino/devlair"
@@ -44,8 +44,8 @@ else
 fi
 
 echo ""
-echo "devlair ${LATEST} installed to ${INSTALL_DIR}/${BIN}"
+echo "✓ devlair ${LATEST} installed to ${INSTALL_DIR}/${BIN}"
 echo ""
 echo "Next step:"
-echo "  sudo devlair init"
+echo "  devlair init"
 echo ""

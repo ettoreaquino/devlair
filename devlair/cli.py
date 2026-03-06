@@ -1,5 +1,6 @@
 import os
 import pwd
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -28,11 +29,16 @@ STATUS_ICON = {
 }
 
 
+def _elevate_if_needed() -> None:
+    """Re-exec with sudo if not already root."""
+    if os.geteuid() != 0:
+        console.print("[muted]Elevating to root...[/muted]")
+        os.execvp("sudo", ["sudo"] + sys.argv)
+
+
 def _require_root() -> str:
     """Ensure running as root and return the invoking username."""
-    if os.geteuid() != 0:
-        console.print("[error]Run with sudo: sudo devlair init[/error]")
-        raise typer.Exit(1)
+    _elevate_if_needed()
     username = os.environ.get("SUDO_USER", "")
     if not username or username == "root":
         username = typer.prompt("Username to configure")

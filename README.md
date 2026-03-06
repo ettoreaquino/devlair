@@ -5,20 +5,22 @@ Set up your dev lair from scratch — a CLI for Ubuntu machines.
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | sudo bash
 ```
 
 ## Usage
 
 ```bash
-sudo devlair init                    # full setup from scratch
-sudo devlair init --only ssh,tmux    # run specific modules
-sudo devlair doctor                  # health check
-sudo devlair update                  # update all tools
-sudo devlair update --self           # also update devlair itself
-sudo devlair disable-password        # disable SSH password auth
-devlair filesystem                   # AI-guided folder structure
+devlair init                    # full setup from scratch
+devlair init --only ssh,tmux    # run specific modules
+devlair doctor                  # health check
+devlair update                  # update all tools
+devlair update --self           # also update devlair itself
+devlair disable-password        # disable SSH password auth
+devlair filesystem              # AI-guided folder structure
 ```
+
+Commands that need root privileges will automatically elevate with `sudo`.
 
 ## What `init` sets up
 
@@ -38,7 +40,6 @@ devlair filesystem                   # AI-guided folder structure
 ## Requirements
 
 - Ubuntu 24.04 LTS (x86_64 or aarch64)
-- Run with `sudo` for system-level steps
 
 ## Release a new version
 

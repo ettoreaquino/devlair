@@ -1,5 +1,6 @@
 import os
 import stat
+import sys
 import tempfile
 from pathlib import Path
 
@@ -13,8 +14,8 @@ from devlair import runner
 
 def run_update(self_update: bool = False) -> None:
     if os.geteuid() != 0:
-        console.print("[error]Run with sudo: sudo devlair update[/error]")
-        raise typer.Exit(1)
+        console.print("[muted]Elevating to root...[/muted]")
+        os.execvp("sudo", ["sudo"] + sys.argv)
 
     # ── System packages ───────────────────────────────────────────────────────
     with console.status("[step]apt update...[/step]", spinner="dots", spinner_style=D_PURPLE):

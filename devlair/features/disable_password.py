@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 import typer
@@ -11,8 +12,8 @@ SSHD_CONF = Path("/etc/ssh/sshd_config.d/99-hardened.conf")
 
 def run_disable_password() -> None:
     if os.geteuid() != 0:
-        console.print("[error]Run with sudo: sudo devlair disable-password[/error]")
-        raise typer.Exit(1)
+        console.print("[muted]Elevating to root...[/muted]")
+        os.execvp("sudo", ["sudo"] + sys.argv)
 
     # Find authorized_keys — check common locations
     sudo_user = os.environ.get("SUDO_USER", "")
@@ -49,7 +50,7 @@ def run_disable_password() -> None:
         return
 
     if not SSHD_CONF.exists():
-        console.print(f"  [error]{SSHD_CONF} not found. Run 'sudo devlair init --only ssh' first.[/error]")
+        console.print(f"  [error]{SSHD_CONF} not found. Run 'devlair init --only ssh' first.[/error]")
         raise typer.Exit(1)
 
     content = SSHD_CONF.read_text()
