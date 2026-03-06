@@ -9,7 +9,21 @@ permissions:
   contents: write
 
 jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create.outputs.upload_url }}
+    steps:
+      - name: Create GitHub release
+        id: create
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+
   build:
+    needs: create-release
     strategy:
       matrix:
         include:
@@ -39,7 +53,7 @@ jobs:
             devlair/cli.py
           mv dist/devlair dist/devlair-linux-${{ matrix.arch }}
 
-      - name: Upload to release
+      - name: Upload binary to release
         uses: softprops/action-gh-release@v2
         with:
           files: dist/devlair-linux-${{ matrix.arch }}
