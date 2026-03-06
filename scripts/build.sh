@@ -8,7 +8,7 @@ cd "$(dirname "$0")/.."
 VERSION="${1:-$(git describe --tags --always 2>/dev/null || echo dev)}"
 VERSION="${VERSION#v}"
 echo "Version: ${VERSION}"
-sed -i "s/__version__ = \"dev\"/__version__ = \"${VERSION}\"/" devlair/__init__.py
+sed -i "s/__version__ = \"0.0.0.dev0\"/__version__ = \"${VERSION}\"/" devlair/__init__.py
 
 echo "Installing dependencies..."
 uv sync --group dev
