@@ -178,7 +178,7 @@ Generates an `ed25519` SSH key for GitHub, configures `~/.ssh/config`, tests the
 <details>
 <summary><b>Shell</b> — aliases + login banner</summary>
 
-Appends aliases to `.zshrc` (`ll`, `..`, `ports`, `dps`, `t` for tmux, `cat` → `bat`, etc.) and a login banner showing hostname, Tailscale IP, disk, and memory usage.
+Appends aliases to `.zshrc` (`ll`, `..`, `ports`, `dps`, `t` for tmux, `bcat` → `bat`, etc.) and a login banner showing hostname, Tailscale IP, disk, and memory usage.
 
 </details>
 

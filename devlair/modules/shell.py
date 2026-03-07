@@ -16,7 +16,7 @@ alias dps='docker ps --format "table {{.Names}}\\t{{.Status}}\\t{{.Ports}}"'
 alias update='sudo apt update && sudo apt upgrade -y'
 alias ts='tailscale status'
 alias t='tmux new-session -A -s dev'
-alias cat='bat --paging=never'
+alias bcat='bat --paging=never'
 
 # ── pyenv ─────────────────────────────────────────────────────────────────────
 export PYENV_ROOT="$HOME/.pyenv"
