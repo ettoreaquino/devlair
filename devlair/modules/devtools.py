@@ -40,6 +40,12 @@ def run(ctx: SetupContext) -> ModuleResult:
             "curl -fsSL https://pyenv.run | bash",
             quiet=True,
         )
+        runner.run_shell_as(
+            ctx.username,
+            f'export PYENV_ROOT="{pyenv_dir}" && export PATH="$PYENV_ROOT/bin:$PATH" '
+            f'&& eval "$(pyenv init -)" && pyenv install -s 3 && pyenv global "$(pyenv latest 3)"',
+            quiet=True,
+        )
         installed.append("pyenv")
 
     # ── nvm / Node ────────────────────────────────────────────────────────────
@@ -50,7 +56,7 @@ def run(ctx: SetupContext) -> ModuleResult:
         console.print("    [muted]nvm + Node LTS...[/muted]")
         runner.run_shell_as(
             ctx.username,
-            "PROFILE=/dev/null curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/HEAD/install.sh | bash",
+            "export PROFILE=/dev/null && curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/HEAD/install.sh | bash",
             quiet=True,
         )
         result = runner.run_shell_as(
