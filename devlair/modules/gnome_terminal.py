@@ -1,3 +1,5 @@
+import pwd
+
 from devlair.context import CheckItem, ModuleResult, SetupContext
 from devlair import runner
 
@@ -15,18 +17,29 @@ DRACULA_PALETTE = [
 PROFILE_SCHEMA = "org.gnome.Terminal.Legacy.Profile"
 
 
+def _default_profile_path() -> str | None:
+    """Return the dconf path for the default Gnome Terminal profile, or None."""
+    profile_id = runner.get_output(
+        "gsettings get org.gnome.Terminal.ProfilesList default"
+    ).strip("' \n")
+    if not profile_id:
+        return None
+    return f"/org/gnome/terminal/legacy/profiles:/:{profile_id}/"
+
+
+def _dbus_env(username: str) -> str:
+    """Return a shell export that sets DBUS_SESSION_BUS_ADDRESS for *username*."""
+    uid = pwd.getpwnam(username).pw_uid
+    return f"export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/{uid}/bus"
+
+
 def run(ctx: SetupContext) -> ModuleResult:
     if not runner.cmd_exists("gsettings"):
         return ModuleResult(status="skip", detail="gsettings not available")
 
-    profile_id = runner.get_output(
-        "gsettings get org.gnome.Terminal.ProfilesList default"
-    ).strip("' \n")
-
-    if not profile_id:
+    path = _default_profile_path()
+    if not path:
         return ModuleResult(status="skip", detail="no default terminal profile found")
-
-    path = f"/org/gnome/terminal/legacy/profiles:/:{profile_id}/"
 
     palette_str = "[" + ", ".join(f"'{c}'" for c in DRACULA_PALETTE) + "]"
 
@@ -41,14 +54,15 @@ def run(ctx: SetupContext) -> ModuleResult:
         "use-theme-transparency": "false",
     }
 
-    dbus_env = "export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus"
-
-    for key, value in dconf_settings.items():
-        runner.run_shell_as(
-            ctx.username,
-            f'{dbus_env}; dconf write {path}{key} "{value}"',
-            quiet=True,
-        )
+    writes = " && ".join(
+        f'dconf write {path}{key} "{value}"'
+        for key, value in dconf_settings.items()
+    )
+    runner.run_shell_as(
+        ctx.username,
+        f"{_dbus_env(ctx.username)}; {writes}",
+        quiet=True,
+    )
 
     return ModuleResult(status="ok", detail="Dracula colors applied to Gnome Terminal")
 
@@ -57,14 +71,10 @@ def check() -> list[CheckItem]:
     if not runner.cmd_exists("gsettings"):
         return [CheckItem(label="gnome-terminal", status="warn", detail="gsettings missing")]
 
-    profile_id = runner.get_output(
-        "gsettings get org.gnome.Terminal.ProfilesList default"
-    ).strip("' \n")
-
-    if not profile_id:
+    path = _default_profile_path()
+    if not path:
         return [CheckItem(label="gnome-terminal", status="warn", detail="no profile")]
 
-    path = f"/org/gnome/terminal/legacy/profiles:/:{profile_id}/"
     bg = runner.get_output(f"dconf read {path}background-color")
     ok = "#282a36" in bg
     return [CheckItem(label="gnome-terminal Dracula", status="ok" if ok else "warn")]

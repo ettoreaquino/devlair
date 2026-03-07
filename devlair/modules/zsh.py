@@ -23,6 +23,11 @@ zmodule zsh-users/zsh-autosuggestions
 zmodule zsh-users/zsh-syntax-highlighting
 """
 
+ZSHENV = """\
+# devlair — skip system compinit so zimfw completion module handles it
+skip_global_compinit=1
+"""
+
 ZSHRC_HEADER = """\
 # devlair — managed zsh config
 export EDITOR=vim
@@ -63,6 +68,12 @@ def run(ctx: SetupContext) -> ModuleResult:
     # Write .zimrc
     zimrc.write_text(ZIMRC)
     shutil.chown(zimrc, ctx.username, ctx.username)
+
+    # Prevent system /etc/zsh/zshrc from calling compinit before zimfw
+    zshenv = ctx.user_home / ".zshenv"
+    if not zshenv.exists() or "skip_global_compinit" not in zshenv.read_text():
+        zshenv.write_text(ZSHENV)
+        shutil.chown(zshenv, ctx.username, ctx.username)
 
     # Write .zshrc header (only if not already managed by devlair)
     if not zshrc.exists() or "devlair" not in zshrc.read_text():
