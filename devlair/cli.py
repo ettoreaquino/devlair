@@ -136,15 +136,15 @@ def doctor() -> None:
 
 @app.command()
 def update(
-    self_update: bool = typer.Option(
-        False, "--self", help="Also update the devlair binary itself."
+    skip_self: bool = typer.Option(
+        False, "--no-self", help="Skip updating the devlair binary."
     ),
 ) -> None:
-    """Update all installed tools."""
+    """Update all installed tools and devlair itself."""
     from devlair.features.update import run_update
 
     _print_header("update", "Updating your lair")
-    run_update(self_update=self_update)
+    run_update(self_update=not skip_self)
 
 
 @app.command(name="disable-password")

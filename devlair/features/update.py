@@ -12,10 +12,21 @@ from devlair.console import console, D_PURPLE
 from devlair import runner
 
 
+def _get_username() -> str:
+    username = os.environ.get("SUDO_USER", "")
+    if not username or username == "root":
+        import pwd
+        username = pwd.getpwnam(os.environ.get("USER", "root")).pw_name
+    return username
+
+
 def run_update(self_update: bool = False) -> None:
     if os.geteuid() != 0:
         console.print("[muted]Elevating to root...[/muted]")
         os.execvp("sudo", ["sudo"] + sys.argv)
+
+    username = _get_username()
+    user_home = Path(f"~{username}").expanduser()
 
     # ── System packages ───────────────────────────────────────────────────────
     with console.status("[step]apt update...[/step]", spinner="dots", spinner_style=D_PURPLE):
@@ -47,6 +58,29 @@ def run_update(self_update: bool = False) -> None:
         with console.status("[step]Docker...[/step]", spinner="dots", spinner_style=D_PURPLE):
             runner.run("apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin", check=False)
         console.print("  [success]✓[/success]  Docker")
+
+    # ── pyenv / Python ─────────────────────────────────────────────────────────
+    pyenv_dir = user_home / ".pyenv"
+    if pyenv_dir.exists():
+        with console.status("[step]pyenv + Python...[/step]", spinner="dots", spinner_style=D_PURPLE):
+            runner.run_shell_as(
+                username,
+                f'export PYENV_ROOT="{pyenv_dir}" && export PATH="$PYENV_ROOT/bin:$PATH" '
+                f'&& pyenv update && pyenv install -s 3 && pyenv global "$(pyenv latest 3)"',
+                check=False,
+            )
+        console.print("  [success]✓[/success]  pyenv + Python")
+
+    # ── nvm / Node ─────────────────────────────────────────────────────────────
+    nvm_dir = user_home / ".nvm"
+    if nvm_dir.exists():
+        with console.status("[step]nvm + Node LTS...[/step]", spinner="dots", spinner_style=D_PURPLE):
+            runner.run_shell_as(
+                username,
+                f'export NVM_DIR="{nvm_dir}" && source "$NVM_DIR/nvm.sh" && nvm install --lts',
+                check=False,
+            )
+        console.print("  [success]✓[/success]  nvm + Node LTS")
 
     # ── Self-update ───────────────────────────────────────────────────────────
     if self_update:
