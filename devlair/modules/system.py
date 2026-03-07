@@ -21,10 +21,11 @@ def run(ctx: SetupContext) -> ModuleResult:
 
 def check() -> list[CheckItem]:
     items = []
-    for pkg in ["git", "curl", "tmux", "zsh", "ufw", "fail2ban"]:
-        ok = runner.cmd_exists(pkg)
+    for label, cmd in [("git", "git"), ("curl", "curl"), ("tmux", "tmux"),
+                        ("zsh", "zsh"), ("ufw", "ufw"), ("fail2ban", "fail2ban-client")]:
+        ok = runner.cmd_exists(cmd)
         items.append(CheckItem(
-            label=pkg,
+            label=label,
             status="ok" if ok else "fail",
             detail="installed" if ok else "missing",
         ))

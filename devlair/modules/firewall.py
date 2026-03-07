@@ -42,7 +42,7 @@ def run(ctx: SetupContext) -> ModuleResult:
 
 
 def check() -> list[CheckItem]:
-    ufw_status = runner.get_output("ufw status")
+    ufw_status = runner.get_output("sudo ufw status")
     f2b_status = runner.get_output("systemctl is-active fail2ban")
     ufw_active = "status: active" in ufw_status.lower()
     return [
