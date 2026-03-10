@@ -45,6 +45,13 @@ def test_idempotent(ctx: SetupContext):
     assert first == second
 
 
+def test_tmux_conf_has_git_branch_in_status(ctx: SetupContext):
+    tmux.run(ctx)
+    conf = (ctx.user_home / ".tmux.conf").read_text()
+    assert "git -C #{pane_current_path} branch --show-current" in conf
+    assert "D_GREEN" in conf.split("status-right")[1].split("\n")[0]
+
+
 def test_check_reports_missing_tmux(mocker):
     mocker.patch("devlair.runner.cmd_exists", return_value=False)
     items = tmux.check()
