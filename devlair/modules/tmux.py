@@ -6,6 +6,8 @@ from devlair import runner
 
 LABEL = "tmux"
 
+TPM_DIR = "~/.tmux/plugins/tpm"
+
 TMUX_CONF = """\
 # ── Prefix ───────────────────────────────────────────────────────────────────
 unbind C-b
@@ -30,6 +32,18 @@ bind - split-window -v -c "#{pane_current_path}"
 bind -r n next-window
 bind -r p previous-window
 bind r source-file ~/.tmux.conf \\; display "Reloaded"
+
+# ── Claude Code popup ────────────────────────────────────────────────────────
+# Prefix+y opens a persistent Claude Code session per project directory
+bind -r y run-shell ' \\
+  SESSION="claude-$(echo #{pane_current_path} | md5sum | cut -c1-8)"; \\
+  tmux has-session -t "$SESSION" 2>/dev/null || \\
+  tmux new-session -d -s "$SESSION" -c "#{pane_current_path}" "claude"; \\
+  tmux display-popup -w80% -h80% -E "tmux attach-session -t $SESSION"'
+
+# ── Claude Code passthrough ──────────────────────────────────────────────────
+# Prefix+o sends Ctrl-o to the pane (used by Claude Code to expand details)
+bind o send-keys C-o
 
 # ── Dracula theme ─────────────────────────────────────────────────────────────
 # https://draculatheme.com
@@ -60,6 +74,13 @@ set -g message-style                "bg=#{D_CURRENT} fg=#{D_YELLOW}"
 
 # ── Convenience alias ────────────────────────────────────────────────────────
 bind t new-session -A -s dev
+
+# ── Plugins (TPM) ────────────────────────────────────────────────────────────
+set -g @plugin 'tmux-plugins/tpm'
+set -g @plugin 'tmux-plugins/tmux-resurrect'
+set -g @resurrect-processes 'false'
+
+run '~/.tmux/plugins/tpm/tpm'
 """
 
 
@@ -67,15 +88,25 @@ def run(ctx: SetupContext) -> ModuleResult:
     conf = ctx.user_home / ".tmux.conf"
     conf.write_text(TMUX_CONF)
     shutil.chown(conf, ctx.username, ctx.username)
-    return ModuleResult(status="ok", detail="Dracula theme applied")
+
+    tpm_path = ctx.user_home / ".tmux" / "plugins" / "tpm"
+    if not tpm_path.exists():
+        runner.run(
+            ["git", "clone", "https://github.com/tmux-plugins/tpm", str(tpm_path)],
+        )
+        runner.run(["chown", "-R", f"{ctx.username}:{ctx.username}", str(tpm_path)])
+
+    return ModuleResult(status="ok", detail="Dracula theme + TPM/resurrect applied")
 
 
 def check() -> list[CheckItem]:
     tmux_ok = runner.cmd_exists("tmux")
+    tpm_ok = Path(TPM_DIR).expanduser().exists()
     return [
         CheckItem(label="tmux installed", status="ok" if tmux_ok else "fail"),
         CheckItem(
             label=".tmux.conf",
             status="ok" if Path("~/.tmux.conf").expanduser().exists() else "warn",
         ),
+        CheckItem(label="TPM installed", status="ok" if tpm_ok else "warn"),
     ]
