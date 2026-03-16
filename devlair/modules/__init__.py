@@ -28,3 +28,6 @@ MODULES = [
     ("gnome_terminal", "Gnome Terminal Dracula",  gnome_terminal),
     ("claude",         "Claude Code",             claude),
 ]
+
+# Modules whose run() is config-only and safe to re-apply after upgrades
+REAPPLY_KEYS = {"zsh", "tmux", "shell", "gnome_terminal", "claude"}

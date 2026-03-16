@@ -12,14 +12,12 @@ from devlair import runner
 
 
 def _get_username() -> str:
-    username = os.environ.get("SUDO_USER", "")
-    if not username or username == "root":
-        import pwd
-        username = pwd.getpwnam(os.environ.get("USER", "root")).pw_name
+    from devlair.context import resolve_invoking_user
+    username, _ = resolve_invoking_user()
     return username
 
 
-def run_update(self_update: bool = False) -> None:
+def run_upgrade(self_update: bool = False) -> None:
     if os.geteuid() != 0:
         console.print("  [error]This command must be run as root.[/error]")
         raise typer.Exit(1)

@@ -12,7 +12,7 @@ STATUS_STYLE = {
 STATUS_ICON = {"ok": "✓", "warn": "⚠", "fail": "✗"}
 
 
-def run_doctor() -> None:
+def run_doctor(fix: bool = False) -> None:
     table = Table(show_header=True, header_style=f"bold {D_COMMENT}", box=None, padding=(0, 2))
     table.add_column("Module")
     table.add_column("Check")
@@ -20,6 +20,7 @@ def run_doctor() -> None:
     table.add_column("Detail")
 
     total = ok = warn = fail = 0
+    failed_keys: set[str] = set()
 
     for key, label, mod in MODULES:
         if not hasattr(mod, "check"):
@@ -31,6 +32,9 @@ def run_doctor() -> None:
             if item.status == "ok":   ok   += 1
             elif item.status == "warn": warn += 1
             else:                       fail += 1
+
+            if item.status in ("warn", "fail"):
+                failed_keys.add(key)
 
             style = STATUS_STYLE[item.status]
             icon  = STATUS_ICON[item.status]
@@ -50,4 +54,30 @@ def run_doctor() -> None:
     else:
         if fail: console.print(f"  [error]{fail} checks failed.[/error]")
         if warn: console.print(f"  [warning]{warn} warnings.[/warning]")
+
+    if fix and failed_keys:
+        from devlair.modules import REAPPLY_KEYS
+        from devlair.context import SetupContext, resolve_invoking_user
+
+        username, user_home = resolve_invoking_user()
+        ctx = SetupContext(username=username, user_home=user_home)
+
+        console.print()
+        console.print(f"  [step]Attempting to fix {len(failed_keys)} module(s)...[/step]")
+        console.print()
+
+        for key, label, mod in MODULES:
+            if key not in failed_keys:
+                continue
+            if key not in REAPPLY_KEYS:
+                console.print(f"  [{D_COMMENT}]–  {label} (manual fix required)[/]")
+                continue
+            if not hasattr(mod, "run"):
+                continue
+            try:
+                mod.run(ctx)
+                console.print(f"  [success]✓[/success]  {label} re-applied")
+            except Exception as exc:
+                console.print(f"  [error]✗[/error]  {label}: {exc}")
+
     console.print()

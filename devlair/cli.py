@@ -147,26 +147,49 @@ def init(
 
 
 @app.command()
-def doctor() -> None:
+def doctor(
+    fix: bool = typer.Option(False, "--fix", help="Re-apply module configs to fix detected drift."),
+) -> None:
     """Check system health and verify all components."""
     from devlair.features.doctor import run_doctor
 
+    if fix:
+        _elevate_if_needed()
     _print_header("doctor", "Checking your lair's health")
-    run_doctor()
+    run_doctor(fix=fix)
 
 
 @app.command()
-def update(
+def upgrade(
     skip_self: bool = typer.Option(
         False, "--no-self", help="Skip updating the devlair binary."
     ),
 ) -> None:
-    """Update all installed tools and devlair itself."""
-    from devlair.features.update import run_update
+    """Upgrade all tools, re-apply configs, and verify health."""
+    from devlair.features.upgrade import run_upgrade
+    from devlair.modules import MODULES, REAPPLY_KEYS
+    from devlair.context import resolve_invoking_user
 
     _elevate_if_needed()
-    _print_header("update", "Updating your lair")
-    run_update(self_update=not skip_self)
+    _print_header("upgrade", "Upgrading your lair")
+    run_upgrade(self_update=not skip_self)
+
+    # Re-apply module configurations
+    username, user_home = resolve_invoking_user()
+    ctx = SetupContext(username=username, user_home=user_home)
+
+    console.print(f"  [step]Re-applying configurations...[/step]")
+    for key, label, mod in MODULES:
+        if key not in REAPPLY_KEYS or not hasattr(mod, "run"):
+            continue
+        try:
+            result = mod.run(ctx)
+            icon = STATUS_ICON[result.status]
+            detail = f"  [detail]{result.detail}[/detail]" if result.detail else ""
+            console.print(f"  {icon}  {label}{detail}")
+        except Exception as exc:
+            console.print(f"  {STATUS_ICON['fail']}  {label}  [detail]{exc}[/detail]")
+    console.print()
 
 
 @app.command(name="disable-password")
