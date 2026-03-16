@@ -3,7 +3,7 @@ import shutil
 import stat
 from pathlib import Path
 
-from devlair.context import CheckItem, ModuleResult, SetupContext
+from devlair.context import CheckItem, ModuleResult, SetupContext, read_json, update_json
 from devlair import runner
 
 LABEL = "Claude Code"
@@ -68,15 +68,7 @@ fi
 
 def _merge_settings(path: Path) -> None:
     """Merge devlair-owned keys into settings.json, preserving all other user keys."""
-    existing: dict = {}
-    if path.exists():
-        try:
-            existing = json.loads(path.read_text()) or {}
-        except (json.JSONDecodeError, OSError):
-            existing = {}
-
-    existing.update(DEVLAIR_SETTINGS)
-    path.write_text(json.dumps(existing, indent=2) + "\n")
+    update_json(path, DEVLAIR_SETTINGS)
 
 
 def _install_status_script(bin_dir: Path, username: str) -> None:

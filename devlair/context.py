@@ -33,3 +33,25 @@ def resolve_invoking_user() -> tuple[str, Path]:
         username = pwd.getpwnam(os.environ.get("USER", "root")).pw_name
     user_home = Path(pwd.getpwnam(username).pw_dir)
     return username, user_home
+
+
+def read_json(path: Path) -> dict:
+    """Read a JSON config file, returning {} on missing or corrupt files."""
+    import json
+
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text()) or {}
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def update_json(path: Path, updates: dict) -> None:
+    """Merge updates into a JSON config file, preserving existing keys."""
+    import json
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = read_json(path)
+    data.update(updates)
+    path.write_text(json.dumps(data, indent=2) + "\n")
