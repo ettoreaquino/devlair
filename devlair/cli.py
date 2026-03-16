@@ -1,5 +1,6 @@
 import os
 import pwd
+import subprocess
 import sys
 from pathlib import Path
 from typing import Optional
@@ -30,10 +31,30 @@ STATUS_ICON = {
 
 
 def _elevate_if_needed() -> None:
-    """Re-exec with sudo if not already root."""
-    if os.geteuid() != 0:
-        console.print("[muted]Elevating to root...[/muted]")
-        os.execvp("sudo", ["sudo"] + sys.argv)
+    """Re-exec with sudo if not already root, with graceful error handling."""
+    if os.geteuid() == 0:
+        return
+
+    console.print("[muted]Elevating to root...[/muted]")
+    try:
+        result = subprocess.run(["sudo"] + sys.argv)
+    except FileNotFoundError:
+        console.print("\n  [error]sudo is not installed.[/error]")
+        console.print("  [muted]Install sudo or run this command as root.[/muted]\n")
+        raise typer.Exit(1)
+    except KeyboardInterrupt:
+        raise typer.Exit(130)
+
+    if result.returncode == 126:
+        console.print("\n  [error]Permission denied — cannot execute the devlair interpreter.[/error]")
+        console.print("  [muted]Your Python binary may have wrong permissions. Try:[/muted]")
+        python_bin = sys.executable
+        console.print(f"  [accent]sudo chmod 755 {python_bin}[/accent]")
+        console.print(f"  [accent]sudo chown $USER:$USER {python_bin}[/accent]\n")
+    elif result.returncode == 1:
+        console.print("\n  [error]sudo authentication failed or was denied.[/error]\n")
+
+    raise typer.Exit(result.returncode)
 
 
 def _require_root() -> str:
@@ -143,6 +164,7 @@ def update(
     """Update all installed tools and devlair itself."""
     from devlair.features.update import run_update
 
+    _elevate_if_needed()
     _print_header("update", "Updating your lair")
     run_update(self_update=not skip_self)
 
@@ -152,6 +174,7 @@ def disable_password() -> None:
     """Disable SSH password authentication (requires a public key in authorized_keys)."""
     from devlair.features.disable_password import run_disable_password
 
+    _elevate_if_needed()
     _print_header("disable-password", "Hardening SSH authentication")
     run_disable_password()
 

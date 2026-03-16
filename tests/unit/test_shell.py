@@ -48,7 +48,8 @@ def test_idempotent_skip_on_second_run(ctx: SetupContext):
     content_after_second = (ctx.user_home / ".zshrc").read_text()
 
     assert result1.status == "ok"
-    assert result2.status == "skip"
+    assert result2.status == "ok"
+    assert result2.detail == "aliases refreshed in .zshrc"
     assert content_after_first == content_after_second
     assert content_after_second.count(shell.MARKER) == 1, "Marker was written more than once"
 

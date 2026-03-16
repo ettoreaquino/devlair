@@ -1,5 +1,4 @@
 import os
-import sys
 from pathlib import Path
 
 import typer
@@ -12,10 +11,9 @@ SSHD_CONF = Path("/etc/ssh/sshd_config.d/99-hardened.conf")
 
 def run_disable_password() -> None:
     if os.geteuid() != 0:
-        console.print("[muted]Elevating to root...[/muted]")
-        os.execvp("sudo", ["sudo"] + sys.argv)
+        console.print("  [error]This command must be run as root.[/error]")
+        raise typer.Exit(1)
 
-    # Find authorized_keys — check common locations
     sudo_user = os.environ.get("SUDO_USER", "")
     if not sudo_user or sudo_user == "root":
         sudo_user = typer.prompt("Username to check")

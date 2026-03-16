@@ -22,8 +22,8 @@ def _get_username() -> str:
 
 def run_update(self_update: bool = False) -> None:
     if os.geteuid() != 0:
-        console.print("[muted]Elevating to root...[/muted]")
-        os.execvp("sudo", ["sudo"] + sys.argv)
+        console.print("  [error]This command must be run as root.[/error]")
+        raise typer.Exit(1)
 
     username = _get_username()
     user_home = Path(f"~{username}").expanduser()
