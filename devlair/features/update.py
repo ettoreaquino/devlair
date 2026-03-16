@@ -117,7 +117,31 @@ def _find_install_path() -> Path:
     return target
 
 
+def _installed_version() -> str:
+    """Return the version of the installed devlair binary, or __version__ as fallback."""
+    import subprocess
+
+    install_path = _find_install_path()
+    if install_path.exists():
+        try:
+            out = subprocess.run(
+                [str(install_path), "--version"],
+                capture_output=True, text=True, timeout=5,
+            )
+            # Output is "devlair X.Y.Z"
+            return out.stdout.strip().split()[-1]
+        except Exception:
+            pass
+    return __version__
+
+
 def _self_update() -> None:
+    current = _installed_version()
+
+    if "dev" in current:
+        console.print("  [muted]Dev install detected — skipping self-update.[/muted]")
+        return
+
     with console.status("[step]Checking for devlair updates...[/step]", spinner="dots", spinner_style=D_PURPLE):
         try:
             resp = httpx.get(
@@ -130,15 +154,15 @@ def _self_update() -> None:
             console.print(f"  [warning]Could not check for updates: {exc}[/warning]")
             return
 
-    if latest == __version__:
-        console.print(f"  [muted]devlair {__version__} is already up to date.[/muted]")
+    if latest == current:
+        console.print(f"  [muted]devlair {current} is already up to date.[/muted]")
         return
 
-    console.print(f"  New version available: [accent]{latest}[/accent] (current: [muted]{__version__}[/muted])")
+    console.print(f"  New version available: [accent]{latest}[/accent] (current: [muted]{current}[/muted])")
     if not typer.confirm("  Update now?", default=True):
         return
 
-    import platform, shutil
+    import platform
     arch = platform.machine()
     suffix = "linux-x86_64" if arch == "x86_64" else "linux-aarch64"
     url = f"https://github.com/ettoreaquino/devlair/releases/download/v{latest}/devlair-{suffix}"
