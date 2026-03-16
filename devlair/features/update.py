@@ -1,6 +1,5 @@
 import os
 import stat
-import sys
 import tempfile
 from pathlib import Path
 
@@ -91,6 +90,33 @@ def run_update(self_update: bool = False) -> None:
     console.print()
 
 
+_INSTALL_DIR = Path("/usr/local/bin")
+
+
+def _find_install_path() -> Path:
+    """Determine where to install the devlair binary.
+
+    Prefers /usr/local/bin.  Falls back to an existing standalone binary
+    found on $PATH (skipping pip console scripts that point at a Python
+    interpreter via their shebang).
+    """
+    import shutil
+
+    target = _INSTALL_DIR / "devlair"
+    if target.exists():
+        return target
+
+    which = shutil.which("devlair")
+    if which:
+        candidate = Path(which).resolve()
+        # Avoid overwriting a pip console script (text file with a Python shebang)
+        if candidate.stat().st_size > 1_000_000:  # PyInstaller binaries are large
+            return candidate
+
+    # Default to /usr/local/bin even if it doesn't exist yet
+    return target
+
+
 def _self_update() -> None:
     with console.status("[step]Checking for devlair updates...[/step]", spinner="dots", spinner_style=D_PURPLE):
         try:
@@ -112,18 +138,19 @@ def _self_update() -> None:
     if not typer.confirm("  Update now?", default=True):
         return
 
-    import platform, sys
+    import platform, shutil
     arch = platform.machine()
     suffix = "linux-x86_64" if arch == "x86_64" else "linux-aarch64"
     url = f"https://github.com/ettoreaquino/devlair/releases/download/v{latest}/devlair-{suffix}"
 
+    install_path = _find_install_path()
+
     with console.status(f"[step]Downloading v{latest}...[/step]", spinner="dots", spinner_style=D_PURPLE):
         resp = httpx.get(url, follow_redirects=True, timeout=60)
         resp.raise_for_status()
-        binary = Path(sys.executable)
         tmp = Path(tempfile.mktemp())
         tmp.write_bytes(resp.content)
         tmp.chmod(tmp.stat().st_mode | stat.S_IEXEC)
-        tmp.replace(binary)
+        tmp.replace(install_path)
 
-    console.print(f"  [success]✓[/success]  devlair updated to v{latest} — restart to apply")
+    console.print(f"  [success]✓[/success]  devlair updated to v{latest} at {install_path} — restart to apply")
