@@ -18,9 +18,6 @@ and wiring up dev toolchains. Run it once on a fresh machine or re-run anytime t
 
 ---
 
-<!-- TODO: Add a terminal recording GIF here (e.g. using vhs or asciinema) -->
-<!-- <p align="center"><img src="assets/demo.gif" width="700" alt="devlair demo"></p> -->
-
 ## Quick start
 
 ```bash
@@ -52,7 +49,7 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
 
 **Composable**
 
-11 modules you can run individually with `--only` or skip with `--skip`. Each module is self-contained and does one thing well.
+12 modules you can run individually with `--only` or skip with `--skip`. Each module is self-contained and does one thing well.
 
 </td>
 </tr>
@@ -73,20 +70,48 @@ devlair init --skip devtools,gnome_terminal
 # Check system health
 devlair doctor
 
-# Update all tools + devlair itself
-devlair update
+# Diagnose and auto-fix config drift
+devlair doctor --fix
 
-# Update tools only (skip devlair binary update)
-devlair update --no-self
+# Upgrade all tools + re-apply configs + update devlair itself
+devlair upgrade
+
+# Upgrade tools only (skip devlair binary update)
+devlair upgrade --no-self
 
 # Disable SSH password auth (key-only)
 devlair disable-password
 
 # AI-guided folder structure (requires Claude CLI)
 devlair filesystem
+
+# Claude Code usage dashboard
+devlair claude
+
+# Set your Claude Max plan tier
+devlair claude --plan max5x
 ```
 
 Commands that need root automatically elevate with `sudo`.
+
+## Claude Code integration
+
+devlair hooks into Claude Code to track session usage and display a dashboard:
+
+```
+╭──────────────────────── devlair  claude  max5x ────────────────────────────╮
+│    5h window  ████████░░░░░░░░░░░░   43%   ~$4.20  8.5M in 39K out        │
+│                                             resets in ~2h                   │
+│                                                                            │
+│    This Week  ██████████████░░░░░░   68%   ~$272  124.0M in 380K out       │
+│                                             28 sessions                    │
+╰────────────────────────────────────────────────────────────────────────────╯
+```
+
+- **5h rolling window** — percentage of estimated plan budget, cost at API rates, token counts, reset countdown
+- **Weekly view** — aggregate usage against weekly budget, session count
+- **Plan-aware** — supports `pro`, `max5x`, and `max20x` tiers (`devlair claude --plan <tier>`)
+- **Automatic hooks** — `SessionStart` and `Stop` hooks in `~/.claude/settings.json` track sessions for the tmux status bar
 
 ## What gets installed
 
@@ -147,7 +172,7 @@ Installs zsh, sets it as default, and configures [zimfw](https://zimfw.sh) with:
 <details>
 <summary><b>tmux</b> — Dracula-themed multiplexer</summary>
 
-Writes `~/.tmux.conf` with Dracula colors, `C-a` prefix, mouse support, 50k line history, and intuitive split bindings (`|` and `-`).
+Writes `~/.tmux.conf` with Dracula colors, `C-a` prefix, mouse support, 50k line history, and intuitive split bindings (`|` and `-`). Includes [TPM](https://github.com/tmux-plugins/tpm), [tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect) for session persistence, and a Claude Code popup (`C-a C`).
 
 </details>
 
@@ -189,6 +214,13 @@ Applies the full 16-color Dracula palette to your default GNOME Terminal profile
 
 </details>
 
+<details>
+<summary><b>Claude Code</b> — hooks, settings, and status bar</summary>
+
+Merges devlair-managed keys into `~/.claude/settings.json` (model, effort level, session hooks). Installs a tmux status bar script that shows the active Claude session and daily session count.
+
+</details>
+
 ## Health check
 
 ```bash
@@ -197,13 +229,19 @@ devlair doctor
 
 Verifies every component without making changes — checks installed tools, config files, service status, and SSH connectivity. Useful after setup or to audit an existing machine.
 
-## Updating
+Use `--fix` to automatically re-apply configurations for modules with detected drift:
 
 ```bash
-devlair update
+devlair doctor --fix
 ```
 
-Updates system packages, Docker, GitHub CLI, AWS CLI, and the devlair binary itself. Use `--no-self` to skip the binary update.
+## Upgrading
+
+```bash
+devlair upgrade
+```
+
+Upgrades system packages, Docker, GitHub CLI, AWS CLI, pyenv/Python, nvm/Node, and the devlair binary itself. After version bumps, automatically re-applies module configurations (hooks, settings, shell aliases) so new config shapes take effect immediately. Use `--no-self` to skip the binary update.
 
 ## Requirements
 
@@ -225,8 +263,8 @@ uv run pytest tests/unit/
 Tag and push — GitHub Actions builds binaries for both architectures and creates a release:
 
 ```bash
-git tag v0.3.0
-git push origin main --tags
+git tag v0.7.0
+git push origin v0.7.0
 ```
 
 ### Project structure
@@ -235,10 +273,10 @@ git push origin main --tags
 devlair/
   cli.py               # Typer CLI entrypoint
   runner.py             # subprocess helpers
-  context.py            # SetupContext, ModuleResult, CheckItem
+  context.py            # SetupContext, ModuleResult, CheckItem, resolve_invoking_user
   console.py            # Rich console + Dracula color tokens
-  modules/              # one file per init module (11 modules)
-  features/             # doctor, update, disable-password, filesystem
+  modules/              # one file per init module (12 modules)
+  features/             # doctor, upgrade, disable-password, filesystem, claude
 install.sh              # curl-pipe installer
 ```
 

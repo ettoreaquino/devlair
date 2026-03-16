@@ -1,5 +1,6 @@
 import json
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -14,147 +15,265 @@ from devlair.console import (
     D_CYAN, D_COMMENT, D_FG, D_RED,
 )
 
-ACTIVE_FILE = Path("~/.claude/devlair-active")
-SESSIONS_FILE = Path("~/.claude/devlair-sessions.jsonl")
+PROJECTS_DIR = Path("~/.claude/projects")
 SETTINGS_FILE = Path("~/.claude/settings.json")
+DEVLAIR_CONFIG = Path("~/.claude/devlair-config.json")
+
+# Cost per token (USD) — Anthropic pricing as of 2025-08
+MODEL_PRICING: dict[str, dict[str, float]] = {
+    "claude-opus-4-6":          {"input": 15.0 / 1e6, "output": 75.0 / 1e6, "cache_write": 18.75 / 1e6, "cache_read": 1.50 / 1e6},
+    "claude-sonnet-4-6":        {"input":  3.0 / 1e6, "output": 15.0 / 1e6, "cache_write":  3.75 / 1e6, "cache_read": 0.30 / 1e6},
+    "claude-haiku-4-5-20251001":{"input":  0.8 / 1e6, "output":  4.0 / 1e6, "cache_write":  1.00 / 1e6, "cache_read": 0.08 / 1e6},
+}
+DEFAULT_PRICING = MODEL_PRICING["claude-sonnet-4-6"]
+
+# Estimated budgets per plan tier (community-observed approximations).
+# 5h window: output tokens per 5-hour rolling window.
+# Weekly: approximate API-rate cost equivalent per 7-day period.
+PLAN_BUDGETS: dict[str, dict[str, float]] = {
+    "pro":    {"5h_output_tokens": 44_000,  "weekly_cost": 80.0},
+    "max5x":  {"5h_output_tokens": 88_000,  "weekly_cost": 400.0},
+    "max20x": {"5h_output_tokens": 220_000, "weekly_cost": 1600.0},
+}
+DEFAULT_PLAN = "max5x"
+VALID_PLANS = list(PLAN_BUDGETS.keys())
 
 
-def _bar(used: int, total: Optional[int], width: int = 20) -> str:
-    if not total:
-        pct, color = 0.5, D_PURPLE
-    else:
-        pct = min(used / total, 1.0)
-        color = D_RED if pct > 0.9 else D_ORANGE if pct > 0.7 else D_GREEN
+@dataclass
+class SessionUsage:
+    """Aggregated token/cost data from a single transcript."""
+    session_id: str = ""
+    model: str = ""
+    started_at: Optional[datetime] = None
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cache_write_tokens: int = 0
+    cache_read_tokens: int = 0
+    cost: float = 0.0
+
+
+def _get_plan() -> str:
+    """Read plan from ~/.devlair/config.json, default to max5x."""
+    config = DEVLAIR_CONFIG.expanduser()
+    if config.exists():
+        try:
+            data = json.loads(config.read_text())
+            plan = data.get("claude_plan", DEFAULT_PLAN)
+            if plan in PLAN_BUDGETS:
+                return plan
+        except (json.JSONDecodeError, OSError):
+            pass
+    return DEFAULT_PLAN
+
+
+def _set_plan(plan: str) -> None:
+    """Write plan to ~/.devlair/config.json."""
+    config = DEVLAIR_CONFIG.expanduser()
+    config.parent.mkdir(parents=True, exist_ok=True)
+
+    data: dict = {}
+    if config.exists():
+        try:
+            data = json.loads(config.read_text()) or {}
+        except (json.JSONDecodeError, OSError):
+            data = {}
+
+    data["claude_plan"] = plan
+    config.write_text(json.dumps(data, indent=2) + "\n")
+
+
+def _parse_transcript(path: Path) -> Optional[SessionUsage]:
+    """Parse a transcript JSONL and return aggregated usage."""
+    if not path.exists():
+        return None
+
+    usage = SessionUsage(session_id=path.stem)
+    pricing = DEFAULT_PRICING
+
+    try:
+        for line in path.read_text().splitlines():
+            if not line.strip():
+                continue
+            data = json.loads(line)
+
+            if usage.started_at is None:
+                ts = data.get("timestamp")
+                if ts:
+                    usage.started_at = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+
+            msg = data.get("message", {})
+            if not isinstance(msg, dict):
+                continue
+
+            if not usage.model and msg.get("role") == "assistant":
+                m = msg.get("model", "")
+                if m and m != "<synthetic>":
+                    usage.model = m
+                    pricing = MODEL_PRICING.get(m, DEFAULT_PRICING)
+
+            u = msg.get("usage")
+            if not u:
+                continue
+
+            usage.input_tokens += u.get("input_tokens", 0)
+            usage.output_tokens += u.get("output_tokens", 0)
+            usage.cache_write_tokens += u.get("cache_creation_input_tokens", 0)
+            usage.cache_read_tokens += u.get("cache_read_input_tokens", 0)
+
+    except (json.JSONDecodeError, OSError):
+        return None
+
+    usage.cost = (
+        usage.input_tokens * pricing["input"]
+        + usage.output_tokens * pricing["output"]
+        + usage.cache_write_tokens * pricing["cache_write"]
+        + usage.cache_read_tokens * pricing["cache_read"]
+    )
+
+    return usage
+
+
+def _all_transcripts() -> list[Path]:
+    """Return all transcript JSONL files across all projects."""
+    root = PROJECTS_DIR.expanduser()
+    if not root.exists():
+        return []
+    return sorted(root.glob("*/*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
+
+
+def _fmt_tokens(n: int) -> str:
+    if n >= 1_000_000:
+        return f"{n / 1_000_000:.1f}M"
+    if n >= 1_000:
+        return f"{n / 1_000:.0f}K"
+    return str(n)
+
+
+def _bar(pct: float, width: int = 20) -> str:
+    pct = max(0.0, min(pct, 1.0))
+    color = D_RED if pct > 0.9 else D_ORANGE if pct > 0.7 else D_GREEN
     filled = int(width * pct)
     return f"[{color}]{'█' * filled}[/][{D_COMMENT}]{'░' * (width - filled)}[/]"
 
 
-def _rel_time(dt: datetime) -> str:
+def _fmt_remaining(seconds: int) -> str:
+    if seconds <= 0:
+        return "now"
+    h = seconds // 3600
+    m = (seconds % 3600) // 60
+    if h > 0:
+        return f"~{h}h{m:02d}m"
+    return f"~{m}m"
+
+
+def _aggregate(transcripts: list[Path], cutoff: datetime) -> tuple[int, int, int, float]:
+    """Aggregate usage from transcripts after cutoff. Returns (sessions, in_tokens, out_tokens, cost)."""
+    sessions = 0
+    total_in = total_out = 0
+    total_cost = 0.0
+
+    for path in transcripts:
+        usage = _parse_transcript(path)
+        if not usage or not usage.started_at:
+            continue
+        if usage.started_at < cutoff:
+            continue
+        sessions += 1
+        total_in += usage.input_tokens + usage.cache_write_tokens + usage.cache_read_tokens
+        total_out += usage.output_tokens
+        total_cost += usage.cost
+
+    return sessions, total_in, total_out, total_cost
+
+
+def _find_window_start(transcripts: list[Path], window: timedelta) -> Optional[datetime]:
+    """Find when the first session in the current window started (for reset countdown)."""
     now = datetime.now(timezone.utc)
-    diff = int((now - dt).total_seconds())
-    if diff < 60:
-        return f"{diff}s ago"
-    if diff < 3600:
-        return f"{diff // 60}m ago"
-    return f"{diff // 3600}h ago"
+    cutoff = now - window
+    earliest = None
+
+    for path in transcripts:
+        usage = _parse_transcript(path)
+        if not usage or not usage.started_at:
+            continue
+        if usage.started_at < cutoff:
+            continue
+        if earliest is None or usage.started_at < earliest:
+            earliest = usage.started_at
+
+    return earliest
 
 
-def _fmt_time(dt: datetime) -> str:
-    local = dt.astimezone()
-    return f"{local.strftime('%H:%M')}  ({_rel_time(dt)})"
+def _dashboard_panel() -> Panel:
+    plan = _get_plan()
+    budget = PLAN_BUDGETS[plan]
+    now = datetime.now(timezone.utc)
 
+    transcripts = _all_transcripts()
 
-def _last_session_panel() -> Panel:
-    active = ACTIVE_FILE.expanduser()
-    sessions = SESSIONS_FILE.expanduser()
+    # ── 5h rolling window ────────────────────────────────────────────────
+    window_5h = timedelta(hours=5)
+    cutoff_5h = now - window_5h
+    sess_5h, in_5h, out_5h, cost_5h = _aggregate(transcripts, cutoff_5h)
+    pct_5h = min(out_5h / budget["5h_output_tokens"], 1.0) if budget["5h_output_tokens"] else 0
 
-    model = project = ended_fmt = "–"
-    in_tok = out_tok = 0
-    cost = 0.0
-    is_active = False
+    # Reset countdown: 5h after the earliest session in this window
+    window_start = _find_window_start(transcripts, window_5h)
+    if window_start:
+        reset_at = window_start + window_5h
+        remaining = int((reset_at - now).total_seconds())
+        reset_str = f"resets in {_fmt_remaining(remaining)}" if remaining > 0 else "resetting"
+    else:
+        reset_str = "no activity"
 
-    if active.exists():
-        try:
-            data = json.loads(active.read_text())
-            model = data.get("model", "–")
-            project = data.get("cwd", "–")
-            ended_fmt = f"[{D_CYAN}]active now[/]"
-            is_active = True
-        except (json.JSONDecodeError, OSError):
-            pass
+    # ── This week ────────────────────────────────────────────────────────
+    cutoff_week = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=7)
+    sess_wk, in_wk, out_wk, cost_wk = _aggregate(transcripts, cutoff_week)
+    pct_wk = min(cost_wk / budget["weekly_cost"], 1.0) if budget["weekly_cost"] else 0
 
-    if not is_active and sessions.exists():
-        try:
-            last_line = sessions.read_text().strip().splitlines()[-1]
-            data = json.loads(last_line)
-            project = data.get("cwd", "–")
-            ended_at_str = data.get("ended_at", "")
-            if ended_at_str:
-                ended_dt = datetime.fromisoformat(ended_at_str.replace("Z", "+00:00"))
-                ended_fmt = _fmt_time(ended_dt)
-            model = "–"
-        except (json.JSONDecodeError, OSError, IndexError, ValueError):
-            pass
+    # ── Build table ──────────────────────────────────────────────────────
+    table = Table(show_header=False, box=None, padding=(0, 1), expand=True)
+    table.add_column(style=D_COMMENT, width=11, justify="right")  # label
+    table.add_column(width=22, no_wrap=True)                       # bar
+    table.add_column(width=5, justify="right", no_wrap=True)       # pct
+    table.add_column(no_wrap=True)                                 # detail
 
-    # Shorten home dir to ~
-    if project.startswith(str(Path.home())):
-        project = "~" + project[len(str(Path.home())):]
+    def _detail(cost: float, in_t: int, out_t: int) -> str:
+        cost_str = f"${cost:.0f}" if cost >= 100 else f"${cost:.2f}"
+        return f" [{D_YELLOW}]~{cost_str}[/]  [{D_GREEN}]{_fmt_tokens(in_t)}[/] [{D_COMMENT}]in[/] [{D_ORANGE}]{_fmt_tokens(out_t)}[/] [{D_COMMENT}]out[/]"
+
+    table.add_row("5h window", _bar(pct_5h), f"[bold]{pct_5h * 100:.0f}%[/]", _detail(cost_5h, in_5h, out_5h))
+    table.add_row("", "", "", f" [{D_COMMENT}]{reset_str}[/]")
+    table.add_row("", "", "", "")
+    table.add_row("This Week", _bar(pct_wk), f"[bold]{pct_wk * 100:.0f}%[/]", _detail(cost_wk, in_wk, out_wk))
+    table.add_row("", "", "", f" [{D_COMMENT}]{sess_wk} sessions[/]")
 
     title = Text()
     title.append("devlair", style=f"bold {D_PURPLE}")
     title.append("  claude", style=f"bold {D_PINK}")
-
-    table = Table(show_header=False, box=None, padding=(0, 2))
-    table.add_column(style=D_COMMENT, width=12, justify="right")
-    table.add_column()
-
-    table.add_row("Model",   f"[{D_PINK}]{model}[/]")
-    table.add_row("Project", f"[{D_CYAN}]{project}[/]")
-    table.add_row("Ended",   ended_fmt if is_active else f"[{D_FG}]{ended_fmt}[/]")
-    table.add_row("Tokens",  f"[{D_GREEN}]{in_tok:,}[/] in  /  [{D_ORANGE}]{out_tok:,}[/] out")
-    table.add_row("Cost",    f"[{D_YELLOW}]~${cost:.2f}[/]")
+    title.append(f"  {plan}", style=f"bold {D_COMMENT}")
 
     return Panel(table, title=title, border_style=D_PURPLE, padding=(0, 2))
 
 
-def _this_week_panel() -> Panel:
-    sessions = SESSIONS_FILE.expanduser()
+def run_claude(
+    toggle_1m: Optional[str] = None,
+    plan: Optional[str] = None,
+) -> None:
+    if plan is not None:
+        if plan not in VALID_PLANS:
+            console.print(f"  [{D_RED}]Unknown plan '{plan}'[/] — use one of: {', '.join(VALID_PLANS)}")
+            raise typer.Exit(1)
+        _set_plan(plan)
+        console.print(f"  [{D_GREEN}]✓[/]  Plan set to [bold]{plan}[/bold]")
+        return
 
-    from collections import defaultdict
-    now = datetime.now(timezone.utc)
-    cutoff = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    # 7 days ago
-    from datetime import timedelta
-    week_cutoff = cutoff - timedelta(days=7)
-
-    total_sessions = 0
-    model_counts: dict[str, int] = defaultdict(int)
-
-    if sessions.exists():
-        for line in sessions.read_text().strip().splitlines():
-            if not line.strip():
-                continue
-            try:
-                data = json.loads(line)
-                ended_at_str = data.get("ended_at", "")
-                if not ended_at_str:
-                    continue
-                ended_dt = datetime.fromisoformat(ended_at_str.replace("Z", "+00:00"))
-                if ended_dt >= week_cutoff:
-                    total_sessions += 1
-            except (json.JSONDecodeError, ValueError):
-                continue
-
-    table = Table(show_header=False, box=None, padding=(0, 2))
-    table.add_column(style=D_COMMENT, width=10, justify="right")
-    table.add_column(width=22, no_wrap=True)
-    table.add_column(style=D_FG, min_width=14)
-
-    table.add_row("Sessions", "", f"[{D_FG}]{total_sessions}[/]")
-    table.add_row("", "", "")
-    table.add_row(
-        "All",
-        _bar(total_sessions, None),
-        f"[{D_COMMENT}]– (phase 2)[/]",
-    )
-
-    return Panel(
-        table,
-        title=f"[bold {D_COMMENT}]This Week[/]",
-        border_style=D_COMMENT,
-        padding=(0, 2),
-    )
-
-
-def run_claude(toggle_1m: Optional[str] = None) -> None:
     if toggle_1m is not None:
         _toggle_1m(toggle_1m)
         return
 
     console.print()
-    console.print(_last_session_panel())
-    console.print()
-    console.print(_this_week_panel())
+    console.print(_dashboard_panel())
     console.print()
 
 

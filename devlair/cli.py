@@ -216,11 +216,15 @@ def claude(
     toggle_1m: Optional[str] = typer.Option(
         None, "--1m", metavar="on|off", help="Enable or disable 1M-token context."
     ),
+    plan: Optional[str] = typer.Option(
+        None, "--plan", metavar="PLAN",
+        help="Set your subscription tier (pro, max5x, max20x).",
+    ),
 ) -> None:
     """View Claude Code usage dashboard."""
     from devlair.features.claude import run_claude
 
-    run_claude(toggle_1m=toggle_1m)
+    run_claude(toggle_1m=toggle_1m, plan=plan)
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
