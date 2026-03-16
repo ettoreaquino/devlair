@@ -273,7 +273,7 @@ git push origin v0.7.0
 devlair/
   cli.py               # Typer CLI entrypoint
   runner.py             # subprocess helpers
-  context.py            # SetupContext, ModuleResult, CheckItem, resolve_invoking_user
+  context.py            # shared types, user resolution, JSON config helpers
   console.py            # Rich console + Dracula color tokens
   modules/              # one file per init module (12 modules)
   features/             # doctor, upgrade, disable-password, filesystem, claude
