@@ -30,6 +30,10 @@ export NVM_DIR="$HOME/.nvm"
 # ── fzf ───────────────────────────────────────────────────────────────────────
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
+# ── Claude Code ───────────────────────────────────────────────────────────────
+export CLAUDE_CODE_DISABLE_1M_CONTEXT=1
+# Use 1M context for a single session: CLAUDE_CODE_DISABLE_1M_CONTEXT=0 claude
+
 # ── login banner ──────────────────────────────────────────────────────────────
 _devlair_banner() {
   local host ip disk mem

@@ -62,8 +62,8 @@ D_YELLOW="#f1fa8c"
 set -g status-style                 "bg=#{D_BG} fg=#{D_FG}"
 set -g status-left                  "#[bg=#{D_PURPLE},fg=#{D_BG},bold] #S #[bg=#{D_BG},fg=#{D_PURPLE}] "
 set -g status-left-length           20
-set -g status-right                 "#[bg=#{D_BG},fg=#{D_GREEN}] #(git -C #{pane_current_path} branch --show-current 2>/dev/null) #[bg=#{D_COMMENT},fg=#{D_FG}] %H:%M #[bg=#{D_CURRENT},fg=#{D_FG}] %d %b "
-set -g status-right-length          60
+set -g status-right                 "#[bg=#{D_BG},fg=#{D_CYAN}]#(~/.devlair/bin/claude-status.sh) #[bg=#{D_BG},fg=#{D_GREEN}] #(git -C #{pane_current_path} branch --show-current 2>/dev/null) #[bg=#{D_COMMENT},fg=#{D_FG}] %H:%M #[bg=#{D_CURRENT},fg=#{D_FG}] %d %b "
+set -g status-right-length          80
 setw -g window-status-current-style "bg=#{D_CURRENT} fg=#{D_CYAN} bold"
 setw -g window-status-current-format" #I #W "
 setw -g window-status-style         "bg=#{D_BG} fg=#{D_COMMENT}"

@@ -188,6 +188,18 @@ def filesystem() -> None:
     run_filesystem()
 
 
+@app.command()
+def claude(
+    toggle_1m: Optional[str] = typer.Option(
+        None, "--1m", metavar="on|off", help="Enable or disable 1M-token context."
+    ),
+) -> None:
+    """View Claude Code usage dashboard."""
+    from devlair.features.claude import run_claude
+
+    run_claude(toggle_1m=toggle_1m)
+
+
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 def _hostname() -> str:

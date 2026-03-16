@@ -10,6 +10,7 @@ from devlair.modules import (
     github,
     shell,
     gnome_terminal,
+    claude,
 )
 
 # (key, display label, module)
@@ -25,4 +26,5 @@ MODULES = [
     ("github",         "GitHub SSH key",          github),
     ("shell",          "Shell aliases",           shell),
     ("gnome_terminal", "Gnome Terminal Dracula",  gnome_terminal),
+    ("claude",         "Claude Code",             claude),
 ]
