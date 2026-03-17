@@ -122,15 +122,15 @@ class TestRequireRoot:
 
 
 class TestCommandsCallElevate:
-    """Verify that update and disable-password call _elevate_if_needed."""
+    """Verify that upgrade and disable-password call _elevate_if_needed."""
 
-    def test_update_elevates(self, mocker):
+    def test_upgrade_elevates(self, mocker):
         mock_elevate = mocker.patch("devlair.cli._elevate_if_needed")
-        mocker.patch("devlair.features.update.run_update")
+        mocker.patch("devlair.features.upgrade.run_upgrade")
 
         from typer.testing import CliRunner
         runner = CliRunner()
-        result = runner.invoke(cli.app, ["update"])
+        result = runner.invoke(cli.app, ["upgrade"])
 
         mock_elevate.assert_called_once()
 

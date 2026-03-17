@@ -135,6 +135,19 @@ def _parse_all(cutoff: datetime) -> list[SessionUsage]:
     return results
 
 
+def _last_weekday_9am(weekday: int, now: datetime) -> datetime:
+    """Return the most recent past occurrence of weekday at 09:00 UTC.
+
+    weekday: 0=Mon, 1=Tue, …, 4=Fri, …, 6=Sun
+    If today is that weekday but before 09:00, go back one full week.
+    """
+    days_ago = (now.weekday() - weekday) % 7
+    if days_ago == 0 and now.hour < 9:
+        days_ago = 7
+    d = now - timedelta(days=days_ago)
+    return d.replace(hour=9, minute=0, second=0, microsecond=0)
+
+
 @dataclass
 class _WindowStats:
     sessions: int = 0
@@ -144,11 +157,21 @@ class _WindowStats:
     earliest: Optional[datetime] = None
 
 
-def _aggregate(parsed: list[SessionUsage], cutoff: datetime) -> _WindowStats:
-    """Aggregate pre-parsed sessions after cutoff."""
+def _aggregate(
+    parsed: list[SessionUsage],
+    cutoff: datetime,
+    model_prefix: Optional[str] = None,
+) -> _WindowStats:
+    """Aggregate pre-parsed sessions after cutoff.
+
+    model_prefix: if set, only count sessions whose model starts with this string
+                  (e.g. "claude-sonnet" to isolate Sonnet-only usage).
+    """
     stats = _WindowStats()
     for u in parsed:
         if not u.started_at or u.started_at < cutoff:
+            continue
+        if model_prefix and not u.model.startswith(model_prefix):
             continue
         stats.sessions += 1
         stats.in_tokens += u.input_tokens + u.cache_write_tokens + u.cache_read_tokens
@@ -189,11 +212,17 @@ def _dashboard_panel() -> Panel:
     budget = PLAN_BUDGETS[plan]
     now = datetime.now(timezone.utc)
 
-    # Parse all transcripts once (stops at weekly cutoff)
-    cutoff_week = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=7)
-    parsed = _parse_all(cutoff_week)
+    # Weekly resets mirror Anthropic's web dashboard:
+    #   All models  → last Friday  09:00 UTC
+    #   Sonnet only → last Monday  09:00 UTC
+    cutoff_fri = _last_weekday_9am(4, now)   # Friday
+    cutoff_mon = _last_weekday_9am(0, now)   # Monday
 
-    # ── 5h rolling window ────────────────────────────────────────────────
+    # Parse all transcripts once back to the earlier of the two cutoffs.
+    cutoff_parse = min(cutoff_fri, cutoff_mon) - timedelta(hours=5)  # also covers 5h window
+    parsed = _parse_all(cutoff_parse)
+
+    # ── 5h rolling window (current session approximation) ────────────────
     cutoff_5h = now - timedelta(hours=5)
     w5h = _aggregate(parsed, cutoff_5h)
     pct_5h = min(w5h.out_tokens / budget["5h_output_tokens"], 1.0) if budget["5h_output_tokens"] else 0
@@ -204,13 +233,23 @@ def _dashboard_panel() -> Panel:
     else:
         reset_str = "no activity"
 
-    # ── This week ────────────────────────────────────────────────────────
-    wk = _aggregate(parsed, cutoff_week)
-    pct_wk = min(wk.cost / budget["weekly_cost"], 1.0) if budget["weekly_cost"] else 0
+    # ── Weekly all-models (resets Friday 09:00) ──────────────────────────
+    wk_all = _aggregate(parsed, cutoff_fri)
+    pct_wk_all = min(wk_all.cost / budget["weekly_cost"], 1.0) if budget["weekly_cost"] else 0
+    fri_reset = cutoff_fri + timedelta(weeks=1)
+    fri_reset_str = f"resets {fri_reset.strftime('%a %I:%M %p').rstrip()}"
+
+    # ── Weekly Sonnet-only (resets Monday 09:00) ─────────────────────────
+    wk_son = _aggregate(parsed, cutoff_mon, model_prefix="claude-sonnet")
+    # Sonnet-only budget is roughly 40% of the total weekly (heuristic from web data)
+    sonnet_weekly_cost = budget["weekly_cost"] * 0.4
+    pct_wk_son = min(wk_son.cost / sonnet_weekly_cost, 1.0) if sonnet_weekly_cost else 0
+    mon_reset = cutoff_mon + timedelta(weeks=1)
+    mon_reset_str = f"resets {mon_reset.strftime('%a %I:%M %p').rstrip()}"
 
     # ── Build table ──────────────────────────────────────────────────────
     table = Table(show_header=False, box=None, padding=(0, 1), expand=True)
-    table.add_column(style=D_COMMENT, width=11, justify="right")
+    table.add_column(style=D_COMMENT, width=13, justify="right")
     table.add_column(width=22, no_wrap=True)
     table.add_column(width=5, justify="right", no_wrap=True)
     table.add_column(no_wrap=True)
@@ -219,11 +258,14 @@ def _dashboard_panel() -> Panel:
         cost_str = f"${cost:.0f}" if cost >= 100 else f"${cost:.2f}"
         return f" [{D_YELLOW}]~{cost_str}[/]  [{D_GREEN}]{_fmt_tokens(in_t)}[/] [{D_COMMENT}]in[/] [{D_ORANGE}]{_fmt_tokens(out_t)}[/] [{D_COMMENT}]out[/]"
 
-    table.add_row("5h window", _bar(pct_5h), f"[bold]{pct_5h * 100:.0f}%[/]", _detail(w5h.cost, w5h.in_tokens, w5h.out_tokens))
+    table.add_row("session", _bar(pct_5h), f"[bold]{pct_5h * 100:.0f}%[/]", _detail(w5h.cost, w5h.in_tokens, w5h.out_tokens))
     table.add_row("", "", "", f" [{D_COMMENT}]{reset_str}[/]")
     table.add_row("", "", "", "")
-    table.add_row("This Week", _bar(pct_wk), f"[bold]{pct_wk * 100:.0f}%[/]", _detail(wk.cost, wk.in_tokens, wk.out_tokens))
-    table.add_row("", "", "", f" [{D_COMMENT}]{wk.sessions} sessions[/]")
+    table.add_row("all models", _bar(pct_wk_all), f"[bold]{pct_wk_all * 100:.0f}%[/]", _detail(wk_all.cost, wk_all.in_tokens, wk_all.out_tokens))
+    table.add_row("", "", "", f" [{D_COMMENT}]{fri_reset_str}  ·  {wk_all.sessions} sessions[/]")
+    table.add_row("", "", "", "")
+    table.add_row("sonnet only", _bar(pct_wk_son), f"[bold]{pct_wk_son * 100:.0f}%[/]", _detail(wk_son.cost, wk_son.in_tokens, wk_son.out_tokens))
+    table.add_row("", "", "", f" [{D_COMMENT}]{mon_reset_str}  ·  {wk_son.sessions} sessions[/]")
 
     title = Text()
     title.append("devlair", style=f"bold {D_PURPLE}")

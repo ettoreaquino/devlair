@@ -33,6 +33,21 @@ bind -r n next-window
 bind -r p previous-window
 bind r source-file ~/.tmux.conf \\; display "Reloaded"
 
+# ── Copy mode (vi + mouse + OSC 52) ─────────────────────────────────────
+set -g mode-keys vi
+set -g set-clipboard on
+
+# v begins selection, C-v toggles rectangle, y yanks
+bind -T copy-mode-vi v   send-keys -X begin-selection
+bind -T copy-mode-vi C-v send-keys -X rectangle-toggle
+bind -T copy-mode-vi y   send-keys -X copy-selection-and-cancel
+
+# Mouse drag auto-copies on release
+bind -T copy-mode-vi MouseDragEnd1Pane send-keys -X copy-selection-and-cancel
+
+# Right-click paste
+bind -n MouseDown3Pane paste-buffer
+
 # ── Claude Code popup ────────────────────────────────────────────────────────
 # Prefix+y opens a persistent Claude Code session per project directory
 bind -r y run-shell ' \\

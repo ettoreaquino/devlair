@@ -99,17 +99,21 @@ Commands that need root automatically elevate with `sudo`.
 devlair hooks into Claude Code to track session usage and display a dashboard:
 
 ```
-╭──────────────────────── devlair  claude  max5x ────────────────────────────╮
-│    5h window  ████████░░░░░░░░░░░░   43%   ~$4.20  8.5M in 39K out        │
-│                                             resets in ~2h                   │
-│                                                                            │
-│    This Week  ██████████████░░░░░░   68%   ~$272  124.0M in 380K out       │
-│                                             28 sessions                    │
-╰────────────────────────────────────────────────────────────────────────────╯
+╭─────────────────────────── devlair  claude  max5x ───────────────────────────╮
+│       session  ████░░░░░░░░░░░░░░░░░░   7%   ~$4.20  3.1M in 25K out        │
+│                                               resets in ~3h38m               │
+│                                                                               │
+│   all models  ██░░░░░░░░░░░░░░░░░░░░   4%   ~$78  45M in 170K out            │
+│                                               resets Fri 09:00 AM  ·  20 sessions │
+│                                                                               │
+│  sonnet only  █░░░░░░░░░░░░░░░░░░░░░   2%   ~$12  27M in 77K out             │
+│                                               resets Mon 09:00 AM  ·  7 sessions  │
+╰───────────────────────────────────────────────────────────────────────────────╯
 ```
 
-- **5h rolling window** — percentage of estimated plan budget, cost at API rates, token counts, reset countdown
-- **Weekly view** — aggregate usage against weekly budget, session count
+- **Session** — 5h rolling window: percentage of estimated plan budget, cost at API rates, token counts, reset countdown
+- **All models** — weekly usage against total budget, resets every Friday 09:00; session count
+- **Sonnet only** — weekly Sonnet usage tracked separately, resets every Monday 09:00
 - **Plan-aware** — supports `pro`, `max5x`, and `max20x` tiers (`devlair claude --plan <tier>`)
 - **Automatic hooks** — `SessionStart` and `Stop` hooks in `~/.claude/settings.json` track sessions for the tmux status bar
 
@@ -203,7 +207,7 @@ Generates an `ed25519` SSH key for GitHub, configures `~/.ssh/config`, tests the
 <details>
 <summary><b>Shell</b> — aliases + login banner</summary>
 
-Appends aliases to `.zshrc` (`ll`, `..`, `ports`, `dps`, `t` for tmux, `bcat` → `bat`, etc.) and a login banner showing hostname, Tailscale IP, disk, and memory usage.
+Appends aliases to `.zshrc` (`ll`, `..`, `ports`, `dps`, `t` for tmux, `bcat` → `bat`, etc.) and a styled login banner showing hostname, Tailscale IP, disk, memory usage, and live/saved tmux sessions with one-command attach hints.
 
 </details>
 
