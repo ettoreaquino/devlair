@@ -176,7 +176,7 @@ Installs zsh, sets it as default, and configures [zimfw](https://zimfw.sh) with:
 <details>
 <summary><b>tmux</b> — Dracula-themed multiplexer</summary>
 
-Writes `~/.tmux.conf` with Dracula colors, `C-a` prefix, mouse support, 50k line history, and intuitive split bindings (`|` and `-`). Includes [TPM](https://github.com/tmux-plugins/tpm), [tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect) for session persistence, and a Claude Code popup (`C-a C`).
+Writes `~/.tmux.conf` with Dracula colors, `C-a` prefix, mouse support, 50k line history, and intuitive split bindings (`|` and `-`). Vi copy-mode with mouse drag selection and OSC 52 clipboard passthrough (works over SSH). Includes [TPM](https://github.com/tmux-plugins/tpm), [tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect) for session persistence, and a Claude Code popup (`C-a y`).
 
 </details>
 
