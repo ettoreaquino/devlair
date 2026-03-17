@@ -28,13 +28,16 @@ MODEL_PRICING: dict[str, dict[str, float]] = {
 }
 DEFAULT_PRICING = MODEL_PRICING["claude-sonnet-4-6"]
 
-# Estimated budgets per plan tier (community-observed approximations).
+# Estimated budgets per plan tier (reverse-engineered from web dashboard, 2026-03).
+# Anthropic does not publish exact limits; these are calibrated from a max5x
+# data point (49K out ≈ 8% of 5h, $155 ≈ 3% of weekly) and the official
+# 1x / 5x / 20x multipliers.  Expect ±20% variance.
 # 5h window: output tokens per 5-hour rolling window.
 # Weekly: approximate API-rate cost equivalent per 7-day period.
 PLAN_BUDGETS: dict[str, dict[str, float]] = {
-    "pro":    {"5h_output_tokens": 44_000,  "weekly_cost": 80.0},
-    "max5x":  {"5h_output_tokens": 88_000,  "weekly_cost": 400.0},
-    "max20x": {"5h_output_tokens": 220_000, "weekly_cost": 1600.0},
+    "pro":    {"5h_output_tokens": 125_000,  "weekly_cost": 1_000.0},
+    "max5x":  {"5h_output_tokens": 625_000,  "weekly_cost": 5_000.0},
+    "max20x": {"5h_output_tokens": 2_500_000, "weekly_cost": 20_000.0},
 }
 DEFAULT_PLAN = "max5x"
 VALID_PLANS = list(PLAN_BUDGETS.keys())
