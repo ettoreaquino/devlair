@@ -94,6 +94,9 @@ bind t new-session -A -s dev
 set -g @plugin 'tmux-plugins/tpm'
 set -g @plugin 'tmux-plugins/tmux-resurrect'
 set -g @resurrect-processes 'false'
+set -g @plugin 'tmux-plugins/tmux-continuum'
+set -g @continuum-restore 'on'
+set -g @continuum-save-interval '15'
 
 run '~/.tmux/plugins/tpm/tpm'
 """

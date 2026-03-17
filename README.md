@@ -176,7 +176,7 @@ Installs zsh, sets it as default, and configures [zimfw](https://zimfw.sh) with:
 <details>
 <summary><b>tmux</b> — Dracula-themed multiplexer</summary>
 
-Writes `~/.tmux.conf` with Dracula colors, `C-a` prefix, mouse support, 50k line history, and intuitive split bindings (`|` and `-`). Vi copy-mode with mouse drag selection and OSC 52 clipboard passthrough (works over SSH). Includes [TPM](https://github.com/tmux-plugins/tpm), [tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect) for session persistence, and a Claude Code popup (`C-a y`).
+Writes `~/.tmux.conf` with Dracula colors, `C-a` prefix, mouse support, 50k line history, and intuitive split bindings (`|` and `-`). Vi copy-mode with mouse drag selection and OSC 52 clipboard passthrough (works over SSH). Includes [TPM](https://github.com/tmux-plugins/tpm), [tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect) + [tmux-continuum](https://github.com/tmux-plugins/tmux-continuum) for automatic session save/restore, and a Claude Code popup (`C-a y`).
 
 </details>
 
@@ -207,7 +207,7 @@ Generates an `ed25519` SSH key for GitHub, configures `~/.ssh/config`, tests the
 <details>
 <summary><b>Shell</b> — aliases + login banner</summary>
 
-Appends aliases to `.zshrc` (`ll`, `..`, `ports`, `dps`, `t` for tmux, `bcat` → `bat`, etc.) and a styled login banner showing hostname, Tailscale IP, disk, memory usage, and live/saved tmux sessions with one-command attach hints.
+Appends aliases to `.zshrc` (`ll`, `..`, `ports`, `dps`, `t` for tmux, `bcat` → `bat`, etc.) and a styled login banner showing hostname, Tailscale IP, disk, memory usage, and live tmux sessions with one-command attach hints.
 
 </details>
 
