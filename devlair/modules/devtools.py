@@ -7,7 +7,7 @@ from devlair.console import console
 
 LABEL = "Dev tools"
 
-TOOLS = ["uv", "pyenv", "nvm", "fzf", "docker", "gh", "aws"]
+TOOLS = ["uv", "pyenv", "nvm", "fzf", "docker", "gh", "aws", "rclone"]
 
 
 def run(ctx: SetupContext) -> ModuleResult:
@@ -144,6 +144,16 @@ def run(ctx: SetupContext) -> ModuleResult:
         """, quiet=True)
         installed.append("aws")
 
+    # ── rclone ────────────────────────────────────────────────────────────────
+    if runner.cmd_exists("rclone"):
+        skipped.append("rclone")
+    else:
+        console.print("    [muted]rclone...[/muted]")
+        runner.run_shell("""
+            curl -fsSL https://rclone.org/install.sh | bash
+        """, quiet=True)
+        installed.append("rclone")
+
     parts = []
     if installed: parts.append(f"installed: {', '.join(installed)}")
     if skipped:   parts.append(f"skipped: {', '.join(skipped)}")
@@ -157,7 +167,7 @@ def check() -> list[CheckItem]:
             status="ok" if runner.cmd_exists(t) else "fail",
             detail="installed" if runner.cmd_exists(t) else "missing",
         )
-        for t in ["docker", "gh", "aws", "fzf"]
+        for t in ["docker", "gh", "aws", "fzf", "rclone"]
     ] + [
         CheckItem(
             label="pyenv",

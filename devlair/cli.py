@@ -203,6 +203,20 @@ def disable_password() -> None:
 
 
 @app.command()
+def sync(
+    add: bool = typer.Option(False, "--add", help="Configure a new cloud folder sync."),
+    now: bool = typer.Option(False, "--now", help="Run all syncs immediately."),
+) -> None:
+    """Manage cloud folder syncs powered by rclone."""
+    from devlair.features.sync import run_sync
+
+    if add:
+        _elevate_if_needed()
+    _print_header("sync", "Cloud folder sync")
+    run_sync(add=add, now=now)
+
+
+@app.command()
 def filesystem() -> None:
     """Configure your filesystem folder structure with AI guidance."""
     from devlair.features.filesystem import run_filesystem

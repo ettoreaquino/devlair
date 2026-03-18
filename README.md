@@ -49,7 +49,7 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
 
 **Composable**
 
-12 modules you can run individually with `--only` or skip with `--skip`. Each module is self-contained and does one thing well.
+13 modules you can run individually with `--only` or skip with `--skip`. Each module is self-contained and does one thing well.
 
 </td>
 </tr>
@@ -90,6 +90,15 @@ devlair claude
 
 # Set your Claude Max plan tier
 devlair claude --plan max5x
+
+# Show configured cloud syncs and timer status
+devlair sync
+
+# Configure a new cloud folder sync (Google Drive, S3, etc.)
+devlair sync --add
+
+# Run all syncs immediately
+devlair sync --now
 ```
 
 Commands that need root automatically elevate with `sudo`.
@@ -181,7 +190,7 @@ Writes `~/.tmux.conf` with Dracula colors, `C-a` prefix, mouse support, 50k line
 </details>
 
 <details>
-<summary><b>Dev tools</b> — 7 essential tools</summary>
+<summary><b>Dev tools</b> — 8 essential tools</summary>
 
 Installs (skipping any that already exist):
 
@@ -194,6 +203,19 @@ Installs (skipping any that already exist):
 | [Docker](https://www.docker.com/) | Containers + Compose |
 | [gh](https://cli.github.com/) | GitHub CLI |
 | [aws](https://aws.amazon.com/cli/) | AWS CLI v2 |
+| [rclone](https://rclone.org/) | Cloud storage sync |
+
+</details>
+
+<details>
+<summary><b>rclone sync</b> — cloud folder sync via systemd timer</summary>
+
+rclone is installed during init. Run `devlair sync --add` after setup to configure a sync:
+- Walks through `rclone config` for OAuth (Google Drive, S3, and [70+ providers](https://rclone.org/overview/))
+- Creates a named systemd user timer (`rclone-<remote>.timer`) that syncs every 15 minutes
+- Runs an initial sync with live progress immediately after setup
+
+`devlair sync` shows timer status and last run time per configured sync. `devlair upgrade` keeps rclone up to date and reports timer health.
 
 </details>
 
@@ -245,7 +267,7 @@ devlair doctor --fix
 devlair upgrade
 ```
 
-Upgrades system packages, Docker, GitHub CLI, AWS CLI, pyenv/Python, nvm/Node, and the devlair binary itself. After version bumps, automatically re-applies module configurations (hooks, settings, shell aliases) so new config shapes take effect immediately. Use `--no-self` to skip the binary update.
+Upgrades system packages, Docker, GitHub CLI, AWS CLI, rclone, pyenv/Python, nvm/Node, and the devlair binary itself. After version bumps, automatically re-applies module configurations (hooks, settings, shell aliases) so new config shapes take effect immediately. Reports rclone sync timer health (active state + last run) after upgrading. Use `--no-self` to skip the binary update.
 
 ## Requirements
 
@@ -279,8 +301,8 @@ devlair/
   runner.py             # subprocess helpers
   context.py            # shared types, user resolution, JSON config helpers
   console.py            # Rich console + Dracula color tokens
-  modules/              # one file per init module (12 modules)
-  features/             # doctor, upgrade, disable-password, filesystem, claude
+  modules/              # one file per init module (13 modules)
+  features/             # doctor, upgrade, disable-password, filesystem, claude, sync
 install.sh              # curl-pipe installer
 ```
 
