@@ -80,10 +80,9 @@ def run_upgrade(self_update: bool = False) -> None:
         console.print("  [success]✓[/success]  nvm + Node LTS")
 
     # ── rclone ────────────────────────────────────────────────────────────────
-    if runner.cmd_exists("rclone"):
-        with console.status("[step]rclone...[/step]", spinner="dots", spinner_style=D_PURPLE):
-            runner.run_shell("curl -fsSL https://rclone.org/install.sh | bash", check=False)
-        console.print("  [success]✓[/success]  rclone")
+    with console.status("[step]rclone...[/step]", spinner="dots", spinner_style=D_PURPLE):
+        runner.run_shell("curl -fsSL https://rclone.org/install.sh | bash", check=False)
+    console.print("  [success]✓[/success]  rclone")
 
         from devlair.features.sync import discover_timers, timer_status
         for t in discover_timers(user_home):

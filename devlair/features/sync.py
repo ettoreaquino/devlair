@@ -12,8 +12,12 @@ _SYNC_FLAGS = "--transfers 4 --retries 3 --max-delete 50"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+def _rclone_bin() -> str:
+    return shutil.which("rclone") or "/usr/local/bin/rclone"
+
+
 def _rclone(username: str, user_home: Path, subcmd: str, quiet: bool = False):
-    cmd = f'HOME="{user_home}" rclone {subcmd}'
+    cmd = f'HOME="{user_home}" "{_rclone_bin()}" {subcmd}'
     if os.geteuid() == 0:
         return runner.run_shell_as(username, cmd, quiet=quiet, check=False)
     return runner.run_shell(cmd, quiet=quiet, check=False)
@@ -79,6 +83,13 @@ def show_status(username: str, user_home: Path) -> None:
 
 
 def add_sync(username: str, user_home: Path) -> None:
+    if not runner.cmd_exists("rclone"):
+        console.print("  [muted]Installing rclone...[/muted]")
+        runner.run_shell("curl -fsSL https://rclone.org/install.sh | bash", quiet=True)
+        if not runner.cmd_exists("rclone"):
+            console.print("  [error]rclone installation failed.[/error]")
+            return
+
     console.print("\n  [info]Configure a new cloud folder sync.[/info]")
     console.print("  [muted]Example: gdrive:0. PERSONAL/store  →  ~/.store[/muted]")
 
