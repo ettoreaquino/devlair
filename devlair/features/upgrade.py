@@ -84,14 +84,14 @@ def run_upgrade(self_update: bool = False) -> None:
         runner.run_shell("curl -fsSL https://rclone.org/install.sh | bash", check=False)
     console.print("  [success]✓[/success]  rclone")
 
-        from devlair.features.sync import discover_timers, timer_status
-        for t in discover_timers(user_home):
-            active, last = timer_status(username, user_home, t.name)
-            style = "success" if active == "active" else "warning"
-            console.print(
-                f"       [muted]{t.stem.removeprefix('rclone-')}[/muted]  "
-                f"[{style}]{active}[/{style}]  ·  last: [muted]{last}[/muted]"
-            )
+    from devlair.features.sync import discover_timers, timer_status
+    for t in discover_timers(user_home):
+        active, last = timer_status(username, user_home, t.name)
+        style = "success" if active == "active" else "warning"
+        console.print(
+            f"       [muted]{t.stem.removeprefix('rclone-')}[/muted]  "
+            f"[{style}]{active}[/{style}]  ·  last: [muted]{last}[/muted]"
+        )
 
     # ── Self-update ───────────────────────────────────────────────────────────
     if self_update:
