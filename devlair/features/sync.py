@@ -7,7 +7,7 @@ from pathlib import Path
 from devlair import runner
 from devlair.console import console
 
-_SYNC_FLAGS = "--transfers 4 --retries 3 --max-delete 50"
+_BISYNC_FLAGS = "--transfers 4 --retries 3 --resilient --create-empty-src-dirs"
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -70,8 +70,8 @@ def show_status(username: str, user_home: Path) -> None:
         if service.exists():
             for line in service.read_text().splitlines():
                 line = line.strip()
-                if line.startswith("Description=rclone sync "):
-                    parts = line.removeprefix("Description=rclone sync ").split(" -> ")
+                if line.startswith("Description=rclone bisync "):
+                    parts = line.removeprefix("Description=rclone bisync ").split(" -> ")
                     if len(parts) == 2:
                         remote_path, local_path = parts
 
@@ -133,30 +133,30 @@ def add_sync(username: str, user_home: Path) -> None:
 
     service.write_text(textwrap.dedent(f"""\
         [Unit]
-        Description=rclone sync {remote_path} -> {local_path}
+        Description=rclone bisync {remote_path} -> {local_path}
         After=network-online.target
         Wants=network-online.target
 
         [Service]
         Type=oneshot
         Environment=HOME={user_home}
-        ExecStart=/usr/bin/rclone sync \\
+        ExecStart=/usr/bin/rclone bisync \\
+            "{local_path}" \\
+            "{remote_path}" \\
             --log-file {log_file} \\
             --log-level INFO \\
-            {_SYNC_FLAGS} \\
-            "{remote_path}" \\
-            "{local_path}"
+            {_BISYNC_FLAGS}
         StandardOutput=journal
         StandardError=journal
     """))
 
     timer.write_text(textwrap.dedent("""\
         [Unit]
-        Description=Run rclone sync every 15 minutes
+        Description=Run rclone sync every 5 minutes
 
         [Timer]
         OnBootSec=2min
-        OnUnitActiveSec=15min
+        OnUnitActiveSec=5min
         Persistent=true
 
         [Install]
@@ -170,11 +170,11 @@ def add_sync(username: str, user_home: Path) -> None:
     _systemctl_user(username, f"daemon-reload", quiet=True)
     _systemctl_user(username, f"enable --now {unit_name}.timer", quiet=True)
 
-    # Initial sync
+    # Initial sync — --resync bootstraps the bisync state on first run
     console.print("  [muted]Initial sync...[/muted]")
-    _rclone(username, user_home, f'sync --progress {_SYNC_FLAGS} "{remote_path}" "{local_path}"')
+    _rclone(username, user_home, f'bisync "{local_path}" "{remote_path}" --resync {_BISYNC_FLAGS}')
 
-    console.print(f"  [success]✓[/success]  {remote_path} → {local_path} (every 15 min)")
+    console.print(f"  [success]✓[/success]  {remote_path} ↔ {local_path} (every 5 min)")
 
 
 def run_now(username: str, user_home: Path) -> None:

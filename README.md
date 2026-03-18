@@ -185,7 +185,7 @@ Installs zsh, sets it as default, and configures [zimfw](https://zimfw.sh) with:
 <details>
 <summary><b>tmux</b> — Dracula-themed multiplexer</summary>
 
-Writes `~/.tmux.conf` with Dracula colors, `C-a` prefix, mouse support, 50k line history, and intuitive split bindings (`|` and `-`). Vi copy-mode with mouse drag selection and OSC 52 clipboard passthrough (works over SSH). Includes [TPM](https://github.com/tmux-plugins/tpm), [tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect) + [tmux-continuum](https://github.com/tmux-plugins/tmux-continuum) for automatic session save/restore, and a Claude Code popup (`C-a y`).
+Writes `~/.tmux.conf` with Dracula colors, `C-a` prefix, mouse support, 50k line history, and intuitive split bindings (`|` and `-`). Vi copy-mode with mouse drag selection piped to the system clipboard (`wl-copy` on Wayland, `xclip` on X11, OSC 52 fallback). Installs `wl-clipboard` automatically when no clipboard tool is found. Includes [TPM](https://github.com/tmux-plugins/tpm), [tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect) + [tmux-continuum](https://github.com/tmux-plugins/tmux-continuum) for automatic session save/restore — TPM plugins are installed non-interactively during init/upgrade. Claude Code popup on `C-a y`.
 
 </details>
 
@@ -208,12 +208,12 @@ Installs (skipping any that already exist):
 </details>
 
 <details>
-<summary><b>rclone sync</b> — cloud folder sync via systemd timer</summary>
+<summary><b>rclone bisync</b> — bidirectional cloud sync via systemd timer</summary>
 
 rclone is installed during init. Run `devlair sync --add` after setup to configure a sync:
 - Walks through `rclone config` for OAuth (Google Drive, S3, and [70+ providers](https://rclone.org/overview/))
-- Creates a named systemd user timer (`rclone-<remote>.timer`) that syncs every 15 minutes
-- Runs an initial sync with live progress immediately after setup
+- Creates a named systemd user timer (`rclone-<remote>.timer`) that bisyncs every 5 minutes
+- Runs an initial `bisync --resync` to bootstrap state immediately after setup
 
 `devlair sync` shows timer status and last run time per configured sync. `devlair upgrade` keeps rclone up to date and reports timer health.
 

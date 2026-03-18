@@ -31,5 +31,6 @@ MODULES = [
     ("claude",         "Claude Code",             claude),
 ]
 
-# Modules whose run() is config-only and safe to re-apply after upgrades
+# Modules whose run() is idempotent and safe to re-apply after upgrades
+# (may install missing deps and re-sync configs)
 REAPPLY_KEYS = {"zsh", "tmux", "shell", "gnome_terminal", "claude"}

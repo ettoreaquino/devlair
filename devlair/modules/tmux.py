@@ -33,17 +33,21 @@ bind -r n next-window
 bind -r p previous-window
 bind r source-file ~/.tmux.conf \\; display "Reloaded"
 
-# ── Copy mode (vi + mouse + OSC 52) ─────────────────────────────────────
+# ── Copy mode (vi + clipboard) ────────────────────────────────────────────
 set -g mode-keys vi
 set -g set-clipboard on
 
-# v begins selection, C-v toggles rectangle, y yanks
-bind -T copy-mode-vi v   send-keys -X begin-selection
-bind -T copy-mode-vi C-v send-keys -X rectangle-toggle
-bind -T copy-mode-vi y   send-keys -X copy-selection-and-cancel
+# Clipboard command: wl-copy (Wayland) > xclip (X11) > cat /dev/null (OSC 52 only)
+CLIP_CMD='command -v wl-copy >/dev/null && wl-copy || { command -v xclip >/dev/null && xclip -selection clipboard || cat >/dev/null; }'
 
-# Mouse drag auto-copies on release
-bind -T copy-mode-vi MouseDragEnd1Pane send-keys -X copy-selection-and-cancel
+# v begins selection, C-v toggles rectangle, y yanks to system clipboard
+bind -T copy-mode-vi v     send-keys -X begin-selection
+bind -T copy-mode-vi C-v   send-keys -X rectangle-toggle
+bind -T copy-mode-vi y     send-keys -X copy-pipe-and-cancel "$CLIP_CMD"
+bind -T copy-mode-vi Enter send-keys -X copy-pipe-and-cancel "$CLIP_CMD"
+
+# Mouse drag copies to system clipboard on release
+bind -T copy-mode-vi MouseDragEnd1Pane send-keys -X copy-pipe-and-cancel "$CLIP_CMD"
 
 # Right-click paste
 bind -n MouseDown3Pane paste-buffer
@@ -80,7 +84,7 @@ set -g status-left-length           20
 set -g status-right                 "#[bg=#{D_BG},fg=#{D_CYAN}]#(~/.devlair/bin/claude-status.sh) #[bg=#{D_BG},fg=#{D_GREEN}] #(git -C #{pane_current_path} branch --show-current 2>/dev/null) #[bg=#{D_COMMENT},fg=#{D_FG}] %H:%M #[bg=#{D_CURRENT},fg=#{D_FG}] %d %b "
 set -g status-right-length          80
 setw -g window-status-current-style "bg=#{D_CURRENT} fg=#{D_CYAN} bold"
-setw -g window-status-current-format" #I #W "
+setw -g window-status-current-format " #I #W "
 setw -g window-status-style         "bg=#{D_BG} fg=#{D_COMMENT}"
 setw -g window-status-format        " #I #W "
 set -g pane-border-style            "fg=#{D_CURRENT}"
@@ -107,19 +111,38 @@ def run(ctx: SetupContext) -> ModuleResult:
     conf.write_text(TMUX_CONF)
     shutil.chown(conf, ctx.username, ctx.username)
 
-    tpm_path = ctx.user_home / ".tmux" / "plugins" / "tpm"
+    # Clipboard helper for Wayland/X11 copy support inside tmux
+    if not runner.cmd_exists("wl-copy") and not runner.cmd_exists("xclip"):
+        runner.apt_install("wl-clipboard", quiet=True)
+
+    plugins_dir = ctx.user_home / ".tmux" / "plugins"
+    plugins_dir.mkdir(parents=True, exist_ok=True)
+    shutil.chown(plugins_dir, ctx.username, ctx.username)
+    shutil.chown(plugins_dir.parent, ctx.username, ctx.username)
+
+    tpm_path = plugins_dir / "tpm"
     if not tpm_path.exists():
-        runner.run(
+        runner.run_as(
+            ctx.username,
             ["git", "clone", "https://github.com/tmux-plugins/tpm", str(tpm_path)],
         )
-        runner.run(["chown", "-R", f"{ctx.username}:{ctx.username}", str(tpm_path)])
 
-    return ModuleResult(status="ok", detail="Dracula theme + TPM/resurrect applied")
+    # Install TPM plugins (resurrect, continuum) non-interactively as the user
+    # so the script reads the user's ~/.tmux.conf and writes to the user's plugins dir
+    install_script = tpm_path / "bin" / "install_plugins"
+    if install_script.exists():
+        runner.run_as(ctx.username, [str(install_script)], check=False)
+
+    return ModuleResult(status="ok", detail="Dracula theme + TPM/resurrect/clipboard applied")
 
 
 def check() -> list[CheckItem]:
     tmux_ok = runner.cmd_exists("tmux")
     tpm_ok = Path(TPM_DIR).expanduser().exists()
+    plugins_dir = Path("~/.tmux/plugins").expanduser()
+    continuum_ok = (plugins_dir / "tmux-continuum").exists()
+    resurrect_ok = (plugins_dir / "tmux-resurrect").exists()
+    clip_ok = runner.cmd_exists("wl-copy") or runner.cmd_exists("xclip")
     return [
         CheckItem(label="tmux installed", status="ok" if tmux_ok else "fail"),
         CheckItem(
@@ -127,4 +150,12 @@ def check() -> list[CheckItem]:
             status="ok" if Path("~/.tmux.conf").expanduser().exists() else "warn",
         ),
         CheckItem(label="TPM installed", status="ok" if tpm_ok else "warn"),
+        CheckItem(
+            label="TPM plugins (resurrect + continuum)",
+            status="ok" if resurrect_ok and continuum_ok else "warn",
+        ),
+        CheckItem(
+            label="Clipboard tool (wl-copy / xclip)",
+            status="ok" if clip_ok else "warn",
+        ),
     ]
