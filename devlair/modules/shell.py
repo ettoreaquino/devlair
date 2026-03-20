@@ -17,6 +17,7 @@ alias update='sudo apt update && sudo apt upgrade -y'
 alias ts='tailscale status'
 alias t='tmux new-session -A -s dev'
 alias bcat='bat --paging=never'
+tmx() { tmux attach-session -t "$1"; }
 
 # ── pyenv ─────────────────────────────────────────────────────────────────────
 export PYENV_ROOT="$HOME/.pyenv"
@@ -67,7 +68,7 @@ if [ -t 0 ]; then
     _dl_row "  tmux:"
     for _dl_s in "${_dl_live[@]}"; do
       if [ ${#_dl_s} -gt 16 ]; then _dl_sdisplay="${_dl_s:0:15}…"; else _dl_sdisplay="$_dl_s"; fi
-      _dl_cmd="tmux a -t ${_dl_s}"
+      _dl_cmd="tmx ${_dl_s}"
       if [ ${#_dl_cmd} -gt 20 ]; then _dl_cmd="${_dl_cmd:0:19}…"; fi
       _dl_left="    ${_dl_sdisplay}"
       _dl_right="→ ${_dl_cmd} "

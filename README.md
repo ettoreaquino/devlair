@@ -108,16 +108,16 @@ Commands that need root automatically elevate with `sudo`.
 devlair hooks into Claude Code to track session usage and display a dashboard:
 
 ```
-╭─────────────────────────── devlair  claude  max5x ───────────────────────────╮
-│       session  ████░░░░░░░░░░░░░░░░░░   7%   ~$4.20  3.1M in 25K out        │
-│                                               resets in ~3h38m               │
-│                                                                               │
-│   all models  ██░░░░░░░░░░░░░░░░░░░░   4%   ~$78  45M in 170K out            │
-│                                               resets Fri 09:00 AM  ·  20 sessions │
-│                                                                               │
-│  sonnet only  █░░░░░░░░░░░░░░░░░░░░░   2%   ~$12  27M in 77K out             │
-│                                               resets Mon 09:00 AM  ·  7 sessions  │
-╰───────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────── devlair  claude  max5x ─────────────────────────╮
+│  session  ████░░░░░░░░░░░░░░░░░░  7%  ~$4.20  3.1M in 25K out         │
+│                                        resets in ~3h38m                │
+│                                                                        │
+│  all models  ██░░░░░░░░░░░░░░░░░░░░  4%  ~$78  45M in 170K out        │
+│                                        resets Fri 09:00 AM · 20 sess.  │
+│                                                                        │
+│  sonnet only  █░░░░░░░░░░░░░░░░░░░░░  2%  ~$12  27M in 77K out        │
+│                                        resets Mon 09:00 AM · 7 sess.   │
+╰────────────────────────────────────────────────────────────────────────╯
 ```
 
 - **Session** — 5h rolling window: percentage of estimated plan budget, cost at API rates, token counts, reset countdown
@@ -229,7 +229,19 @@ Generates an `ed25519` SSH key for GitHub, configures `~/.ssh/config`, tests the
 <details>
 <summary><b>Shell</b> — aliases + login banner</summary>
 
-Appends aliases to `.zshrc` (`ll`, `..`, `ports`, `dps`, `t` for tmux, `bcat` → `bat`, etc.) and a styled login banner showing hostname, Tailscale IP, disk, memory usage, and live tmux sessions with one-command attach hints.
+Appends aliases to `.zshrc` (`ll`, `..`, `ports`, `dps`, `t` for tmux, `tmx <name>` to attach sessions, `bcat` → `bat`, etc.) and a styled login banner:
+
+```
+╭─ myhost ──────────────────────────────────────╮
+│  100.64.0.1  disk 3.2G/50G  mem 8.1G/15G     │
+│                                               │
+│  tmux:                                        │
+│    dev                       → tmx dev        │
+│    work                      → tmx work       │
+╰───────────────────────────────────────────────╯
+```
+
+Shows hostname, Tailscale IP, disk/memory usage, and live tmux sessions with `tmx` shortcut.
 
 </details>
 
