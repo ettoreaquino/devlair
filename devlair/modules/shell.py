@@ -86,8 +86,8 @@ if [ -t 0 ]; then
     _dl_row ""
     _dl_row "  syncs:"
     for _dl_svc in "${_dl_svcs[@]}"; do
-      _dl_rname="${_dl_svc:t:r}"
-      _dl_rname="${_dl_rname#rclone-}"
+      _dl_sname="${_dl_svc:t:r}"
+      _dl_sname="${_dl_sname#rclone-}"
       _dl_lp=""
       while IFS= read -r _dl_line; do
         case "$_dl_line" in
@@ -100,9 +100,9 @@ if [ -t 0 ]; then
       [ -z "$_dl_lp" ] && continue
       _dl_lp="${_dl_lp/#$HOME/\~}"
       if [ ${#_dl_lp} -gt 28 ]; then _dl_lp="${_dl_lp:0:27}…"; fi
-      if [ ${#_dl_rname} -gt 10 ]; then _dl_rname="${_dl_rname:0:9}…"; fi
+      if [ ${#_dl_sname} -gt 10 ]; then _dl_sname="${_dl_sname:0:9}…"; fi
       _dl_left="    ${_dl_lp}"
-      _dl_right="← ${_dl_rname} "
+      _dl_right="← ${_dl_sname} "
       _dl_gap=$(( _dl_IW - ${#_dl_left} - ${#_dl_right} ))
       [ "$_dl_gap" -lt 1 ] && _dl_gap=1
       _dl_row "${_dl_left}${(l:_dl_gap:: :)}${_dl_right}"

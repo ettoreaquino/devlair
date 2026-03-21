@@ -94,8 +94,11 @@ devlair claude --plan max5x
 # Show configured cloud syncs and timer status
 devlair sync
 
-# Configure a new cloud folder sync (Google Drive, S3, etc.)
+# Configure a new cloud folder sync (interactive — prompts for name, remote, local path)
 devlair sync --add
+
+# Configure with a preset name
+devlair sync --add --name store
 
 # Run all syncs immediately
 devlair sync --now
@@ -103,8 +106,8 @@ devlair sync --now
 # Remove a configured sync (interactive)
 devlair sync --remove
 
-# Remove a specific sync by remote name
-devlair sync --remove --name gdrive
+# Remove a specific sync by name
+devlair sync --remove --name store
 ```
 
 Commands that need root automatically elevate with `sudo`.
@@ -217,8 +220,9 @@ Installs (skipping any that already exist):
 <summary><b>rclone bisync</b> — bidirectional cloud sync via systemd timer</summary>
 
 rclone is installed during init. Run `devlair sync --add` after setup to configure a sync:
+- Prompts for a short sync name (e.g. `store`, `vault`) used as the systemd unit identifier
 - Walks through `rclone config` for OAuth (Google Drive, S3, and [70+ providers](https://rclone.org/overview/))
-- Creates a named systemd user timer (`rclone-<remote>.timer`) that bisyncs every 5 minutes
+- Creates a named systemd user timer (`rclone-<name>.timer`) that bisyncs every 5 minutes
 - Runs an initial `bisync --resync` to bootstrap state immediately after setup
 
 `devlair sync` shows timer status and last run time per configured sync. `devlair sync --remove` stops and deletes a sync's systemd units and log file (does not touch the rclone remote or local files). The login banner automatically shows synced drives when service files are present. `devlair upgrade` keeps rclone up to date and reports timer health.

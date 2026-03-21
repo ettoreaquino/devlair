@@ -5,8 +5,9 @@ from pathlib import Path
 from unittest.mock import call
 
 import pytest
+import typer
 
-from devlair.features.sync import parse_sync_info, remove_sync
+from devlair.features.sync import _validate_sync_name, parse_sync_info, remove_sync
 
 _USER = getpass.getuser()
 
@@ -45,12 +46,36 @@ def _create_sync(tmp_home: Path, name: str = "gdrive",
     return timer
 
 
+# ── _validate_sync_name ──────────────────────────────────────────────────────
+
+def test_validate_sync_name_simple():
+    assert _validate_sync_name("store") == "store"
+
+
+def test_validate_sync_name_with_hyphens():
+    assert _validate_sync_name("my-vault") == "my-vault"
+
+
+def test_validate_sync_name_uppercase_normalized():
+    assert _validate_sync_name("Store") == "store"
+
+
+def test_validate_sync_name_rejects_spaces():
+    with pytest.raises(typer.BadParameter):
+        _validate_sync_name("my store")
+
+
+def test_validate_sync_name_rejects_empty():
+    with pytest.raises(typer.BadParameter):
+        _validate_sync_name("")
+
+
 # ── parse_sync_info ──────────────────────────────────────────────────────────
 
 def test_parse_sync_info(tmp_home):
-    timer = _create_sync(tmp_home)
-    rname, rpath, lpath = parse_sync_info(timer)
-    assert rname == "gdrive"
+    timer = _create_sync(tmp_home, name="store")
+    sname, rpath, lpath = parse_sync_info(timer)
+    assert sname == "store"
     assert rpath == "gdrive:docs"
     assert lpath == "/home/user/docs"
 
@@ -75,21 +100,21 @@ def test_remove_no_syncs(tmp_home, mock_runner, capsys):
 
 
 def test_remove_by_name(tmp_home, mock_runner, mocker):
-    timer = _create_sync(tmp_home)
+    timer = _create_sync(tmp_home, name="store")
     mocker.patch("devlair.features.sync.typer.confirm", return_value=True)
 
-    remove_sync(_USER, tmp_home, name="gdrive")
+    remove_sync(_USER, tmp_home, name="store")
 
     assert not timer.exists()
     assert not timer.with_suffix(".service").exists()
-    assert not (tmp_home / ".local" / "log" / "rclone-gdrive.log").exists()
+    assert not (tmp_home / ".local" / "log" / "rclone-store.log").exists()
 
 
 def test_remove_by_name_not_found(tmp_home, mock_runner, capsys):
     _create_sync(tmp_home)
     remove_sync(_USER, tmp_home, name="missing")
     captured = capsys.readouterr()
-    assert "No sync found for remote 'missing'" in captured.out
+    assert "No sync named 'missing'" in captured.out
 
 
 def test_remove_single_sync(tmp_home, mock_runner, mocker):

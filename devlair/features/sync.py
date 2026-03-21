@@ -1,8 +1,10 @@
 import os
+import re
 import shutil
 import textwrap
 import typer
 from pathlib import Path
+from typing import Optional
 
 from devlair import runner
 from devlair.console import console
@@ -31,6 +33,21 @@ def _systemctl_user(username: str, subcmd: str, quiet: bool = True):
     return runner.run_shell(cmd, quiet=quiet, check=False)
 
 
+_VALID_NAME = re.compile(r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?$")
+
+
+def _validate_sync_name(name: str) -> str:
+    """Validate and return a sync name, or raise typer.BadParameter."""
+    name = name.strip().lower()
+    if not name:
+        raise typer.BadParameter("Sync name cannot be empty.")
+    if len(name) > 30:
+        raise typer.BadParameter("Sync name must be 30 characters or fewer.")
+    if not _VALID_NAME.match(name):
+        raise typer.BadParameter("Use only lowercase letters, numbers, and hyphens (e.g. 'store', 'my-vault').")
+    return name
+
+
 def _chown(path: Path, username: str) -> None:
     if os.geteuid() == 0:
         shutil.chown(path, username, username)
@@ -56,8 +73,8 @@ def timer_status(username: str, user_home: Path, timer_name: str) -> tuple[str, 
 # ── Commands ──────────────────────────────────────────────────────────────────
 
 def parse_sync_info(timer: Path) -> tuple[str, str, str]:
-    """Return (remote_name, remote_path, local_path) from a timer's service file."""
-    remote_name = timer.stem.removeprefix("rclone-")
+    """Return (sync_name, remote_path, local_path) from a timer's service file."""
+    sync_name = timer.stem.removeprefix("rclone-")
     remote_path = local_path = "?"
     service = timer.with_suffix(".service")
     if service.exists():
@@ -67,7 +84,7 @@ def parse_sync_info(timer: Path) -> tuple[str, str, str]:
                 parts = line.removeprefix("Description=rclone bisync ").split(" -> ")
                 if len(parts) == 2:
                     remote_path, local_path = parts
-    return remote_name, remote_path, local_path
+    return sync_name, remote_path, local_path
 
 
 def show_status(username: str, user_home: Path) -> None:
@@ -77,17 +94,17 @@ def show_status(username: str, user_home: Path) -> None:
         return
 
     for timer in timers:
-        remote_name, remote_path, local_path = parse_sync_info(timer)
+        sync_name, remote_path, local_path = parse_sync_info(timer)
         active, last = timer_status(username, user_home, timer.name)
 
         style = "success" if active == "active" else "warning"
-        console.print(f"  [{style}]●[/{style}]  [accent]{remote_name}[/accent]")
+        console.print(f"  [{style}]●[/{style}]  [accent]{sync_name}[/accent]")
         console.print(f"       [muted]{remote_path}[/muted]  →  [muted]{local_path}[/muted]")
         console.print(f"       timer: [{style}]{active}[/{style}]  ·  last run: [muted]{last}[/muted]")
         console.print()
 
 
-def add_sync(username: str, user_home: Path) -> None:
+def add_sync(username: str, user_home: Path, name: Optional[str] = None) -> None:
     if not runner.cmd_exists("rclone"):
         console.print("  [muted]Installing rclone...[/muted]")
         runner.run_shell("curl -fsSL https://rclone.org/install.sh | bash", quiet=True)
@@ -97,6 +114,28 @@ def add_sync(username: str, user_home: Path) -> None:
 
     console.print("\n  [info]Configure a new cloud folder sync.[/info]")
     console.print("  [muted]Example: gdrive:0. PERSONAL/store  →  ~/.store[/muted]")
+
+    # Sync name — user-chosen, used as the systemd unit name
+    if not name:
+        console.print("\n  [muted]Pick a short name for this sync (e.g. store, vault, photos).[/muted]")
+        while True:
+            raw = typer.prompt("  Sync name (Enter to cancel)", default="")
+            if not raw:
+                console.print("  [muted]Cancelled.[/muted]")
+                return
+            try:
+                name = _validate_sync_name(raw)
+                break
+            except typer.BadParameter as e:
+                console.print(f"  [error]{e}[/error]")
+    else:
+        name = _validate_sync_name(name)
+
+    # Check for name collision
+    systemd_dir = user_home / ".config" / "systemd" / "user"
+    if (systemd_dir / f"rclone-{name}.timer").exists():
+        console.print(f"  [error]A sync named '{name}' already exists. Choose a different name.[/error]")
+        return
 
     remote_path = typer.prompt("\n  Remote path (Enter to cancel)", default="")
     if not remote_path:
@@ -125,14 +164,13 @@ def add_sync(username: str, user_home: Path) -> None:
     local_path.mkdir(parents=True, exist_ok=True)
     _chown(local_path, username)
 
-    systemd_dir = user_home / ".config" / "systemd" / "user"
     systemd_dir.mkdir(parents=True, exist_ok=True)
 
     log_dir = user_home / ".local" / "log"
     log_dir.mkdir(parents=True, exist_ok=True)
 
-    log_file  = log_dir / f"rclone-{remote_name}.log"
-    unit_name = f"rclone-{remote_name}"
+    log_file  = log_dir / f"rclone-{name}.log"
+    unit_name = f"rclone-{name}"
     service   = systemd_dir / f"{unit_name}.service"
     timer     = systemd_dir / f"{unit_name}.timer"
 
@@ -182,7 +220,7 @@ def add_sync(username: str, user_home: Path) -> None:
     console.print(f"  [success]✓[/success]  {remote_path} ↔ {local_path} (every 5 min)")
 
 
-def remove_sync(username: str, user_home: Path, name: str | None = None) -> None:
+def remove_sync(username: str, user_home: Path, name: Optional[str] = None) -> None:
     timers = discover_timers(user_home)
     if not timers:
         console.print("  [muted]No syncs configured.[/muted]")
@@ -193,22 +231,22 @@ def remove_sync(username: str, user_home: Path, name: str | None = None) -> None
     if name:
         match = [s for s in syncs if s[1] == name]
         if not match:
-            console.print(f"  [error]No sync found for remote '{name}'.[/error]")
+            console.print(f"  [error]No sync named '{name}'.[/error]")
             return
         selected = match[0]
-        console.print(f"  {selected[2]} ↔ {selected[3]}")
+        console.print(f"  {selected[1]}: {selected[2]} ↔ {selected[3]}")
         if not typer.confirm("  Remove this sync?"):
             console.print("  [muted]Cancelled.[/muted]")
             return
     elif len(syncs) == 1:
         selected = syncs[0]
-        console.print(f"  {selected[2]} ↔ {selected[3]}")
+        console.print(f"  {selected[1]}: {selected[2]} ↔ {selected[3]}")
         if not typer.confirm("  Remove this sync?"):
             console.print("  [muted]Cancelled.[/muted]")
             return
     else:
-        for i, (_, rname, rpath, lpath) in enumerate(syncs, 1):
-            console.print(f"  {i}) {rname}: {rpath} ↔ {lpath}")
+        for i, (_, sname, rpath, lpath) in enumerate(syncs, 1):
+            console.print(f"  {i}) {sname}: {rpath} ↔ {lpath}")
         choice = typer.prompt("  Select sync to remove (number)")
         try:
             idx = int(choice) - 1
@@ -256,7 +294,7 @@ def run_sync(add: bool = False, now: bool = False, remove: bool = False, name: s
     username, user_home = resolve_invoking_user()
 
     if add:
-        add_sync(username, user_home)
+        add_sync(username, user_home, name=name)
     elif remove:
         remove_sync(username, user_home, name=name)
     elif now:
