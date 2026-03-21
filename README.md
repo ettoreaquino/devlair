@@ -99,6 +99,12 @@ devlair sync --add
 
 # Run all syncs immediately
 devlair sync --now
+
+# Remove a configured sync (interactive)
+devlair sync --remove
+
+# Remove a specific sync by remote name
+devlair sync --remove --name gdrive
 ```
 
 Commands that need root automatically elevate with `sudo`.
@@ -215,7 +221,7 @@ rclone is installed during init. Run `devlair sync --add` after setup to configu
 - Creates a named systemd user timer (`rclone-<remote>.timer`) that bisyncs every 5 minutes
 - Runs an initial `bisync --resync` to bootstrap state immediately after setup
 
-`devlair sync` shows timer status and last run time per configured sync. `devlair upgrade` keeps rclone up to date and reports timer health.
+`devlair sync` shows timer status and last run time per configured sync. `devlair sync --remove` stops and deletes a sync's systemd units and log file (does not touch the rclone remote or local files). The login banner automatically shows synced drives when service files are present. `devlair upgrade` keeps rclone up to date and reports timer health.
 
 </details>
 

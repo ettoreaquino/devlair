@@ -206,6 +206,8 @@ def disable_password() -> None:
 def sync(
     add: bool = typer.Option(False, "--add", help="Configure a new cloud folder sync."),
     now: bool = typer.Option(False, "--now", help="Run all syncs immediately."),
+    remove: bool = typer.Option(False, "--remove", help="Remove a configured sync."),
+    name: str = typer.Option("", "--name", "-n", help="Remote name (for --remove)."),
 ) -> None:
     """Manage cloud folder syncs powered by rclone."""
     from devlair.features.sync import run_sync
@@ -213,7 +215,7 @@ def sync(
     if add:
         _elevate_if_needed()
     _print_header("sync", "Cloud folder sync")
-    run_sync(add=add, now=now)
+    run_sync(add=add, now=now, remove=remove, name=name or None)
 
 
 @app.command()

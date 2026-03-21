@@ -80,6 +80,35 @@ if [ -t 0 ]; then
     _dl_row "  no sessions — type 't' to start"
   fi
 
+  # synced drives
+  _dl_svcs=(~/.config/systemd/user/rclone-*.service(N))
+  if [ ${#_dl_svcs[@]} -gt 0 ]; then
+    _dl_row ""
+    _dl_row "  syncs:"
+    for _dl_svc in "${_dl_svcs[@]}"; do
+      _dl_rname="${_dl_svc:t:r}"
+      _dl_rname="${_dl_rname#rclone-}"
+      _dl_lp=""
+      while IFS= read -r _dl_line; do
+        case "$_dl_line" in
+          Description=rclone\ bisync\ *)
+            _dl_desc="${_dl_line#Description=rclone bisync }"
+            _dl_lp="${_dl_desc#* -> }"
+            ;;
+        esac
+      done < "$_dl_svc"
+      [ -z "$_dl_lp" ] && continue
+      _dl_lp="${_dl_lp/#$HOME/\~}"
+      if [ ${#_dl_lp} -gt 28 ]; then _dl_lp="${_dl_lp:0:27}…"; fi
+      if [ ${#_dl_rname} -gt 10 ]; then _dl_rname="${_dl_rname:0:9}…"; fi
+      _dl_left="    ${_dl_lp}"
+      _dl_right="← ${_dl_rname} "
+      _dl_gap=$(( _dl_IW - ${#_dl_left} - ${#_dl_right} ))
+      [ "$_dl_gap" -lt 1 ] && _dl_gap=1
+      _dl_row "${_dl_left}${(l:_dl_gap:: :)}${_dl_right}"
+    done
+  fi
+
   # bottom border
   printf '%s╰%s╯%s\\n' "$_dl_p" "$_dl_dashes" "$_dl_r"
 fi

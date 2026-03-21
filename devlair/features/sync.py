@@ -55,6 +55,21 @@ def timer_status(username: str, user_home: Path, timer_name: str) -> tuple[str, 
 
 # ── Commands ──────────────────────────────────────────────────────────────────
 
+def parse_sync_info(timer: Path) -> tuple[str, str, str]:
+    """Return (remote_name, remote_path, local_path) from a timer's service file."""
+    remote_name = timer.stem.removeprefix("rclone-")
+    remote_path = local_path = "?"
+    service = timer.with_suffix(".service")
+    if service.exists():
+        for line in service.read_text().splitlines():
+            line = line.strip()
+            if line.startswith("Description=rclone bisync "):
+                parts = line.removeprefix("Description=rclone bisync ").split(" -> ")
+                if len(parts) == 2:
+                    remote_path, local_path = parts
+    return remote_name, remote_path, local_path
+
+
 def show_status(username: str, user_home: Path) -> None:
     timers = discover_timers(user_home)
     if not timers:
@@ -62,18 +77,8 @@ def show_status(username: str, user_home: Path) -> None:
         return
 
     for timer in timers:
-        remote_name = timer.stem.removeprefix("rclone-")
+        remote_name, remote_path, local_path = parse_sync_info(timer)
         active, last = timer_status(username, user_home, timer.name)
-
-        remote_path = local_path = "?"
-        service = timer.with_suffix(".service")
-        if service.exists():
-            for line in service.read_text().splitlines():
-                line = line.strip()
-                if line.startswith("Description=rclone bisync "):
-                    parts = line.removeprefix("Description=rclone bisync ").split(" -> ")
-                    if len(parts) == 2:
-                        remote_path, local_path = parts
 
         style = "success" if active == "active" else "warning"
         console.print(f"  [{style}]●[/{style}]  [accent]{remote_name}[/accent]")
@@ -177,6 +182,61 @@ def add_sync(username: str, user_home: Path) -> None:
     console.print(f"  [success]✓[/success]  {remote_path} ↔ {local_path} (every 5 min)")
 
 
+def remove_sync(username: str, user_home: Path, name: str | None = None) -> None:
+    timers = discover_timers(user_home)
+    if not timers:
+        console.print("  [muted]No syncs configured.[/muted]")
+        return
+
+    syncs = [(t, *parse_sync_info(t)) for t in timers]
+
+    if name:
+        match = [s for s in syncs if s[1] == name]
+        if not match:
+            console.print(f"  [error]No sync found for remote '{name}'.[/error]")
+            return
+        selected = match[0]
+        console.print(f"  {selected[2]} ↔ {selected[3]}")
+        if not typer.confirm("  Remove this sync?"):
+            console.print("  [muted]Cancelled.[/muted]")
+            return
+    elif len(syncs) == 1:
+        selected = syncs[0]
+        console.print(f"  {selected[2]} ↔ {selected[3]}")
+        if not typer.confirm("  Remove this sync?"):
+            console.print("  [muted]Cancelled.[/muted]")
+            return
+    else:
+        for i, (_, rname, rpath, lpath) in enumerate(syncs, 1):
+            console.print(f"  {i}) {rname}: {rpath} ↔ {lpath}")
+        choice = typer.prompt("  Select sync to remove (number)")
+        try:
+            idx = int(choice) - 1
+            if idx < 0 or idx >= len(syncs):
+                raise ValueError
+        except ValueError:
+            console.print("  [error]Invalid selection.[/error]")
+            return
+        selected = syncs[idx]
+
+    timer_path = selected[0]
+    unit_name = timer_path.stem
+    remote_path = selected[2]
+    local_path = selected[3]
+
+    _systemctl_user(username, f"stop {unit_name}.timer")
+    _systemctl_user(username, f"disable {unit_name}.timer")
+    _systemctl_user(username, "daemon-reload")
+
+    timer_path.unlink(missing_ok=True)
+    timer_path.with_suffix(".service").unlink(missing_ok=True)
+
+    log_file = user_home / ".local" / "log" / f"{unit_name}.log"
+    log_file.unlink(missing_ok=True)
+
+    console.print(f"  [success]✓[/success]  Removed {remote_path} ↔ {local_path}")
+
+
 def run_now(username: str, user_home: Path) -> None:
     timers = discover_timers(user_home)
     if not timers:
@@ -191,12 +251,14 @@ def run_now(username: str, user_home: Path) -> None:
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def run_sync(add: bool = False, now: bool = False) -> None:
+def run_sync(add: bool = False, now: bool = False, remove: bool = False, name: str | None = None) -> None:
     from devlair.context import resolve_invoking_user
     username, user_home = resolve_invoking_user()
 
     if add:
         add_sync(username, user_home)
+    elif remove:
+        remove_sync(username, user_home, name=name)
     elif now:
         run_now(username, user_home)
     else:
