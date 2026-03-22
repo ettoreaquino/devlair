@@ -7,7 +7,7 @@ from unittest.mock import call
 import pytest
 import typer
 
-from devlair.features.sync import _validate_sync_name, parse_sync_info, remove_sync
+from devlair.features.sync import _validate_sync_name, add_sync, parse_sync_info, remove_sync
 
 _USER = getpass.getuser()
 
@@ -158,3 +158,37 @@ def test_remove_multiple_syncs(tmp_home, mock_runner, mocker):
     # gdrive should still exist
     gdrive_timer = tmp_home / ".config" / "systemd" / "user" / "rclone-gdrive.timer"
     assert gdrive_timer.exists()
+
+
+# ── add_sync rollback ───────────────────────────────────────────────────────
+
+def test_add_sync_rolls_back_on_failed_initial_sync(tmp_home, mock_runner, mocker, capsys):
+    import subprocess
+
+    # rclone listremotes returns the remote as existing
+    mock_runner["run_shell"].return_value = subprocess.CompletedProcess(
+        args=[], returncode=0, stdout="gdrive:\n", stderr=""
+    )
+
+    # Make the bisync call (last run_shell call) fail
+    def shell_side_effect(*args, **kwargs):
+        cmd = args[1] if len(args) > 1 else args[0]
+        if "bisync" in cmd:
+            return subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr="sync failed")
+        return subprocess.CompletedProcess(args=[], returncode=0, stdout="gdrive:\n", stderr="")
+
+    mock_runner["run_shell"].side_effect = shell_side_effect
+    mock_runner["run_shell_as"].side_effect = shell_side_effect
+
+    mocker.patch("devlair.features.sync.typer.prompt", side_effect=["gdrive:docs", "/tmp/test-local"])
+    mocker.patch("devlair.features.sync.os.geteuid", return_value=0)
+
+    add_sync(_USER, tmp_home, name="mytest")
+
+    captured = capsys.readouterr()
+    assert "Rolling back" in captured.out
+
+    # Verify systemd units were cleaned up
+    systemd_dir = tmp_home / ".config" / "systemd" / "user"
+    assert not (systemd_dir / "rclone-mytest.service").exists()
+    assert not (systemd_dir / "rclone-mytest.timer").exists()

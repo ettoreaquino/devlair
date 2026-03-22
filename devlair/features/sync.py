@@ -215,7 +215,18 @@ def add_sync(username: str, user_home: Path, name: Optional[str] = None) -> None
 
     # Initial sync — --resync bootstraps the bisync state on first run
     console.print("  [muted]Initial sync...[/muted]")
-    _rclone(username, user_home, f'bisync "{local_path}" "{remote_path}" --resync {_BISYNC_FLAGS}')
+    result = _rclone(username, user_home, f'bisync "{local_path}" "{remote_path}" --resync {_BISYNC_FLAGS}')
+
+    if result.returncode != 0:
+        console.print(f"  [error]Initial sync failed (exit {result.returncode}). Rolling back.[/error]")
+        _systemctl_user(username, f"stop {unit_name}.timer")
+        _systemctl_user(username, f"disable {unit_name}.timer")
+        _systemctl_user(username, "daemon-reload")
+        service.unlink(missing_ok=True)
+        timer.unlink(missing_ok=True)
+        log_file.unlink(missing_ok=True)
+        console.print("  [muted]Systemd units removed. Fix the issue and retry with [accent]devlair sync --add[/accent].[/muted]")
+        return
 
     console.print(f"  [success]✓[/success]  {remote_path} ↔ {local_path} (every 5 min)")
 
