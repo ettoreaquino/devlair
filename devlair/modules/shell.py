@@ -113,6 +113,7 @@ if [ -t 0 ]; then
   _dl_claw_compose="$HOME/.devlair/claw/docker-compose.yml"
   if [ -f "$_dl_claw_compose" ]; then
     _dl_row ""
+    _dl_row "  claw:"
     _dl_evo=$(docker inspect -f '{{.State.Status}}' evolution 2>/dev/null)
     _dl_pico=$(docker inspect -f '{{.State.Status}}' picoclaw 2>/dev/null)
     if [ "$_dl_pico" = "running" ] && [ "$_dl_evo" = "running" ]; then
@@ -122,13 +123,13 @@ if [ -t 0 ]; then
       else
         _dl_alcount=0
       fi
-      _dl_left="  claw: ● up  ${_dl_alcount} phones"
+      _dl_left="    ● up  ${_dl_alcount} phones"
       _dl_right="→ devlair claw "
     else
       _dl_down=""
       [ "$_dl_pico" != "running" ] && _dl_down="picoclaw"
       [ "$_dl_evo" != "running" ] && _dl_down="${_dl_down:+$_dl_down }evolution"
-      _dl_left="  claw: ○ ${_dl_down} down"
+      _dl_left="    ○ ${_dl_down} down"
       _dl_right="→ devlair claw --start "
     fi
     _dl_gap=$(( _dl_IW - ${#_dl_left} - ${#_dl_right} ))

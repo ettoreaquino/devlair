@@ -309,7 +309,7 @@ devlair doctor
 
 Verifies every component without making changes — checks installed tools, config files, service status, and SSH connectivity. Useful after setup or to audit an existing machine.
 
-Use `--fix` to automatically re-apply configurations for modules with detected drift:
+Use `--fix` to automatically re-apply configurations and install missing dev tools for modules with detected drift:
 
 ```bash
 devlair doctor --fix

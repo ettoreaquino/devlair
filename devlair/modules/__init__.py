@@ -35,4 +35,4 @@ MODULES = [
 
 # Modules whose run() is idempotent and safe to re-apply after upgrades
 # (may install missing deps and re-sync configs)
-REAPPLY_KEYS = {"zsh", "tmux", "shell", "gnome_terminal", "claude", "claw"}
+REAPPLY_KEYS = {"zsh", "tmux", "devtools", "shell", "gnome_terminal", "claude", "claw"}
