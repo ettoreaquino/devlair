@@ -20,6 +20,28 @@ DOCKER_COMPOSE = textwrap.dedent("""\
     name: claw
 
     services:
+      postgres:
+        image: postgres:16-alpine
+        container_name: claw-postgres
+        restart: unless-stopped
+        networks:
+          - claw
+        environment:
+          - POSTGRES_DB=evolution
+          - POSTGRES_USER=evolution
+          - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+        volumes:
+          - postgres-data:/var/lib/postgresql/data
+        deploy:
+          resources:
+            limits:
+              memory: 64M
+        healthcheck:
+          test: ["CMD-SHELL", "pg_isready -U evolution"]
+          interval: 5s
+          timeout: 3s
+          retries: 5
+
       evolution:
         image: atendai/evolution-api:latest
         container_name: evolution
@@ -30,12 +52,22 @@ DOCKER_COMPOSE = textwrap.dedent("""\
           - "127.0.0.1:8080:8080"
         environment:
           - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY}
+          - DATABASE_PROVIDER=postgresql
+          - DATABASE_CONNECTION_URI=postgresql://evolution:${POSTGRES_PASSWORD}@postgres:5432/evolution
+          - DATABASE_SAVE_DATA_INSTANCE=true
+          - DATABASE_SAVE_DATA_NEW_MESSAGE=false
+          - DATABASE_SAVE_DATA_CONTACTS=false
+          - DATABASE_SAVE_DATA_CHATS=false
+          - CACHE_REDIS_ENABLED=false
         volumes:
           - evolution-data:/evolution/instances
         deploy:
           resources:
             limits:
               memory: 256M
+        depends_on:
+          postgres:
+            condition: service_healthy
 
       picoclaw:
         build: ./picoclaw
@@ -75,6 +107,7 @@ DOCKER_COMPOSE = textwrap.dedent("""\
         driver: bridge
 
     volumes:
+      postgres-data:
       evolution-data:
 """)
 
@@ -346,7 +379,12 @@ def run(ctx: SetupContext) -> ModuleResult:
         evolution_key = _secrets.token_urlsafe(32)
         console.print(f"  [muted]Generated Evolution API key.[/muted]")
 
-    env_content = f"ANTHROPIC_API_KEY={anthropic_key}\nEVOLUTION_API_KEY={evolution_key}\n"
+    postgres_pw = existing_env.get("POSTGRES_PASSWORD", "")
+    if not postgres_pw:
+        import secrets as _secrets
+        postgres_pw = _secrets.token_urlsafe(24)
+
+    env_content = f"ANTHROPIC_API_KEY={anthropic_key}\nEVOLUTION_API_KEY={evolution_key}\nPOSTGRES_PASSWORD={postgres_pw}\n"
     env_file.write_text(env_content)
     env_file.chmod(stat.S_IRUSR | stat.S_IWUSR)  # 0600
 
