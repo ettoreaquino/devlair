@@ -228,6 +228,29 @@ def filesystem() -> None:
 
 
 @app.command()
+def claw(
+    pair: bool = typer.Option(False, "--pair", help="Pair WhatsApp via QR code."),
+    allow: str = typer.Option("", "--allow", help="Add phone number to allowlist."),
+    revoke: str = typer.Option("", "--revoke", help="Remove phone from allowlist."),
+    logs: bool = typer.Option(False, "--logs", help="Tail agent logs."),
+    stop: bool = typer.Option(False, "--stop", help="Stop the agent."),
+    start: bool = typer.Option(False, "--start", help="Start the agent."),
+) -> None:
+    """Manage PicoCLAW AI agent with WhatsApp access."""
+    from devlair.features.claw import run_claw
+
+    _print_header("claw", "PicoCLAW Agent")
+    run_claw(
+        pair=pair,
+        allow=allow or None,
+        revoke=revoke or None,
+        logs=logs,
+        stop=stop,
+        start=start,
+    )
+
+
+@app.command()
 def claude(
     toggle_1m: Optional[str] = typer.Option(
         None, "--1m", metavar="on|off", help="Enable or disable 1M-token context."

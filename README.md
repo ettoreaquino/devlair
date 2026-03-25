@@ -49,7 +49,7 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
 
 **Composable**
 
-13 modules you can run individually with `--only` or skip with `--skip`. Each module is self-contained and does one thing well.
+14 modules you can run individually with `--only` or skip with `--skip`. Each module is self-contained and does one thing well.
 
 </td>
 </tr>
@@ -108,6 +108,25 @@ devlair sync --remove
 
 # Remove a specific sync by name
 devlair sync --remove --name store
+
+# PicoCLAW — WhatsApp AI agent status
+devlair claw
+
+# Pair WhatsApp via QR code
+devlair claw --pair
+
+# Authorize a phone number
+devlair claw --allow +5511999999999
+
+# Revoke a phone number
+devlair claw --revoke +5511999999999
+
+# Start/stop the agent stack
+devlair claw --start
+devlair claw --stop
+
+# Tail agent logs
+devlair claw --logs
 ```
 
 Commands that need root automatically elevate with `sudo`.
@@ -269,6 +288,19 @@ Merges devlair-managed keys into `~/.claude/settings.json` (model, effort level,
 
 </details>
 
+<details>
+<summary><b>PicoCLAW</b> — WhatsApp AI agent via Evolution API</summary>
+
+Provisions a two-container stack: [Evolution API](https://github.com/EvolutionAPI/evolution-api) (WhatsApp gateway) and PicoCLAW (a lightweight webhook-to-Claude bridge built from source during provisioning). The agent receives WhatsApp messages, calls Claude, and replies — with per-sender rate limiting, conversation history, and a phone number allowlist.
+
+- `devlair claw` shows progressive status — walks you through setup step by step
+- `devlair claw --pair` connects WhatsApp via QR code
+- `devlair claw --allow +55…` manages the sender allowlist
+- `devlair doctor` checks container security (non-root, read-only rootfs, cap_drop ALL, no docker socket)
+- Login banner shows a compact `claw: ● up  N phones` line when provisioned
+
+</details>
+
 ## Health check
 
 ```bash
@@ -323,8 +355,8 @@ devlair/
   runner.py             # subprocess helpers
   context.py            # shared types, user resolution, JSON config helpers
   console.py            # Rich console + Dracula color tokens
-  modules/              # one file per init module (13 modules)
-  features/             # doctor, upgrade, disable-password, filesystem, claude, sync
+  modules/              # one file per init module (14 modules)
+  features/             # doctor, upgrade, disable-password, filesystem, claude, sync, claw
 install.sh              # curl-pipe installer
 ```
 

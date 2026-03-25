@@ -12,6 +12,7 @@ from devlair.modules import (
     shell,
     gnome_terminal,
     claude,
+    claw,
 )
 
 # (key, display label, module)
@@ -29,8 +30,9 @@ MODULES = [
     ("shell",          "Shell aliases",           shell),
     ("gnome_terminal", "Gnome Terminal Dracula",  gnome_terminal),
     ("claude",         "Claude Code",             claude),
+    ("claw",           "PicoCLAW Agent",          claw),
 ]
 
 # Modules whose run() is idempotent and safe to re-apply after upgrades
 # (may install missing deps and re-sync configs)
-REAPPLY_KEYS = {"zsh", "tmux", "shell", "gnome_terminal", "claude"}
+REAPPLY_KEYS = {"zsh", "tmux", "shell", "gnome_terminal", "claude", "claw"}
