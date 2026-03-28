@@ -10,11 +10,15 @@ LABEL = "Claude Code"
 
 SETTINGS_PATH = Path("~/.claude/settings.json")
 
-DEVLAIR_MANAGED_KEYS = {"model", "effortLevel", "hooks"}
+DEVLAIR_MANAGED_KEYS = {"model", "effortLevel", "hooks", "channelsEnabled", "allowedChannelPlugins"}
 
 DEVLAIR_SETTINGS = {
     "model": "sonnet",
     "effortLevel": "medium",
+    "channelsEnabled": True,
+    "allowedChannelPlugins": [
+        {"marketplace": "claude-plugins-official", "plugin": "telegram"}
+    ],
     "hooks": {
         "SessionStart": [{
             "matcher": "",
@@ -22,6 +26,7 @@ DEVLAIR_SETTINGS = {
                 "type": "command",
                 "command": (
                     "jq -c '{pid:(env.PPID|tonumber? // 0),session_id,model,cwd,"
+                    "channels:(env.CLAUDE_CHANNELS // \"\"),"
                     "started_at:(now|todate)}' > ~/.claude/devlair-active; "
                     "tmux refresh-client -S 2>/dev/null; true"
                 ),
@@ -52,7 +57,13 @@ if [ -f "$ACTIVE" ]; then
   if [ "$PID" -gt 0 ] && kill -0 "$PID" 2>/dev/null; then
     MODEL=$(jq -r '.model // ""' "$ACTIVE" 2>/dev/null \\
       | sed 's/claude-//' | sed 's/-.*//' | cut -c1-6)
-    echo "CC:${MODEL}"
+    CH=$(jq -r '.channels // ""' "$ACTIVE" 2>/dev/null)
+    OUT="CC:${MODEL}"
+    if [ -n "$CH" ]; then
+      CH_COUNT=$(echo "$CH" | tr ',' '\\n' | grep -c .)
+      OUT="${OUT} CH:${CH_COUNT}"
+    fi
+    echo "$OUT"
     exit 0
   fi
   rm -f "$ACTIVE"
@@ -66,15 +77,21 @@ fi
 """
 
 
+CLAUDE_TELEGRAM_SH = """\
+#!/bin/bash
+exec claude --channels plugin:telegram@claude-plugins-official "$@"
+"""
+
+
 def _merge_settings(path: Path) -> None:
     """Merge devlair-owned keys into settings.json, preserving all other user keys."""
     update_json(path, DEVLAIR_SETTINGS)
 
 
-def _install_status_script(bin_dir: Path, username: str) -> None:
+def _install_script(bin_dir: Path, name: str, content: str, username: str) -> None:
     bin_dir.mkdir(parents=True, exist_ok=True)
-    script = bin_dir / "claude-status.sh"
-    script.write_text(CLAUDE_STATUS_SH)
+    script = bin_dir / name
+    script.write_text(content)
     script.chmod(script.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     shutil.chown(script, username, username)
     shutil.chown(bin_dir, username, username)
@@ -90,15 +107,18 @@ def run(ctx: SetupContext) -> ModuleResult:
     shutil.chown(settings_path, ctx.username, ctx.username)
 
     bin_dir = ctx.user_home / ".devlair" / "bin"
-    _install_status_script(bin_dir, ctx.username)
+    _install_script(bin_dir, "claude-status.sh", CLAUDE_STATUS_SH, ctx.username)
+    _install_script(bin_dir, "claude-telegram.sh", CLAUDE_TELEGRAM_SH, ctx.username)
 
-    return ModuleResult(status="ok", detail="settings.json merged, hooks installed, claude-status.sh deployed")
+    return ModuleResult(status="ok", detail="settings.json merged, hooks installed, scripts deployed")
 
 
 def check() -> list[CheckItem]:
     settings_path = SETTINGS_PATH.expanduser()
     hooks_ok = False
     settings_ok = False
+    channels_enabled = False
+    telegram_allowed = False
 
     if settings_path.exists():
         try:
@@ -106,16 +126,25 @@ def check() -> list[CheckItem]:
             settings_ok = True
             hooks = data.get("hooks", {})
             hooks_ok = "Stop" in hooks and "SessionStart" in hooks
+            channels_enabled = data.get("channelsEnabled") is True
+            for plugin in data.get("allowedChannelPlugins", []):
+                if plugin.get("plugin") == "telegram":
+                    telegram_allowed = True
+                    break
         except (json.JSONDecodeError, OSError):
             pass
 
     claude_ok = runner.cmd_exists("claude")
     context_disabled = Path("~/.zshrc").expanduser().exists() and \
         "CLAUDE_CODE_DISABLE_1M_CONTEXT" in Path("~/.zshrc").expanduser().read_text()
+    telegram_wrapper = Path("~/.devlair/bin/claude-telegram.sh").expanduser().exists()
 
     return [
-        CheckItem("claude installed",      "ok" if claude_ok      else "warn"),
-        CheckItem("settings.json managed", "ok" if settings_ok    else "warn"),
-        CheckItem("Stop hook configured",  "ok" if hooks_ok       else "warn"),
+        CheckItem("claude installed",      "ok" if claude_ok        else "warn"),
+        CheckItem("settings.json managed", "ok" if settings_ok      else "warn"),
+        CheckItem("Stop hook configured",  "ok" if hooks_ok         else "warn"),
         CheckItem("1M context disabled",   "ok" if context_disabled else "warn"),
+        CheckItem("channels enabled",      "ok" if channels_enabled else "warn"),
+        CheckItem("telegram plugin allowed", "ok" if telegram_allowed else "warn"),
+        CheckItem("claude-telegram.sh",    "ok" if telegram_wrapper else "warn"),
     ]

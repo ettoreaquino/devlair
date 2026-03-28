@@ -49,7 +49,7 @@ DOCKER_COMPOSE = textwrap.dedent("""\
         networks:
           - claw
         ports:
-          - "127.0.0.1:8080:8080"
+          - "0.0.0.0:8080:8080"
         environment:
           - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY}
           - DATABASE_PROVIDER=postgresql

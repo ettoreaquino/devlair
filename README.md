@@ -91,6 +91,9 @@ devlair claude
 # Set your Claude Max plan tier
 devlair claude --plan max5x
 
+# Show Telegram channel configuration
+devlair claude --channels
+
 # Show configured cloud syncs and timer status
 devlair sync
 
@@ -282,9 +285,9 @@ Applies the full 16-color Dracula palette to your default GNOME Terminal profile
 </details>
 
 <details>
-<summary><b>Claude Code</b> — hooks, settings, and status bar</summary>
+<summary><b>Claude Code</b> — hooks, settings, channels, and status bar</summary>
 
-Merges devlair-managed keys into `~/.claude/settings.json` (model, effort level, session hooks). Installs a tmux status bar script that shows the active Claude session and daily session count.
+Merges devlair-managed keys into `~/.claude/settings.json` (model, effort level, session hooks, channels). Enables Claude Code [channels](https://docs.anthropic.com/en/docs/claude-code/channels) with the Telegram plugin — deploys a `claude-telegram.sh` wrapper to launch sessions with Telegram attached. The tmux status bar shows the active model and channel count (`CC:sonnet CH:1`), and the login banner displays channel status. Use `devlair claude --channels` to view configuration and a quick-start guide.
 
 </details>
 

@@ -137,6 +137,22 @@ if [ -t 0 ]; then
     _dl_row "${_dl_left}${(l:_dl_gap:: :)}${_dl_right}"
   fi
 
+  # channels (Telegram via Claude Code)
+  _dl_ch_enabled=$(jq -r '.channelsEnabled // false' ~/.claude/settings.json 2>/dev/null)
+  _dl_tg_allowed=$(jq -r '.allowedChannelPlugins[]? | select(.plugin=="telegram") | .plugin' ~/.claude/settings.json 2>/dev/null)
+  _dl_row ""
+  _dl_row "  channels:"
+  if [ "$_dl_ch_enabled" = "true" ] && [ "$_dl_tg_allowed" = "telegram" ]; then
+    _dl_left="    ● telegram"
+    _dl_right="→ claude-telegram "
+  else
+    _dl_left="    ○ telegram off"
+    _dl_right="→ devlair claude --channels "
+  fi
+  _dl_gap=$(( _dl_IW - ${#_dl_left} - ${#_dl_right} ))
+  [ "$_dl_gap" -lt 1 ] && _dl_gap=1
+  _dl_row "${_dl_left}${(l:_dl_gap:: :)}${_dl_right}"
+
   # bottom border
   printf '%s╰%s╯%s\\n' "$_dl_p" "$_dl_dashes" "$_dl_r"
 fi

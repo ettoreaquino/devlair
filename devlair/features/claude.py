@@ -275,10 +275,64 @@ def _dashboard_panel() -> Panel:
     return Panel(table, title=title, border_style=D_PURPLE, padding=(0, 2))
 
 
+def _show_channels() -> None:
+    """Display channel configuration status and quick-start guide."""
+    settings = SETTINGS_FILE.expanduser()
+    data = read_json(settings)
+
+    channels_enabled = data.get("channelsEnabled") is True
+    allowed_plugins = data.get("allowedChannelPlugins", [])
+    wrapper_exists = Path("~/.devlair/bin/claude-telegram.sh").expanduser().exists()
+
+    console.print()
+    title = Text()
+    title.append("devlair", style=f"bold {D_PURPLE}")
+    title.append("  channels", style=f"bold {D_PINK}")
+
+    rows: list[str] = []
+
+    # channelsEnabled status
+    if channels_enabled:
+        rows.append(f"  [{D_GREEN}]●[/] channelsEnabled  [{D_GREEN}]true[/]")
+    else:
+        rows.append(f"  [{D_RED}]○[/] channelsEnabled  [{D_RED}]false[/]")
+
+    # allowed plugins
+    if allowed_plugins:
+        rows.append(f"  [{D_COMMENT}]allowed plugins:[/]")
+        for p in allowed_plugins:
+            mkt = p.get("marketplace", "?")
+            name = p.get("plugin", "?")
+            rows.append(f"    [{D_FG}]{name}[/]  [{D_COMMENT}]@ {mkt}[/]")
+    else:
+        rows.append(f"  [{D_COMMENT}]no allowed plugins[/]")
+
+    # wrapper script
+    if wrapper_exists:
+        rows.append(f"  [{D_GREEN}]●[/] claude-telegram.sh  [{D_GREEN}]installed[/]")
+    else:
+        rows.append(f"  [{D_RED}]○[/] claude-telegram.sh  [{D_RED}]missing[/]  — run [bold]sudo devlair init --only claude[/bold]")
+
+    rows.append("")
+    rows.append(f"  [{D_COMMENT}]Quick start:[/]")
+    rows.append(f"    [{D_FG}]claude-telegram[/]          [{D_COMMENT}]launch with Telegram channel[/]")
+    rows.append(f"    [{D_COMMENT}]Pair via /start in Telegram → @ClaudeCodeBot[/]")
+    rows.append(f"    [{D_COMMENT}]Messages sent in Telegram appear in your Claude Code session[/]")
+
+    panel = Panel("\n".join(rows), title=title, border_style=D_PURPLE, padding=(0, 2))
+    console.print(panel)
+    console.print()
+
+
 def run_claude(
     toggle_1m: Optional[str] = None,
     plan: Optional[str] = None,
+    channels: bool = False,
 ) -> None:
+    if channels:
+        _show_channels()
+        return
+
     if plan is not None:
         if plan not in VALID_PLANS:
             console.print(f"  [{D_RED}]Unknown plan '{plan}'[/] — use one of: {', '.join(VALID_PLANS)}")
