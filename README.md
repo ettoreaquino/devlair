@@ -287,7 +287,7 @@ Applies the full 16-color Dracula palette to your default GNOME Terminal profile
 <details>
 <summary><b>Claude Code</b> — hooks, settings, channels, and status bar</summary>
 
-Merges devlair-managed keys into `~/.claude/settings.json` (model, effort level, session hooks, channels). Enables Claude Code [channels](https://docs.anthropic.com/en/docs/claude-code/channels) with the Telegram plugin — deploys a `claude-telegram.sh` wrapper to launch sessions with Telegram attached. The tmux status bar shows the active model and channel count (`CC:sonnet CH:1`), and the login banner displays channel status. Use `devlair claude --channels` to view configuration and a quick-start guide.
+Merges devlair-managed keys into `~/.claude/settings.json` (model, effort level, session hooks, channels). Enables Claude Code [channels](https://docs.anthropic.com/en/docs/claude-code/channels) with the Telegram plugin — deploys a `claude-telegram` command to launch sessions with Telegram attached. The tmux status bar shows the active model and channel count (`CC:sonnet CH:1`), and the login banner displays channel status. Use `devlair claude --channels` to view configuration and a quick-start guide.
 
 </details>
 

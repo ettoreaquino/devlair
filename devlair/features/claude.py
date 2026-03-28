@@ -282,7 +282,7 @@ def _show_channels() -> None:
 
     channels_enabled = data.get("channelsEnabled") is True
     allowed_plugins = data.get("allowedChannelPlugins", [])
-    wrapper_exists = Path("~/.devlair/bin/claude-telegram.sh").expanduser().exists()
+    wrapper_exists = Path("~/.devlair/bin/claude-telegram").expanduser().exists()
 
     console.print()
     title = Text()
@@ -309,9 +309,9 @@ def _show_channels() -> None:
 
     # wrapper script
     if wrapper_exists:
-        rows.append(f"  [{D_GREEN}]●[/] claude-telegram.sh  [{D_GREEN}]installed[/]")
+        rows.append(f"  [{D_GREEN}]●[/] claude-telegram  [{D_GREEN}]installed[/]")
     else:
-        rows.append(f"  [{D_RED}]○[/] claude-telegram.sh  [{D_RED}]missing[/]  — run [bold]sudo devlair init --only claude[/bold]")
+        rows.append(f"  [{D_RED}]○[/] claude-telegram  [{D_RED}]missing[/]  — run [bold]sudo devlair init --only claude[/bold]")
 
     rows.append("")
     rows.append(f"  [{D_COMMENT}]Quick start:[/]")

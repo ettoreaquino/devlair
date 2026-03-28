@@ -19,6 +19,9 @@ alias t='tmux new-session -A -s dev'
 alias bcat='bat --paging=never'
 tmx() { tmux attach-session -t "$1"; }
 
+# ── devlair bin ───────────────────────────────────────────────────────────────
+export PATH="$HOME/.devlair/bin:$PATH"
+
 # ── pyenv ─────────────────────────────────────────────────────────────────────
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"

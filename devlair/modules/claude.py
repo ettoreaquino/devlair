@@ -108,7 +108,7 @@ def run(ctx: SetupContext) -> ModuleResult:
 
     bin_dir = ctx.user_home / ".devlair" / "bin"
     _install_script(bin_dir, "claude-status.sh", CLAUDE_STATUS_SH, ctx.username)
-    _install_script(bin_dir, "claude-telegram.sh", CLAUDE_TELEGRAM_SH, ctx.username)
+    _install_script(bin_dir, "claude-telegram", CLAUDE_TELEGRAM_SH, ctx.username)
 
     return ModuleResult(status="ok", detail="settings.json merged, hooks installed, scripts deployed")
 
@@ -137,7 +137,7 @@ def check() -> list[CheckItem]:
     claude_ok = runner.cmd_exists("claude")
     context_disabled = Path("~/.zshrc").expanduser().exists() and \
         "CLAUDE_CODE_DISABLE_1M_CONTEXT" in Path("~/.zshrc").expanduser().read_text()
-    telegram_wrapper = Path("~/.devlair/bin/claude-telegram.sh").expanduser().exists()
+    telegram_wrapper = Path("~/.devlair/bin/claude-telegram").expanduser().exists()
 
     return [
         CheckItem("claude installed",      "ok" if claude_ok        else "warn"),
@@ -146,5 +146,5 @@ def check() -> list[CheckItem]:
         CheckItem("1M context disabled",   "ok" if context_disabled else "warn"),
         CheckItem("channels enabled",      "ok" if channels_enabled else "warn"),
         CheckItem("telegram plugin allowed", "ok" if telegram_allowed else "warn"),
-        CheckItem("claude-telegram.sh",    "ok" if telegram_wrapper else "warn"),
+        CheckItem("claude-telegram",    "ok" if telegram_wrapper else "warn"),
     ]
