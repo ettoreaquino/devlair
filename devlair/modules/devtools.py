@@ -7,7 +7,11 @@ from devlair.console import console
 
 LABEL = "Dev tools"
 
-TOOLS = ["uv", "pyenv", "nvm", "fzf", "docker", "gh", "aws", "rclone"]
+TOOLS = ["uv", "pyenv", "nvm", "fzf", "docker", "gh", "aws", "rclone", "bun"]
+
+
+def _bun_exists(user_home: Path) -> bool:
+    return runner.cmd_exists("bun") or (user_home / ".bun" / "bin" / "bun").exists()
 
 
 def run(ctx: SetupContext) -> ModuleResult:
@@ -154,6 +158,18 @@ def run(ctx: SetupContext) -> ModuleResult:
         """, quiet=True)
         installed.append("rclone")
 
+    # ── Bun ───────────────────────────────────────────────────────────────────
+    if _bun_exists(ctx.user_home):
+        skipped.append("bun")
+    else:
+        console.print("    [muted]bun...[/muted]")
+        runner.run_shell_as(
+            ctx.username,
+            "curl -fsSL https://bun.sh/install | bash",
+            quiet=True,
+        )
+        installed.append("bun")
+
     parts = []
     if installed: parts.append(f"installed: {', '.join(installed)}")
     if skipped:   parts.append(f"skipped: {', '.join(skipped)}")
@@ -161,6 +177,7 @@ def run(ctx: SetupContext) -> ModuleResult:
 
 
 def check() -> list[CheckItem]:
+    user_home = Path("~").expanduser()
     return [
         CheckItem(
             label=t,
@@ -176,5 +193,10 @@ def check() -> list[CheckItem]:
         CheckItem(
             label="nvm",
             status="ok" if Path("~/.nvm").expanduser().exists() else "warn",
+        ),
+        CheckItem(
+            label="bun",
+            status="ok" if _bun_exists(user_home) else "warn",
+            detail="installed" if _bun_exists(user_home) else "missing — required for Claude Code channels",
         ),
     ]

@@ -235,6 +235,7 @@ Installs (skipping any that already exist):
 | [gh](https://cli.github.com/) | GitHub CLI |
 | [aws](https://aws.amazon.com/cli/) | AWS CLI v2 |
 | [rclone](https://rclone.org/) | Cloud storage sync |
+| [Bun](https://bun.sh/) | JavaScript runtime (required for Claude Code channels) |
 
 </details>
 
@@ -324,7 +325,7 @@ devlair doctor --fix
 devlair upgrade
 ```
 
-Upgrades system packages, Docker, GitHub CLI, AWS CLI, rclone, pyenv/Python, nvm/Node, and the devlair binary itself. After version bumps, automatically re-applies module configurations (hooks, settings, shell aliases) so new config shapes take effect immediately. Reports rclone sync timer health (active state + last run) after upgrading. Use `--no-self` to skip the binary update.
+Upgrades system packages, Docker, GitHub CLI, AWS CLI, rclone, pyenv/Python, nvm/Node, Bun, and the devlair binary itself. Installs Bun automatically if it was not previously present. After version bumps, automatically re-applies module configurations (hooks, settings, shell aliases) so new config shapes take effect immediately. Reports rclone sync timer health (active state + last run) after upgrading. Use `--no-self` to skip the binary update.
 
 ## Requirements
 

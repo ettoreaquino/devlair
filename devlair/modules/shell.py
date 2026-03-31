@@ -122,7 +122,7 @@ if [ -t 0 ]; then
     if [ "$_dl_pico" = "running" ] && [ "$_dl_evo" = "running" ]; then
       _dl_alfile="$HOME/.devlair/claw/allowlist.json"
       if [ -f "$_dl_alfile" ]; then
-        _dl_alcount=$(grep -co '"+' "$_dl_alfile" 2>/dev/null || echo 0)
+        _dl_alcount=$(grep -c '"+' "$_dl_alfile" 2>/dev/null || true)
       else
         _dl_alcount=0
       fi
