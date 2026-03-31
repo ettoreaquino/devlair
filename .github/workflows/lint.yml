@@ -1,0 +1,28 @@
+name: Lint
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Check for invalid escape sequences
+        run: |
+          python3 -W error::SyntaxWarning -c "
+          import ast, sys
+          from pathlib import Path
+          errors = []
+          for f in Path('devlair').rglob('*.py'):
+              try:
+                  ast.parse(f.read_text(), filename=str(f))
+              except SyntaxError as e:
+                  errors.append(f'{f}:{e.lineno}: {e.msg}')
+          if errors:
+              print('\n'.join(errors)); sys.exit(1)
+          print('clean')
+          "

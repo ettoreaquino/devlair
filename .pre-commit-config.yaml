@@ -1,0 +1,8 @@
+repos:
+  - repo: local
+    hooks:
+      - id: syntax-warnings
+        name: Python SyntaxWarning check
+        language: system
+        entry: python3 -W error::SyntaxWarning -c "import ast, sys; [ast.parse(open(f).read(), filename=f) for f in sys.argv[1:]]"
+        types: [python]

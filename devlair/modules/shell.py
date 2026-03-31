@@ -101,7 +101,7 @@ if [ -t 0 ]; then
         esac
       done < "$_dl_svc"
       [ -z "$_dl_lp" ] && continue
-      _dl_lp="${_dl_lp/#$HOME/\~}"
+      _dl_lp="${_dl_lp/#$HOME/\\~}"
       if [ ${#_dl_lp} -gt 28 ]; then _dl_lp="${_dl_lp:0:27}…"; fi
       if [ ${#_dl_sname} -gt 10 ]; then _dl_sname="${_dl_sname:0:9}…"; fi
       _dl_left="    ${_dl_lp}"
