@@ -94,7 +94,7 @@ if [ -t 0 ]; then
       _dl_lp=""
       while IFS= read -r _dl_line; do
         case "$_dl_line" in
-          Description=rclone\ bisync\ *)
+          Description=rclone\\ bisync\\ *)
             _dl_desc="${_dl_line#Description=rclone bisync }"
             _dl_lp="${_dl_desc#* -> }"
             ;;
