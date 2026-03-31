@@ -283,6 +283,29 @@ def _show_channels() -> None:
     channels_enabled = data.get("channelsEnabled") is True
     allowed_plugins = data.get("allowedChannelPlugins", [])
     wrapper_exists = Path("~/.devlair/bin/claude-telegram").expanduser().exists()
+    bun_ok = (
+        Path("~/.bun/bin/bun").expanduser().exists()
+        or bool(__import__("shutil").which("bun"))
+    )
+    token_configured = Path("~/.claude/channels/telegram/.env").expanduser().exists()
+
+    # Check if plugin is installed
+    import shutil as _shutil
+    import subprocess as _subprocess
+    plugin_installed = False
+    if _shutil.which("claude"):
+        try:
+            result = _subprocess.run(
+                ["claude", "plugin", "list", "--json"],
+                capture_output=True, text=True, check=False,
+            )
+            plugins = json.loads(result.stdout) if result.returncode == 0 else []
+            plugin_installed = any(
+                p.get("name") == "telegram" and p.get("marketplace") == "claude-plugins-official"
+                for p in plugins
+            )
+        except (json.JSONDecodeError, OSError):
+            pass
 
     console.print()
     title = Text()
@@ -291,13 +314,16 @@ def _show_channels() -> None:
 
     rows: list[str] = []
 
-    # channelsEnabled status
-    if channels_enabled:
-        rows.append(f"  [{D_GREEN}]●[/] channelsEnabled  [{D_GREEN}]true[/]")
-    else:
-        rows.append(f"  [{D_RED}]○[/] channelsEnabled  [{D_RED}]false[/]")
+    # ── Status checks ──────────────────────────────────────────────────────────
+    def _ok(label: str) -> str:
+        return f"  [{D_GREEN}]●[/] {label}  [{D_GREEN}]ok[/]"
 
-    # allowed plugins
+    def _warn(label: str, fix: str) -> str:
+        return f"  [{D_RED}]○[/] {label}  [{D_RED}]missing[/]  — {fix}"
+
+    rows.append(_ok("channelsEnabled") if channels_enabled
+                else _warn("channelsEnabled", f"run [bold]sudo devlair init --only claude[/bold]"))
+
     if allowed_plugins:
         rows.append(f"  [{D_COMMENT}]allowed plugins:[/]")
         for p in allowed_plugins:
@@ -305,19 +331,31 @@ def _show_channels() -> None:
             name = p.get("plugin", "?")
             rows.append(f"    [{D_FG}]{name}[/]  [{D_COMMENT}]@ {mkt}[/]")
     else:
-        rows.append(f"  [{D_COMMENT}]no allowed plugins[/]")
+        rows.append(f"  [{D_RED}]○[/] allowed plugins  [{D_RED}]none[/]  — run [bold]sudo devlair init --only claude[/bold]")
 
-    # wrapper script
-    if wrapper_exists:
-        rows.append(f"  [{D_GREEN}]●[/] claude-telegram  [{D_GREEN}]installed[/]")
-    else:
-        rows.append(f"  [{D_RED}]○[/] claude-telegram  [{D_RED}]missing[/]  — run [bold]sudo devlair init --only claude[/bold]")
+    rows.append(_ok("telegram plugin") if plugin_installed
+                else _warn("telegram plugin", "run [bold]sudo devlair init --only claude[/bold]"))
 
+    rows.append(_ok("claude-telegram wrapper") if wrapper_exists
+                else _warn("claude-telegram", "run [bold]sudo devlair init --only claude[/bold]"))
+
+    rows.append(_ok("bun") if bun_ok
+                else _warn("bun", "run [bold]sudo devlair init --only devtools[/bold]  (required for plugins)"))
+
+    rows.append(_ok("telegram token") if token_configured
+                else f"  [{D_ORANGE}]○[/] telegram token  [{D_ORANGE}]not set[/]  — see step 1 below")
+
+    # ── Setup guide ────────────────────────────────────────────────────────────
     rows.append("")
-    rows.append(f"  [{D_COMMENT}]Quick start:[/]")
-    rows.append(f"    [{D_FG}]claude-telegram[/]          [{D_COMMENT}]launch with Telegram channel[/]")
-    rows.append(f"    [{D_COMMENT}]Pair via /start in Telegram → @ClaudeCodeBot[/]")
-    rows.append(f"    [{D_COMMENT}]Messages sent in Telegram appear in your Claude Code session[/]")
+    rows.append(f"  [{D_COMMENT}]Setup (one-time):[/]")
+    rows.append(f"    [{D_COMMENT}]1.[/] Create a bot: open Telegram → [{D_FG}]@BotFather[/] → [{D_FG}]/newbot[/] → copy token")
+    rows.append(f"    [{D_COMMENT}]2.[/] Configure your token (inside any Claude Code session):[/]")
+    rows.append(f"         [{D_FG}]/telegram:configure <token>[/]")
+    rows.append(f"    [{D_COMMENT}]3.[/] Launch with channels:[/]")
+    rows.append(f"         [{D_FG}]claude-telegram[/]")
+    rows.append(f"    [{D_COMMENT}]4.[/] Pair: message your bot in Telegram → it replies with a code → in Claude Code:[/]")
+    rows.append(f"         [{D_FG}]/telegram:access pair <code>[/]")
+    rows.append(f"         [{D_FG}]/telegram:access policy allowlist[/]")
 
     panel = Panel("\n".join(rows), title=title, border_style=D_PURPLE, padding=(0, 2))
     console.print(panel)

@@ -97,6 +97,50 @@ def _install_script(bin_dir: Path, name: str, content: str, username: str) -> No
     shutil.chown(bin_dir, username, username)
 
 
+TELEGRAM_MARKETPLACE = "anthropics/claude-plugins-official"
+TELEGRAM_PLUGIN = "telegram@claude-plugins-official"
+
+
+def _ensure_telegram_plugin(username: str) -> str:
+    """Add the official marketplace and install the Telegram plugin (idempotent)."""
+    details = []
+
+    # Add marketplace if not present
+    result = runner.run_as(
+        username, ["claude", "plugin", "marketplace", "list", "--json"],
+        capture=True, check=False,
+    )
+    marketplaces = json.loads(result.stdout) if result.returncode == 0 else []
+    has_marketplace = any(m.get("name") == "claude-plugins-official" for m in marketplaces)
+
+    if not has_marketplace:
+        runner.run_as(
+            username, ["claude", "plugin", "marketplace", "add", TELEGRAM_MARKETPLACE],
+            capture=True,
+        )
+        details.append("marketplace added")
+
+    # Install plugin if not present
+    result = runner.run_as(
+        username, ["claude", "plugin", "list", "--json"],
+        capture=True, check=False,
+    )
+    plugins = json.loads(result.stdout) if result.returncode == 0 else []
+    has_plugin = any(
+        p.get("name") == "telegram" and p.get("marketplace") == "claude-plugins-official"
+        for p in plugins
+    )
+
+    if not has_plugin:
+        runner.run_as(
+            username, ["claude", "plugin", "install", TELEGRAM_PLUGIN],
+            capture=True,
+        )
+        details.append("telegram plugin installed")
+
+    return ", ".join(details) if details else "telegram plugin already installed"
+
+
 def run(ctx: SetupContext) -> ModuleResult:
     claude_dir = ctx.user_home / ".claude"
     claude_dir.mkdir(parents=True, exist_ok=True)
@@ -110,7 +154,18 @@ def run(ctx: SetupContext) -> ModuleResult:
     _install_script(bin_dir, "claude-status.sh", CLAUDE_STATUS_SH, ctx.username)
     _install_script(bin_dir, "claude-telegram", CLAUDE_TELEGRAM_SH, ctx.username)
 
-    return ModuleResult(status="ok", detail="settings.json merged, hooks installed, scripts deployed")
+    # Install Telegram channel plugin (requires claude CLI)
+    plugin_detail = ""
+    if runner.cmd_exists("claude"):
+        try:
+            plugin_detail = _ensure_telegram_plugin(ctx.username)
+        except Exception as exc:
+            plugin_detail = f"telegram plugin failed: {exc}"
+
+    detail = f"settings.json merged, hooks installed, scripts deployed"
+    if plugin_detail:
+        detail += f", {plugin_detail}"
+    return ModuleResult(status="ok", detail=detail)
 
 
 def check() -> list[CheckItem]:
@@ -138,13 +193,34 @@ def check() -> list[CheckItem]:
     context_disabled = Path("~/.zshrc").expanduser().exists() and \
         "CLAUDE_CODE_DISABLE_1M_CONTEXT" in Path("~/.zshrc").expanduser().read_text()
     telegram_wrapper = Path("~/.devlair/bin/claude-telegram").expanduser().exists()
+    bun_ok = runner.cmd_exists("bun") or Path("~/.bun/bin/bun").expanduser().exists()
+    telegram_env = Path("~/.claude/channels/telegram/.env").expanduser().exists()
+
+    # Check if telegram plugin is installed
+    plugin_installed = False
+    if claude_ok:
+        try:
+            result = runner.run(
+                ["claude", "plugin", "list", "--json"],
+                capture=True, check=False,
+            )
+            plugins = json.loads(result.stdout) if result.returncode == 0 else []
+            plugin_installed = any(
+                p.get("name") == "telegram" and p.get("marketplace") == "claude-plugins-official"
+                for p in plugins
+            )
+        except (json.JSONDecodeError, OSError):
+            pass
 
     return [
-        CheckItem("claude installed",      "ok" if claude_ok        else "warn"),
-        CheckItem("settings.json managed", "ok" if settings_ok      else "warn"),
-        CheckItem("Stop hook configured",  "ok" if hooks_ok         else "warn"),
-        CheckItem("1M context disabled",   "ok" if context_disabled else "warn"),
-        CheckItem("channels enabled",      "ok" if channels_enabled else "warn"),
+        CheckItem("claude installed",        "ok" if claude_ok        else "warn"),
+        CheckItem("settings.json managed",   "ok" if settings_ok      else "warn"),
+        CheckItem("Stop hook configured",    "ok" if hooks_ok         else "warn"),
+        CheckItem("1M context disabled",     "ok" if context_disabled else "warn"),
+        CheckItem("channels enabled",        "ok" if channels_enabled else "warn"),
         CheckItem("telegram plugin allowed", "ok" if telegram_allowed else "warn"),
-        CheckItem("claude-telegram",    "ok" if telegram_wrapper else "warn"),
+        CheckItem("telegram plugin installed", "ok" if plugin_installed else "warn"),
+        CheckItem("claude-telegram",         "ok" if telegram_wrapper else "warn"),
+        CheckItem("bun installed",           "ok" if bun_ok           else "warn"),
+        CheckItem("telegram token configured", "ok" if telegram_env   else "warn"),
     ]
