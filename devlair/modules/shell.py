@@ -31,6 +31,10 @@ eval "$(pyenv init - zsh 2>/dev/null || true)"
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
 
+# ── bun ───────────────────────────────────────────────────────────────────────
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+
 # ── fzf ───────────────────────────────────────────────────────────────────────
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
@@ -173,6 +177,9 @@ def _clean_zshrc(text: str) -> str:
         "\\. \"$NVM_DIR/nvm.sh\"",
         "\\. \"$NVM_DIR/bash_completion\"",
         "# This loads nvm",
+        "export BUN_INSTALL=",
+        '[ -s "$BUN_INSTALL/bin/bun" ]',
+        "# bun",
     ]
     in_devlair_block = False
     for line in text.splitlines(keepends=True):
