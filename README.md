@@ -262,7 +262,18 @@ Generates an `ed25519` SSH key for GitHub, configures `~/.ssh/config`, tests the
 <details>
 <summary><b>Shell</b> — aliases + login banner</summary>
 
-Appends aliases to `.zshrc` (`ll`, `..`, `ports`, `dps`, `t` for tmux, `tmx <name>` to attach sessions, `bcat` → `bat`, etc.) and a styled login banner:
+Appends aliases to `.zshrc` (`ll`, `..`, `ports`, `dps`, `t` for tmux, `bcat` → `bat`, etc.) and a `tmx` command for session management:
+
+```bash
+tmx <name>                          # attach to existing session
+tmx new --name <name>               # create and attach (plain shell)
+tmx new --name <name> --claude      # create and attach with Claude Code running
+tmx new --name <name> --claude-telegram  # create a named Telegram bot session
+```
+
+`--claude-telegram` prompts for a bot token, creates an isolated state directory at `~/.claude/channels/telegram-<name>/`, registers the session in a manifest, and launches `claude-telegram` with `TELEGRAM_STATE_DIR` set — so each session has its own bot, allowlist, and pairing codes.
+
+The login banner shows live tmux sessions and named channel sessions:
 
 ```
 ╭─ myhost ──────────────────────────────────────╮
@@ -271,10 +282,14 @@ Appends aliases to `.zshrc` (`ll`, `..`, `ports`, `dps`, `t` for tmux, `tmx <nam
 │  tmux:                                        │
 │    dev                       → tmx dev        │
 │    work                      → tmx work       │
+│                                               │
+│  channels:                                    │
+│    ● work-bot                → tmx work-bot   │
+│    ○ staging-bot             → tmx staging-bot│
 ╰───────────────────────────────────────────────╯
 ```
 
-Shows hostname, Tailscale IP, disk/memory usage, and live tmux sessions with `tmx` shortcut.
+`●` = token configured and at least one user authenticated; `○` = session exists but not yet ready.
 
 </details>
 
@@ -288,7 +303,7 @@ Applies the full 16-color Dracula palette to your default GNOME Terminal profile
 <details>
 <summary><b>Claude Code</b> — hooks, settings, channels, and status bar</summary>
 
-Merges devlair-managed keys into `~/.claude/settings.json` (model, effort level, session hooks, channels). Enables Claude Code [channels](https://docs.anthropic.com/en/docs/claude-code/channels) with the Telegram plugin — deploys a `claude-telegram` command to launch sessions with Telegram attached. The tmux status bar shows the active model and channel count (`CC:sonnet CH:1`), and the login banner displays channel status. Use `devlair claude --channels` to view configuration and a quick-start guide.
+Merges devlair-managed keys into `~/.claude/settings.json` (model, effort level, session hooks, channels). Enables Claude Code [channels](https://docs.anthropic.com/en/docs/claude-code/channels) with the Telegram plugin — deploys `claude-telegram` and `tmx-new` commands. The tmux status bar shows the active model and channel count (`CC:sonnet CH:1`). Named Telegram sessions are created via `tmx new --name <n> --claude-telegram`; each gets an isolated bot state dir and appears in the login banner. Use `devlair claude --channels` to view configuration.
 
 </details>
 
