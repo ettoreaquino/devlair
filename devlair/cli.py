@@ -124,11 +124,10 @@ def _render_logo() -> None:
         return
 
     width = shutil.get_terminal_size().columns
-    W, grad, inner_box = _LOGO_FULL
-    if width < W + 4:
-        W, grad, inner_box = _LOGO_MEDIUM
-    if width < W + 4:
-        W, grad, inner_box = _LOGO_SHORT
+    for spec in (_LOGO_FULL, _LOGO_MEDIUM, _LOGO_SHORT):
+        W, grad, inner_box = spec
+        if width >= W + 4:
+            break
 
     for line in _build_logo(W, grad, inner_box):
         console.print(line)
@@ -161,7 +160,7 @@ HELP_SECTIONS = [
         ],
     ),
     (
-        "tmux Sessions",
+        "tmux Sessions",  # shell aliases & keybindings, not Typer commands
         [
             ("t", "Start/attach default 'dev' session"),
             ("tmx <name>", "Attach to a named session"),

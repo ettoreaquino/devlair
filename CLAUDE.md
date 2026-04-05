@@ -7,7 +7,7 @@ A CLI tool for provisioning and managing development machines. Currently Python 
 ```bash
 uv sync --group dev          # install dependencies
 uv run pytest tests/unit/    # run tests
-python -m devlair.cli --help # test CLI locally
+uv run python -m devlair.cli --help # test CLI locally
 ```
 
 ## Architecture

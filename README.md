@@ -61,6 +61,8 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
 
 ## Commands
 
+<!-- Version in the help snapshot is static; update when cutting a release. -->
+
 ```
 ╭────────────────────────────────────────────────╮
 │  ░░▒▒▓▓██                            ██▓▓▒▒░░  │
@@ -69,7 +71,7 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
 │               ╚═══════════════╝                │
 │  ░░▒▒▓▓██                            ██▓▓▒▒░░  │
 ╰────────────────────────────────────────────────╯
-  v0.7.0
+  v1.0.0
 
   Setup & Health
     init [--only MOD] [--skip MOD]      Set up this machine from scratch
