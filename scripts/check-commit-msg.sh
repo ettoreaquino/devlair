@@ -8,6 +8,9 @@ FIRST_LINE=$(head -1 "$MSG_FILE")
 
 PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .+'
 
+# Allow auto-generated merge and revert commits
+if echo "$FIRST_LINE" | grep -qE '^(Merge|Revert) '; then exit 0; fi
+
 if ! echo "$FIRST_LINE" | grep -qE "$PATTERN"; then
   echo "ERROR: commit message does not follow Conventional Commits."
   echo ""

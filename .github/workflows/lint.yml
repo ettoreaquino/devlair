@@ -64,6 +64,8 @@ jobs:
           PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .+'
           BAD=0
           while IFS= read -r msg; do
+            # Allow auto-generated merge and revert commits
+            echo "$msg" | grep -qE '^(Merge|Revert) ' && continue
             if ! echo "$msg" | grep -qE "$PATTERN"; then
               echo "::error::Bad commit message: $msg"
               BAD=1
