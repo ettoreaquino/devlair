@@ -21,159 +21,99 @@ from devlair.context import ModuleResult, SetupContext
 
 # ── logo ──────────────────────────────────────────────────────────────────────
 
-def _logo_full() -> list[Text]:
-    """Full logo — 7 rows, 52 visible columns (2 indent + 50 box)."""
-    W = 48                     # inner width between │ chars
-    border = "─" * W
+_BRAND = "d e v l a i r"
+_INDENT = "  "
 
-    grad   = "░░▒▒▓▓██"       # 8 chars
-    grad_r = "██▓▓▒▒░░"       # 8 chars
-    gap    = W - len(grad) - len(grad_r) - 4  # 28
+# (inner_width, gradient_chars, show_inner_box)
+# Total visible width = inner_width + 2 (border chars) + 2 (indent)
+_LOGO_FULL   = (48, "░░▒▒▓▓██", True)    # 52 cols, 7 rows
+_LOGO_MEDIUM = (38, "░▒▓█",     False)   # 42 cols, 3 rows
+_LOGO_SHORT  = (20, "",         False)   # 24 cols, 3 rows
 
-    name  = "d e v l a i r"   # 13 chars
-    iw    = len(name) + 4      # 17  (║ + space + name + space + ║)
-    ib    = "═" * (iw - 2)     # 15
-    itop  = f"╔{ib}╗"
-    ibot  = f"╚{ib}╝"
-    pt    = (W - iw) // 2      # left padding inside outer box
-    pr    = W - iw - pt        # right padding
 
-    lines: list[Text] = []
-
-    # top border
+def _border(W: int, left: str, right: str) -> Text:
     t = Text()
-    t.append("  ╭", style=D_PURPLE)
-    t.append(border, style=D_PURPLE)
-    t.append("╮", style=D_PURPLE)
-    lines.append(t)
+    t.append(f"{_INDENT}{left}", style=D_PURPLE)
+    t.append("─" * W, style=D_PURPLE)
+    t.append(right, style=D_PURPLE)
+    return t
 
-    # gradient row
-    def _grad_row() -> Text:
-        t = Text()
-        t.append("  │", style=D_PURPLE)
-        t.append("  ")
-        t.append(grad, style=D_COMMENT)
-        t.append(" " * gap)
-        t.append(grad_r, style=D_COMMENT)
-        t.append("  ")
-        t.append("│", style=D_PURPLE)
-        return t
 
-    lines.append(_grad_row())
-
-    # inner box — top
+def _content_row(W: int, inner: Text) -> Text:
+    """Wrap inner Text inside │...│ centered to W."""
+    pad = W - inner.cell_len
+    pad_l = pad // 2
+    pad_r = pad - pad_l
     t = Text()
-    t.append("  │", style=D_PURPLE)
-    t.append(" " * pt)
-    t.append(itop, style=D_PINK)
-    t.append(" " * pr)
+    t.append(f"{_INDENT}│", style=D_PURPLE)
+    t.append(" " * pad_l)
+    t.append_text(inner)
+    t.append(" " * pad_r)
     t.append("│", style=D_PURPLE)
-    lines.append(t)
-
-    # inner box — name
-    t = Text()
-    t.append("  │", style=D_PURPLE)
-    t.append(" " * pt)
-    t.append("║ ", style=D_PINK)
-    t.append(name, style=f"bold {D_FG}")
-    t.append(" ║", style=D_PINK)
-    t.append(" " * pr)
-    t.append("│", style=D_PURPLE)
-    lines.append(t)
-
-    # inner box — bottom
-    t = Text()
-    t.append("  │", style=D_PURPLE)
-    t.append(" " * pt)
-    t.append(ibot, style=D_PINK)
-    t.append(" " * pr)
-    t.append("│", style=D_PURPLE)
-    lines.append(t)
-
-    # gradient row (repeated)
-    lines.append(_grad_row())
-
-    # bottom border
-    t = Text()
-    t.append("  ╰", style=D_PURPLE)
-    t.append(border, style=D_PURPLE)
-    t.append("╯", style=D_PURPLE)
-    lines.append(t)
-
-    return lines
+    return t
 
 
-def _logo_medium() -> list[Text]:
-    """Medium logo — 3 rows, 42 visible columns."""
-    W = 38
-    border = "─" * W
+def _build_logo(W: int, grad: str, inner_box: bool) -> list[Text]:
+    lines: list[Text] = [_border(W, "╭", "╮")]
 
-    grad   = "░▒▓█"            # 4 chars
-    grad_r = "█▓▒░"            # 4 chars
-    name   = "d e v l a i r"   # 13 chars
-    content_w = len(grad) + 2 + len(name) + 2 + len(grad_r)  # 25
-    pt = (W - content_w) // 2
-    pr = W - content_w - pt
+    if grad:
+        grad_r = grad[::-1]
+        gap = W - len(grad) - len(grad_r) - 4
 
-    lines: list[Text] = []
+        def _grad_row() -> Text:
+            t = Text()
+            t.append(f"{_INDENT}│", style=D_PURPLE)
+            t.append("  ")
+            t.append(grad, style=D_COMMENT)
+            t.append(" " * gap)
+            t.append(grad_r, style=D_COMMENT)
+            t.append("  ")
+            t.append("│", style=D_PURPLE)
+            return t
 
-    t = Text()
-    t.append("  ╭", style=D_PURPLE)
-    t.append(border, style=D_PURPLE)
-    t.append("╮", style=D_PURPLE)
-    lines.append(t)
+        if inner_box:
+            iw = len(_BRAND) + 4
+            ib = "═" * (iw - 2)
+            pt = (W - iw) // 2
+            pr = W - iw - pt
 
-    t = Text()
-    t.append("  │", style=D_PURPLE)
-    t.append(" " * pt)
-    t.append(grad, style=D_COMMENT)
-    t.append("  ")
-    t.append(name, style=f"bold {D_FG}")
-    t.append("  ")
-    t.append(grad_r, style=D_COMMENT)
-    t.append(" " * pr)
-    t.append("│", style=D_PURPLE)
-    lines.append(t)
+            def _inner_row(content: str, style: str) -> Text:
+                t = Text()
+                t.append(f"{_INDENT}│", style=D_PURPLE)
+                t.append(" " * pt)
+                t.append(content, style=style)
+                t.append(" " * pr)
+                t.append("│", style=D_PURPLE)
+                return t
 
-    t = Text()
-    t.append("  ╰", style=D_PURPLE)
-    t.append(border, style=D_PURPLE)
-    t.append("╯", style=D_PURPLE)
-    lines.append(t)
+            name_row = Text()
+            name_row.append(f"{_INDENT}│", style=D_PURPLE)
+            name_row.append(" " * pt)
+            name_row.append("║ ", style=D_PINK)
+            name_row.append(_BRAND, style=f"bold {D_FG}")
+            name_row.append(" ║", style=D_PINK)
+            name_row.append(" " * pr)
+            name_row.append("│", style=D_PURPLE)
 
-    return lines
+            lines.append(_grad_row())
+            lines.append(_inner_row(f"╔{ib}╗", D_PINK))
+            lines.append(name_row)
+            lines.append(_inner_row(f"╚{ib}╝", D_PINK))
+            lines.append(_grad_row())
+        else:
+            inner = Text()
+            inner.append(grad, style=D_COMMENT)
+            inner.append("  ")
+            inner.append(_BRAND, style=f"bold {D_FG}")
+            inner.append("  ")
+            inner.append(grad_r, style=D_COMMENT)
+            lines.append(_content_row(W, inner))
+    else:
+        inner = Text()
+        inner.append(_BRAND, style=f"bold {D_FG}")
+        lines.append(_content_row(W, inner))
 
-
-def _logo_short() -> list[Text]:
-    """Short logo — 3 rows, 24 visible columns."""
-    W = 20
-    border = "─" * W
-    name = "d e v l a i r"    # 13 chars
-    pt = (W - len(name)) // 2
-    pr = W - len(name) - pt
-
-    lines: list[Text] = []
-
-    t = Text()
-    t.append("  ╭", style=D_PURPLE)
-    t.append(border, style=D_PURPLE)
-    t.append("╮", style=D_PURPLE)
-    lines.append(t)
-
-    t = Text()
-    t.append("  │", style=D_PURPLE)
-    t.append(" " * pt)
-    t.append(name, style=f"bold {D_FG}")
-    t.append(" " * pr)
-    t.append("│", style=D_PURPLE)
-    lines.append(t)
-
-    t = Text()
-    t.append("  ╰", style=D_PURPLE)
-    t.append(border, style=D_PURPLE)
-    t.append("╯", style=D_PURPLE)
-    lines.append(t)
-
+    lines.append(_border(W, "╰", "╯"))
     return lines
 
 
@@ -184,15 +124,13 @@ def _render_logo() -> None:
         return
 
     width = shutil.get_terminal_size().columns
+    W, grad, inner_box = _LOGO_FULL
+    if width < W + 4:
+        W, grad, inner_box = _LOGO_MEDIUM
+    if width < W + 4:
+        W, grad, inner_box = _LOGO_SHORT
 
-    if width >= 54:
-        lines = _logo_full()
-    elif width >= 44:
-        lines = _logo_medium()
-    else:
-        lines = _logo_short()
-
-    for line in lines:
+    for line in _build_logo(W, grad, inner_box):
         console.print(line)
 
 
