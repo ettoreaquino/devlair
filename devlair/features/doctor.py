@@ -1,11 +1,11 @@
 from rich.table import Table
 
-from devlair.console import console, D_GREEN, D_RED, D_ORANGE, D_COMMENT
+from devlair.console import D_COMMENT, D_GREEN, D_ORANGE, D_RED, console
 from devlair.context import CheckItem
 from devlair.modules import MODULES
 
 STATUS_STYLE = {
-    "ok":   f"bold {D_GREEN}",
+    "ok": f"bold {D_GREEN}",
     "warn": f"bold {D_ORANGE}",
     "fail": f"bold {D_RED}",
 }
@@ -29,15 +29,18 @@ def run_doctor(fix: bool = False) -> None:
         first = True
         for item in items:
             total += 1
-            if item.status == "ok":   ok   += 1
-            elif item.status == "warn": warn += 1
-            else:                       fail += 1
+            if item.status == "ok":
+                ok += 1
+            elif item.status == "warn":
+                warn += 1
+            else:
+                fail += 1
 
             if item.status in ("warn", "fail"):
                 failed_keys.add(key)
 
             style = STATUS_STYLE[item.status]
-            icon  = STATUS_ICON[item.status]
+            icon = STATUS_ICON[item.status]
             table.add_row(
                 label if first else "",
                 item.label,
@@ -52,12 +55,14 @@ def run_doctor(fix: bool = False) -> None:
     if fail == 0 and warn == 0:
         console.print(f"  [success]All {total} checks passed.[/success]")
     else:
-        if fail: console.print(f"  [error]{fail} checks failed.[/error]")
-        if warn: console.print(f"  [warning]{warn} warnings.[/warning]")
+        if fail:
+            console.print(f"  [error]{fail} checks failed.[/error]")
+        if warn:
+            console.print(f"  [warning]{warn} warnings.[/warning]")
 
     if fix and failed_keys:
-        from devlair.modules import REAPPLY_KEYS
         from devlair.context import SetupContext, resolve_invoking_user
+        from devlair.modules import REAPPLY_KEYS
 
         username, user_home = resolve_invoking_user()
         ctx = SetupContext(username=username, user_home=user_home)

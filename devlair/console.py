@@ -14,16 +14,18 @@ D_PURPLE = "#bd93f9"
 D_RED = "#ff5555"
 D_YELLOW = "#f1fa8c"
 
-DRACULA = Theme({
-    "info":    f"bold {D_CYAN}",
-    "success": f"bold {D_GREEN}",
-    "warning": f"bold {D_ORANGE}",
-    "error":   f"bold {D_RED}",
-    "accent":  f"bold {D_PURPLE}",
-    "muted":   D_COMMENT,
-    "heading": f"bold {D_FG}",
-    "step":    D_PINK,
-    "detail":  D_CYAN,
-})
+DRACULA = Theme(
+    {
+        "info": f"bold {D_CYAN}",
+        "success": f"bold {D_GREEN}",
+        "warning": f"bold {D_ORANGE}",
+        "error": f"bold {D_RED}",
+        "accent": f"bold {D_PURPLE}",
+        "muted": D_COMMENT,
+        "heading": f"bold {D_FG}",
+        "step": D_PINK,
+        "detail": D_CYAN,
+    }
+)
 
 console = Console(theme=DRACULA)

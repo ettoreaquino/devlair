@@ -3,8 +3,8 @@ from pathlib import Path
 
 import typer
 
-from devlair.console import console
 from devlair import runner
+from devlair.console import console
 
 SSHD_CONF = Path("/etc/ssh/sshd_config.d/99-hardened.conf")
 
@@ -19,6 +19,7 @@ def run_disable_password() -> None:
         sudo_user = typer.prompt("Username to check")
 
     import pwd
+
     user_home = Path(pwd.getpwnam(sudo_user).pw_dir)
     auth_keys = user_home / ".ssh" / "authorized_keys"
 
@@ -30,10 +31,7 @@ def run_disable_password() -> None:
         console.print()
         raise typer.Exit(1)
 
-    key_count = sum(
-        1 for line in auth_keys.read_text().splitlines()
-        if line.strip() and not line.startswith("#")
-    )
+    key_count = sum(1 for line in auth_keys.read_text().splitlines() if line.strip() and not line.startswith("#"))
     console.print()
     console.print(f"  [success]{key_count} public key(s) found in authorized_keys.[/success]")
     console.print()

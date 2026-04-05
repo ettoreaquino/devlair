@@ -1,13 +1,12 @@
 import json
-import os
 import subprocess
 from pathlib import Path
 
 import typer
 from rich.tree import Tree
 
-from devlair.console import console, D_PURPLE, D_GREEN, D_COMMENT
 from devlair import runner
+from devlair.console import D_COMMENT, D_GREEN, D_PURPLE, console
 
 STATE_FILE = Path.home() / ".devlair" / "filesystem.json"
 
@@ -36,9 +35,14 @@ def run_filesystem() -> None:
 
     # Run claude in interactive print mode with our system prompt
     result = subprocess.run(
-        ["claude", "--system", SYSTEM_PROMPT, "-p",
-         "Hello! Let's design the folder structure for your home directory. "
-         "First, what kind of work do you primarily do? (e.g. ML research, web dev, data engineering, etc.)"],
+        [
+            "claude",
+            "--system",
+            SYSTEM_PROMPT,
+            "-p",
+            "Hello! Let's design the folder structure for your home directory. "
+            "First, what kind of work do you primarily do? (e.g. ML research, web dev, data engineering, etc.)",
+        ],
         text=True,
     )
 

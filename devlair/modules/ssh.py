@@ -1,10 +1,11 @@
 import shutil
-import typer
 from pathlib import Path
 
-from devlair.context import CheckItem, ModuleResult, SetupContext
+import typer
+
 from devlair import runner
 from devlair.console import console
+from devlair.context import CheckItem, ModuleResult, SetupContext
 
 LABEL = "SSH"
 SSHD_CONF = Path("/etc/ssh/sshd_config.d/99-hardened.conf")
@@ -58,14 +59,17 @@ AllowUsers {ctx.username}
 
 def check() -> list[CheckItem]:
     items = []
-    items.append(CheckItem(
-        label="sshd running",
-        status="ok" if runner.get_output("systemctl is-active ssh") == "active" else "fail",
-    ))
-    auth_keys = Path("/root/../").resolve()  # placeholder — resolved in context
-    items.append(CheckItem(
-        label="99-hardened.conf",
-        status="ok" if SSHD_CONF.exists() else "warn",
-        detail="present" if SSHD_CONF.exists() else "missing",
-    ))
+    items.append(
+        CheckItem(
+            label="sshd running",
+            status="ok" if runner.get_output("systemctl is-active ssh") == "active" else "fail",
+        )
+    )
+    items.append(
+        CheckItem(
+            label="99-hardened.conf",
+            status="ok" if SSHD_CONF.exists() else "warn",
+            detail="present" if SSHD_CONF.exists() else "missing",
+        )
+    )
     return items

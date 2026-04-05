@@ -1,6 +1,6 @@
-from devlair.context import CheckItem, ModuleResult, SetupContext
 from devlair import runner
 from devlair.console import console
+from devlair.context import CheckItem, ModuleResult, SetupContext
 
 LABEL = "Tailscale"
 
@@ -27,9 +27,11 @@ def check() -> list[CheckItem]:
     items.append(CheckItem(label="tailscale installed", status="ok" if installed else "fail"))
     if installed:
         ip = runner.get_output("tailscale ip -4")
-        items.append(CheckItem(
-            label="tailscale connected",
-            status="ok" if ip else "warn",
-            detail=ip or "not connected",
-        ))
+        items.append(
+            CheckItem(
+                label="tailscale connected",
+                status="ok" if ip else "warn",
+                detail=ip or "not connected",
+            )
+        )
     return items

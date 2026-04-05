@@ -6,13 +6,13 @@ from pathlib import Path
 import httpx
 import typer
 
-from devlair import __version__
-from devlair.console import console, D_PURPLE
-from devlair import runner
+from devlair import __version__, runner
+from devlair.console import D_PURPLE, console
 
 
 def _get_username() -> str:
     from devlair.context import resolve_invoking_user
+
     username, _ = resolve_invoking_user()
     return username
 
@@ -42,18 +42,23 @@ def run_upgrade(self_update: bool = False) -> None:
         with console.status("[step]AWS CLI...[/step]", spinner="dots", spinner_style=D_PURPLE):
             arch = runner.get_output("dpkg --print-architecture")
             aws_arch = "x86_64" if arch == "amd64" else "aarch64"
-            runner.run_shell(f"""
+            runner.run_shell(
+                f"""
                 curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-{aws_arch}.zip" -o /tmp/awscliv2.zip
                 unzip -qo /tmp/awscliv2.zip -d /tmp
                 /tmp/aws/install --update
                 rm -rf /tmp/awscliv2.zip /tmp/aws
-            """, check=False)
+            """,
+                check=False,
+            )
         console.print("  [success]✓[/success]  AWS CLI")
 
     # ── Docker ────────────────────────────────────────────────────────────────
     if runner.cmd_exists("docker"):
         with console.status("[step]Docker...[/step]", spinner="dots", spinner_style=D_PURPLE):
-            runner.run("apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin", check=False)
+            runner.run(
+                "apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin", check=False
+            )
         console.print("  [success]✓[/success]  Docker")
 
     # ── pyenv / Python ─────────────────────────────────────────────────────────
@@ -96,6 +101,7 @@ def run_upgrade(self_update: bool = False) -> None:
         console.print("  [success]✓[/success]  Bun (installed)")
 
     from devlair.features.sync import discover_timers, timer_status
+
     for t in discover_timers(user_home):
         active, last = timer_status(username, user_home, t.name)
         style = "success" if active == "active" else "warning"
@@ -149,7 +155,9 @@ def _installed_version() -> str:
         try:
             out = subprocess.run(
                 [str(install_path), "--version"],
-                capture_output=True, text=True, timeout=5,
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
             # Output is "devlair X.Y.Z"
             return out.stdout.strip().split()[-1]
@@ -186,6 +194,7 @@ def _self_update() -> None:
         return
 
     import platform
+
     arch = platform.machine()
     suffix = "linux-x86_64" if arch == "x86_64" else "linux-aarch64"
     url = f"https://github.com/ettoreaquino/devlair/releases/download/v{latest}/devlair-{suffix}"

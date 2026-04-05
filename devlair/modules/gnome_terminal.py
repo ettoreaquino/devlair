@@ -1,17 +1,29 @@
 import pwd
 
-from devlair.context import CheckItem, ModuleResult, SetupContext
 from devlair import runner
+from devlair.context import CheckItem, ModuleResult, SetupContext
 
 LABEL = "Gnome Terminal Dracula"
 
 # Dracula palette for Gnome Terminal (dconf format)
 # https://draculatheme.com/gnome-terminal
 DRACULA_PALETTE = [
-    "#282a36", "#ff5555", "#50fa7b", "#f1fa8c",
-    "#bd93f9", "#ff79c6", "#8be9fd", "#f8f8f2",
-    "#6272a4", "#ff6e6e", "#69ff94", "#ffffa5",
-    "#d6acff", "#ff92df", "#a4ffff", "#ffffff",
+    "#282a36",
+    "#ff5555",
+    "#50fa7b",
+    "#f1fa8c",
+    "#bd93f9",
+    "#ff79c6",
+    "#8be9fd",
+    "#f8f8f2",
+    "#6272a4",
+    "#ff6e6e",
+    "#69ff94",
+    "#ffffa5",
+    "#d6acff",
+    "#ff92df",
+    "#a4ffff",
+    "#ffffff",
 ]
 
 PROFILE_SCHEMA = "org.gnome.Terminal.Legacy.Profile"
@@ -19,9 +31,7 @@ PROFILE_SCHEMA = "org.gnome.Terminal.Legacy.Profile"
 
 def _default_profile_path() -> str | None:
     """Return the dconf path for the default Gnome Terminal profile, or None."""
-    profile_id = runner.get_output(
-        "gsettings get org.gnome.Terminal.ProfilesList default"
-    ).strip("' \n")
+    profile_id = runner.get_output("gsettings get org.gnome.Terminal.ProfilesList default").strip("' \n")
     if not profile_id:
         return None
     return f"/org/gnome/terminal/legacy/profiles:/:{profile_id}/"
@@ -54,10 +64,7 @@ def run(ctx: SetupContext) -> ModuleResult:
         "use-theme-transparency": "false",
     }
 
-    writes = " && ".join(
-        f'dconf write {path}{key} "{value}"'
-        for key, value in dconf_settings.items()
-    )
+    writes = " && ".join(f'dconf write {path}{key} "{value}"' for key, value in dconf_settings.items())
     runner.run_shell_as(
         ctx.username,
         f"{_dbus_env(ctx.username)}; {writes}",

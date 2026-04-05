@@ -29,4 +29,16 @@ dev = [
     "pyinstaller>=6",
     "pytest>=8",
     "pytest-mock>=3.14",
+    "ruff>=0.15",
 ]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501", "E701"]  # E501: string literals (shell/tmux/Rich) exceed 120; E701: compact tabular one-liners
+
+[tool.pytest.ini_options]
+testpaths = ["tests/unit"]

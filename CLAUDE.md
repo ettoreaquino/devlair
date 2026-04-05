@@ -5,9 +5,12 @@ A CLI tool for provisioning and managing development machines. Currently Python 
 ## Dev commands
 
 ```bash
-uv sync --group dev          # install dependencies
-uv run pytest tests/unit/    # run tests
+uv sync --group dev                 # install dependencies
+uv run pytest tests/unit/           # run tests
+uv run ruff check devlair/ tests/   # lint
+uv run ruff format devlair/ tests/  # auto-format
 uv run python -m devlair.cli --help # test CLI locally
+pre-commit install && pre-commit install --hook-type commit-msg  # one-time setup
 ```
 
 ## Architecture
@@ -47,8 +50,23 @@ Module groups: **core** (system, timezone, zsh, shell), **coding** (devtools, gi
 
 - **Colors:** Dracula palette via `devlair/console.py`. Purple = primary, Pink = accent, Cyan = info, Green = success, Orange = warning, Red = error, Comment gray = muted.
 - **Output:** Use `console.print()` with Rich markup. Use `_print_header(command, subtitle)` for command headers.
-- **Commits:** Conventional Commits — `feat(scope):`, `fix(scope):`, `docs:`, `refactor:`.
+- **Lint:** ruff with `E`, `F`, `W`, `I` rules. `E501` and `E701` are intentionally ignored.
+- **Commits:** Conventional Commits — `feat(scope):`, `fix(scope):`, `docs:`, `refactor:`. Enforced by commit-msg hook.
 - **Branches:** GitHub Flow — `feat/name`, `fix/name` branches, PR to main, squash merge.
+
+## Quality gates
+
+Every commit and PR must pass these gates:
+
+| Gate | Local (pre-commit) | CI (PR) | Blocks |
+|------|--------------------|---------|--------|
+| Python syntax (SyntaxWarning) | ✓ | ✓ | commit + merge |
+| ruff lint | ✓ | ✓ | commit + merge |
+| ruff format | ✓ | ✓ | commit + merge |
+| Conventional Commits | ✓ (commit-msg hook) | ✓ | commit + merge |
+| Unit tests (pytest) | manual | ✓ | merge |
+
+Setup: `pre-commit install && pre-commit install --hook-type commit-msg`
 
 ## Release process
 

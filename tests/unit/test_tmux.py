@@ -1,8 +1,7 @@
 """Tests for the tmux module — writes .tmux.conf, no system calls needed."""
-import pytest
-from pathlib import Path
-from devlair.modules import tmux
+
 from devlair.context import SetupContext
+from devlair.modules import tmux
 
 
 def test_run_creates_tmux_conf(ctx: SetupContext, mock_runner):
@@ -83,8 +82,7 @@ def test_run_installs_tpm_plugins_as_user(ctx: SetupContext, mock_runner):
     tmux.run(ctx)
 
     calls = [str(c) for c in mock_runner["run_as"].call_args_list]
-    assert any("install_plugins" in c for c in calls), \
-        "install_plugins should be run via run_as (as the user)"
+    assert any("install_plugins" in c for c in calls), "install_plugins should be run via run_as (as the user)"
 
 
 def test_run_skips_tpm_clone_when_present(ctx: SetupContext, mock_runner):
@@ -94,10 +92,7 @@ def test_run_skips_tpm_clone_when_present(ctx: SetupContext, mock_runner):
     tmux.run(ctx)
 
     # run_as should NOT have been called with a git clone
-    clone_calls = [
-        c for c in mock_runner["run_as"].call_args_list
-        if "clone" in str(c)
-    ]
+    clone_calls = [c for c in mock_runner["run_as"].call_args_list if "clone" in str(c)]
     assert not clone_calls, "TPM should not be re-cloned when already present"
 
 

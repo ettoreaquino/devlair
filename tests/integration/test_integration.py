@@ -9,15 +9,18 @@ Only non-interactive, non-systemd modules are exercised:
 The SUDO_USER env var must be set to a valid user before running
 (the Dockerfile sets it to 'testuser').
 """
+
 import os
 import pwd
-import pytest
 from pathlib import Path
-from devlair.context import SetupContext
-from devlair.modules import tmux, shell
 
+import pytest
+
+from devlair.context import SetupContext
+from devlair.modules import shell, tmux
 
 # ── helpers ───────────────────────────────────────────────────────────────────
+
 
 def _get_ctx() -> SetupContext:
     username = os.environ.get("SUDO_USER", "")
@@ -31,6 +34,7 @@ def _get_ctx() -> SetupContext:
 
 
 # ── tmux ──────────────────────────────────────────────────────────────────────
+
 
 class TestTmuxIntegration:
     def test_creates_tmux_conf(self):
@@ -61,6 +65,7 @@ class TestTmuxIntegration:
 
 
 # ── shell ─────────────────────────────────────────────────────────────────────
+
 
 class TestShellIntegration:
     def test_creates_zshrc(self):

@@ -14,10 +14,17 @@ from rich.text import Text
 
 from devlair import __version__
 from devlair.console import (
-    console, D_PURPLE, D_PINK, D_GREEN, D_RED, D_ORANGE, D_COMMENT, D_CYAN, D_FG,
+    D_COMMENT,
+    D_CYAN,
+    D_FG,
+    D_GREEN,
+    D_ORANGE,
+    D_PINK,
+    D_PURPLE,
+    D_RED,
+    console,
 )
 from devlair.context import ModuleResult, SetupContext
-
 
 # ── logo ──────────────────────────────────────────────────────────────────────
 
@@ -26,9 +33,9 @@ _INDENT = "  "
 
 # (inner_width, gradient_chars, show_inner_box)
 # Total visible width = inner_width + 2 (border chars) + 2 (indent)
-_LOGO_FULL   = (48, "░░▒▒▓▓██", True)    # 52 cols, 7 rows
-_LOGO_MEDIUM = (38, "░▒▓█",     False)   # 42 cols, 3 rows
-_LOGO_SHORT  = (20, "",         False)   # 24 cols, 3 rows
+_LOGO_FULL = (48, "░░▒▒▓▓██", True)  # 52 cols, 7 rows
+_LOGO_MEDIUM = (38, "░▒▓█", False)  # 42 cols, 3 rows
+_LOGO_SHORT = (20, "", False)  # 24 cols, 3 rows
 
 
 def _border(W: int, left: str, right: str) -> Text:
@@ -178,17 +185,13 @@ def _render_help() -> None:
     _render_logo()
     console.print(f"  [{D_COMMENT}]v{__version__}[/]")
 
-    cmd_w = max(
-        len(cmd) for _, entries in HELP_SECTIONS for cmd, _ in entries
-    )
+    cmd_w = max(len(cmd) for _, entries in HELP_SECTIONS for cmd, _ in entries)
 
     for section_title, entries in HELP_SECTIONS:
         console.print()
         console.print(f"  [{D_PINK}]{section_title}[/]")
         for cmd, desc in entries:
-            console.print(
-                f"    [{D_PURPLE}]{cmd:<{cmd_w}}[/]  [{D_COMMENT}]{desc}[/]"
-            )
+            console.print(f"    [{D_PURPLE}]{cmd:<{cmd_w}}[/]  [{D_COMMENT}]{desc}[/]")
 
     console.print()
     console.print(
@@ -217,7 +220,7 @@ app = typer.Typer(
 )
 
 STATUS_ICON = {
-    "ok":   f"[{D_GREEN}]✓[/]",
+    "ok": f"[{D_GREEN}]✓[/]",
     "warn": f"[{D_ORANGE}]⚠[/]",
     "skip": f"[{D_COMMENT}]–[/]",
     "fail": f"[{D_RED}]✗[/]",
@@ -297,12 +300,8 @@ def main(
 
 @app.command()
 def init(
-    only: Optional[str] = typer.Option(
-        None, "--only", help="Comma-separated modules to run, e.g. system,ssh"
-    ),
-    skip: Optional[str] = typer.Option(
-        None, "--skip", help="Comma-separated modules to skip"
-    ),
+    only: Optional[str] = typer.Option(None, "--only", help="Comma-separated modules to run, e.g. system,ssh"),
+    skip: Optional[str] = typer.Option(None, "--skip", help="Comma-separated modules to skip"),
 ) -> None:
     """Set up this machine from scratch."""
     from devlair.modules import MODULES
@@ -355,14 +354,12 @@ def doctor(
 
 @app.command()
 def upgrade(
-    skip_self: bool = typer.Option(
-        False, "--no-self", help="Skip updating the devlair binary."
-    ),
+    skip_self: bool = typer.Option(False, "--no-self", help="Skip updating the devlair binary."),
 ) -> None:
     """Upgrade all tools, re-apply configs, and verify health."""
+    from devlair.context import resolve_invoking_user
     from devlair.features.upgrade import run_upgrade
     from devlair.modules import MODULES, REAPPLY_KEYS
-    from devlair.context import resolve_invoking_user
 
     _elevate_if_needed()
     _print_header("upgrade", "Upgrading your lair")
@@ -372,7 +369,7 @@ def upgrade(
     username, user_home = resolve_invoking_user()
     ctx = SetupContext(username=username, user_home=user_home)
 
-    console.print(f"  [step]Re-applying configurations...[/step]")
+    console.print("  [step]Re-applying configurations...[/step]")
     for key, label, mod in MODULES:
         if key not in REAPPLY_KEYS or not hasattr(mod, "run"):
             continue
@@ -446,15 +443,17 @@ def claw(
 
 @app.command()
 def claude(
-    toggle_1m: Optional[str] = typer.Option(
-        None, "--1m", metavar="on|off", help="Enable or disable 1M-token context."
-    ),
+    toggle_1m: Optional[str] = typer.Option(None, "--1m", metavar="on|off", help="Enable or disable 1M-token context."),
     plan: Optional[str] = typer.Option(
-        None, "--plan", metavar="PLAN",
+        None,
+        "--plan",
+        metavar="PLAN",
         help="Set your subscription tier (pro, max5x, max20x).",
     ),
     channels: bool = typer.Option(
-        False, "--channels", help="Show channel configuration status.",
+        False,
+        "--channels",
+        help="Show channel configuration status.",
     ),
 ) -> None:
     """View Claude Code usage dashboard."""
@@ -465,25 +464,31 @@ def claude(
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
+
 def _hostname() -> str:
     import socket
+
     return socket.gethostname()
 
 
 def _print_summary(results: list[tuple[str, ModuleResult]]) -> None:
-    ok    = sum(1 for _, r in results if r.status == "ok")
-    warn  = sum(1 for _, r in results if r.status == "warn")
-    fail  = sum(1 for _, r in results if r.status == "fail")
-    skip  = sum(1 for _, r in results if r.status == "skip")
+    ok = sum(1 for _, r in results if r.status == "ok")
+    warn = sum(1 for _, r in results if r.status == "warn")
+    fail = sum(1 for _, r in results if r.status == "fail")
+    skip = sum(1 for _, r in results if r.status == "skip")
 
     table = Table(show_header=False, box=None, padding=(0, 2))
     table.add_column(justify="right")
     table.add_column()
 
-    if ok:   table.add_row(f"[success]{ok} ok[/success]",      "")
-    if warn: table.add_row(f"[warning]{warn} warnings[/warning]", "")
-    if fail: table.add_row(f"[error]{fail} failed[/error]",    "")
-    if skip: table.add_row(f"[muted]{skip} skipped[/muted]",   "")
+    if ok:
+        table.add_row(f"[success]{ok} ok[/success]", "")
+    if warn:
+        table.add_row(f"[warning]{warn} warnings[/warning]", "")
+    if fail:
+        table.add_row(f"[error]{fail} failed[/error]", "")
+    if skip:
+        table.add_row(f"[muted]{skip} skipped[/muted]", "")
 
     border = D_GREEN if fail == 0 else D_RED
     console.print()
@@ -491,9 +496,11 @@ def _print_summary(results: list[tuple[str, ModuleResult]]) -> None:
     console.print()
 
     if fail == 0:
-        console.print(f"  [success]Your lair is ready.[/success]  Restart your shell or run [accent]exec zsh[/accent]")
+        console.print("  [success]Your lair is ready.[/success]  Restart your shell or run [accent]exec zsh[/accent]")
     else:
-        console.print(f"  [error]Some modules failed.[/error] Re-run with [accent]--only[/accent] to retry individual steps.")
+        console.print(
+            "  [error]Some modules failed.[/error] Re-run with [accent]--only[/accent] to retry individual steps."
+        )
     console.print()
 
 

@@ -1,8 +1,8 @@
 """Tests for devlair.features.sync — parse_sync_info and remove_sync."""
+
 import getpass
 import textwrap
 from pathlib import Path
-from unittest.mock import call
 
 import pytest
 import typer
@@ -23,22 +23,25 @@ SERVICE_CONTENT = textwrap.dedent("""\
 """)
 
 
-def _create_sync(tmp_home: Path, name: str = "gdrive",
-                 remote: str = "gdrive:docs", local: str = "/home/user/docs") -> Path:
+def _create_sync(
+    tmp_home: Path, name: str = "gdrive", remote: str = "gdrive:docs", local: str = "/home/user/docs"
+) -> Path:
     """Create a fake timer + service pair and return the timer path."""
     systemd_dir = tmp_home / ".config" / "systemd" / "user"
     systemd_dir.mkdir(parents=True, exist_ok=True)
     timer = systemd_dir / f"rclone-{name}.timer"
     service = systemd_dir / f"rclone-{name}.service"
     timer.write_text("[Timer]\nOnBootSec=2min\n")
-    service.write_text(textwrap.dedent(f"""\
+    service.write_text(
+        textwrap.dedent(f"""\
         [Unit]
         Description=rclone bisync {remote} -> {local}
 
         [Service]
         Type=oneshot
         ExecStart=/usr/bin/rclone bisync "{local}" "{remote}"
-    """))
+    """)
+    )
     # Also create a log file
     log_dir = tmp_home / ".local" / "log"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -47,6 +50,7 @@ def _create_sync(tmp_home: Path, name: str = "gdrive",
 
 
 # ── _validate_sync_name ──────────────────────────────────────────────────────
+
 
 def test_validate_sync_name_simple():
     assert _validate_sync_name("store") == "store"
@@ -72,6 +76,7 @@ def test_validate_sync_name_rejects_empty():
 
 # ── parse_sync_info ──────────────────────────────────────────────────────────
 
+
 def test_parse_sync_info(tmp_home):
     timer = _create_sync(tmp_home, name="store")
     sname, rpath, lpath = parse_sync_info(timer)
@@ -92,6 +97,7 @@ def test_parse_sync_info_missing_service(tmp_home):
 
 
 # ── remove_sync ──────────────────────────────────────────────────────────────
+
 
 def test_remove_no_syncs(tmp_home, mock_runner, capsys):
     remove_sync(_USER, tmp_home)
@@ -161,6 +167,7 @@ def test_remove_multiple_syncs(tmp_home, mock_runner, mocker):
 
 
 # ── add_sync rollback ───────────────────────────────────────────────────────
+
 
 def test_add_sync_rolls_back_on_failed_initial_sync(tmp_home, mock_runner, mocker, capsys):
     import subprocess

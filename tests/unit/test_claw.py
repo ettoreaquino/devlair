@@ -1,10 +1,8 @@
 """Tests for devlair.modules.claw and devlair.features.claw."""
+
 import getpass
 import json
 import subprocess
-from pathlib import Path
-
-import pytest
 
 from devlair.features.claw import (
     _read_allowlist,
@@ -13,7 +11,7 @@ from devlair.features.claw import (
     revoke_phone,
     show_status,
 )
-from devlair.modules.claw import DOCKER_COMPOSE, PICOCLAW_CONFIG, PICOCLAW_APP, run, check
+from devlair.modules.claw import check, run
 
 _USER = getpass.getuser()
 
@@ -30,11 +28,9 @@ def test_run_fails_without_docker(ctx, mock_runner):
 
 def test_run_creates_directory_structure(ctx, mock_runner, mocker):
     mocker.patch("devlair.modules.claw.typer.prompt", return_value="sk-ant-test-key")
-    mock_runner["run_shell"].return_value = subprocess.CompletedProcess(
-        args=[], returncode=0, stdout="", stderr=""
-    )
+    mock_runner["run_shell"].return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
 
-    result = run(ctx)
+    run(ctx)
 
     claw_dir = ctx.user_home / ".devlair" / "claw"
     assert claw_dir.exists()
@@ -50,9 +46,7 @@ def test_run_creates_directory_structure(ctx, mock_runner, mocker):
 
 def test_run_env_file_has_restricted_permissions(ctx, mock_runner, mocker):
     mocker.patch("devlair.modules.claw.typer.prompt", return_value="sk-ant-test-key")
-    mock_runner["run_shell"].return_value = subprocess.CompletedProcess(
-        args=[], returncode=0, stdout="", stderr=""
-    )
+    mock_runner["run_shell"].return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
 
     run(ctx)
 
@@ -67,11 +61,9 @@ def test_run_preserves_existing_env(ctx, mock_runner, mocker):
     env_file = claw_dir / ".env"
     env_file.write_text("ANTHROPIC_API_KEY=existing-key\nEVOLUTION_API_KEY=existing-evo\n")
 
-    mock_runner["run_shell"].return_value = subprocess.CompletedProcess(
-        args=[], returncode=0, stdout="", stderr=""
-    )
+    mock_runner["run_shell"].return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
 
-    result = run(ctx)
+    run(ctx)
 
     content = env_file.read_text()
     assert "existing-key" in content
@@ -80,9 +72,7 @@ def test_run_preserves_existing_env(ctx, mock_runner, mocker):
 
 def test_run_compose_yaml_contains_security_settings(ctx, mock_runner, mocker):
     mocker.patch("devlair.modules.claw.typer.prompt", return_value="sk-ant-test-key")
-    mock_runner["run_shell"].return_value = subprocess.CompletedProcess(
-        args=[], returncode=0, stdout="", stderr=""
-    )
+    mock_runner["run_shell"].return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
 
     run(ctx)
 
@@ -92,14 +82,12 @@ def test_run_compose_yaml_contains_security_settings(ctx, mock_runner, mocker):
     assert "cap_drop:" in compose
     assert "ALL" in compose
     assert "no-new-privileges" in compose
-    assert '65534:65534' in compose
+    assert "65534:65534" in compose
 
 
 def test_run_picoclaw_config_blocks_shell_tools(ctx, mock_runner, mocker):
     mocker.patch("devlair.modules.claw.typer.prompt", return_value="sk-ant-test-key")
-    mock_runner["run_shell"].return_value = subprocess.CompletedProcess(
-        args=[], returncode=0, stdout="", stderr=""
-    )
+    mock_runner["run_shell"].return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
 
     run(ctx)
 

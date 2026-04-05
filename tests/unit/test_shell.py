@@ -1,8 +1,7 @@
 """Tests for the shell module — appends aliases to .zshrc."""
-import pytest
-from pathlib import Path
-from devlair.modules import shell
+
 from devlair.context import SetupContext
+from devlair.modules import shell
 
 
 def test_run_creates_zshrc_if_missing(ctx: SetupContext):
@@ -58,6 +57,7 @@ def test_check_ok_when_marker_present(ctx: SetupContext):
     shell.run(ctx)
     # check() reads ~/.zshrc, but we're in a tmp_home — patch Path.home
     import unittest.mock as mock
+
     with mock.patch("pathlib.Path.home", return_value=ctx.user_home):
         items = shell.check()
     assert items[0].status == "ok"
@@ -65,6 +65,7 @@ def test_check_ok_when_marker_present(ctx: SetupContext):
 
 def test_check_warn_when_marker_absent(ctx: SetupContext):
     import unittest.mock as mock
+
     with mock.patch("pathlib.Path.home", return_value=ctx.user_home):
         items = shell.check()
     assert items[0].status == "warn"

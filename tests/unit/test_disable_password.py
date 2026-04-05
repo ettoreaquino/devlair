@@ -1,10 +1,12 @@
 """Tests for the disable-password feature."""
+
 import os
-import pytest
-import typer
-import click
 from pathlib import Path
 from unittest.mock import MagicMock
+
+import click
+import pytest
+
 from devlair.features import disable_password
 
 _EXIT_EXCEPTIONS = (SystemExit, click.exceptions.Exit)
@@ -12,12 +14,7 @@ _EXIT_EXCEPTIONS = (SystemExit, click.exceptions.Exit)
 
 def _write_sshd_conf(path: Path, password_auth: str = "yes") -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        f"ListenAddress 100.1.2.3\n"
-        f"Port 22\n"
-        f"PasswordAuthentication {password_auth}\n"
-        f"AllowUsers testuser\n"
-    )
+    path.write_text(f"ListenAddress 100.1.2.3\nPort 22\nPasswordAuthentication {password_auth}\nAllowUsers testuser\n")
 
 
 def test_exits_when_not_root(mocker):

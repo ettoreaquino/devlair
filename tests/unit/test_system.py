@@ -1,7 +1,7 @@
 """Tests for the system module — validates apt calls are made correctly."""
-import pytest
-from devlair.modules import system
+
 from devlair.context import SetupContext
+from devlair.modules import system
 
 
 def test_run_calls_apt_update(ctx: SetupContext, mock_runner):

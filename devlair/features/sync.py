@@ -2,9 +2,10 @@ import os
 import re
 import shutil
 import textwrap
-import typer
 from pathlib import Path
 from typing import Optional
+
+import typer
 
 from devlair import runner
 from devlair.console import console
@@ -13,6 +14,7 @@ _BISYNC_FLAGS = "--transfers 4 --retries 3 --resilient --create-empty-src-dirs"
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _rclone_bin() -> str:
     return shutil.which("rclone") or "/usr/local/bin/rclone"
@@ -71,6 +73,7 @@ def timer_status(username: str, user_home: Path, timer_name: str) -> tuple[str, 
 
 
 # ── Commands ──────────────────────────────────────────────────────────────────
+
 
 def parse_sync_info(timer: Path) -> tuple[str, str, str]:
     """Return (sync_name, remote_path, local_path) from a timer's service file."""
@@ -149,7 +152,9 @@ def add_sync(username: str, user_home: Path, name: Optional[str] = None) -> None
     # Configure remote if not already present
     existing = _rclone(username, user_home, "listremotes", quiet=True).stdout
     if f"{remote_name}:" not in existing:
-        console.print(f"\n  [info]Launching 'rclone config' — create a remote named '[accent]{remote_name}[/accent]'.[/info]")
+        console.print(
+            f"\n  [info]Launching 'rclone config' — create a remote named '[accent]{remote_name}[/accent]'.[/info]"
+        )
         console.print("  [muted]n (new remote) → name it as above → type: drive → follow prompts.[/muted]\n")
         _rclone(username, user_home, "config")
 
@@ -169,12 +174,13 @@ def add_sync(username: str, user_home: Path, name: Optional[str] = None) -> None
     log_dir = user_home / ".local" / "log"
     log_dir.mkdir(parents=True, exist_ok=True)
 
-    log_file  = log_dir / f"rclone-{name}.log"
+    log_file = log_dir / f"rclone-{name}.log"
     unit_name = f"rclone-{name}"
-    service   = systemd_dir / f"{unit_name}.service"
-    timer     = systemd_dir / f"{unit_name}.timer"
+    service = systemd_dir / f"{unit_name}.service"
+    timer = systemd_dir / f"{unit_name}.timer"
 
-    service.write_text(textwrap.dedent(f"""\
+    service.write_text(
+        textwrap.dedent(f"""\
         [Unit]
         Description=rclone bisync {remote_path} -> {local_path}
         After=network-online.target
@@ -191,9 +197,11 @@ def add_sync(username: str, user_home: Path, name: Optional[str] = None) -> None
             {_BISYNC_FLAGS}
         StandardOutput=journal
         StandardError=journal
-    """))
+    """)
+    )
 
-    timer.write_text(textwrap.dedent("""\
+    timer.write_text(
+        textwrap.dedent("""\
         [Unit]
         Description=Run rclone sync every 5 minutes
 
@@ -204,13 +212,14 @@ def add_sync(username: str, user_home: Path, name: Optional[str] = None) -> None
 
         [Install]
         WantedBy=timers.target
-    """))
+    """)
+    )
 
     for path in [systemd_dir, service, timer, log_dir]:
         _chown(path, username)
 
     runner.run(["loginctl", "enable-linger", username], check=False)
-    _systemctl_user(username, f"daemon-reload", quiet=True)
+    _systemctl_user(username, "daemon-reload", quiet=True)
     _systemctl_user(username, f"enable --now {unit_name}.timer", quiet=True)
 
     # Initial sync — --resync bootstraps the bisync state on first run
@@ -225,7 +234,9 @@ def add_sync(username: str, user_home: Path, name: Optional[str] = None) -> None
         service.unlink(missing_ok=True)
         timer.unlink(missing_ok=True)
         log_file.unlink(missing_ok=True)
-        console.print("  [muted]Systemd units removed. Fix the issue and retry with [accent]devlair sync --add[/accent].[/muted]")
+        console.print(
+            "  [muted]Systemd units removed. Fix the issue and retry with [accent]devlair sync --add[/accent].[/muted]"
+        )
         return
 
     console.print(f"  [success]✓[/success]  {remote_path} ↔ {local_path} (every 5 min)")
@@ -300,8 +311,10 @@ def run_now(username: str, user_home: Path) -> None:
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
+
 def run_sync(add: bool = False, now: bool = False, remove: bool = False, name: str | None = None) -> None:
     from devlair.context import resolve_invoking_user
+
     username, user_home = resolve_invoking_user()
 
     if add:

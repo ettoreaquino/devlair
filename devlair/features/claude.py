@@ -10,9 +10,15 @@ from rich.table import Table
 from rich.text import Text
 
 from devlair.console import (
+    D_COMMENT,
+    D_FG,
+    D_GREEN,
+    D_ORANGE,
+    D_PINK,
+    D_PURPLE,
+    D_RED,
+    D_YELLOW,
     console,
-    D_PURPLE, D_PINK, D_GREEN, D_ORANGE, D_YELLOW,
-    D_COMMENT, D_FG, D_RED,
 )
 from devlair.context import read_json, update_json
 
@@ -22,9 +28,24 @@ DEVLAIR_CONFIG = Path("~/.claude/devlair-config.json")
 
 # Cost per token (USD) — Anthropic pricing as of 2025-08
 MODEL_PRICING: dict[str, dict[str, float]] = {
-    "claude-opus-4-6":          {"input": 15.0 / 1e6, "output": 75.0 / 1e6, "cache_write": 18.75 / 1e6, "cache_read": 1.50 / 1e6},
-    "claude-sonnet-4-6":        {"input":  3.0 / 1e6, "output": 15.0 / 1e6, "cache_write":  3.75 / 1e6, "cache_read": 0.30 / 1e6},
-    "claude-haiku-4-5-20251001":{"input":  0.8 / 1e6, "output":  4.0 / 1e6, "cache_write":  1.00 / 1e6, "cache_read": 0.08 / 1e6},
+    "claude-opus-4-6": {
+        "input": 15.0 / 1e6,
+        "output": 75.0 / 1e6,
+        "cache_write": 18.75 / 1e6,
+        "cache_read": 1.50 / 1e6,
+    },
+    "claude-sonnet-4-6": {
+        "input": 3.0 / 1e6,
+        "output": 15.0 / 1e6,
+        "cache_write": 3.75 / 1e6,
+        "cache_read": 0.30 / 1e6,
+    },
+    "claude-haiku-4-5-20251001": {
+        "input": 0.8 / 1e6,
+        "output": 4.0 / 1e6,
+        "cache_write": 1.00 / 1e6,
+        "cache_read": 0.08 / 1e6,
+    },
 }
 DEFAULT_PRICING = MODEL_PRICING["claude-sonnet-4-6"]
 
@@ -35,8 +56,8 @@ DEFAULT_PRICING = MODEL_PRICING["claude-sonnet-4-6"]
 # 5h window: output tokens per 5-hour rolling window.
 # Weekly: approximate API-rate cost equivalent per 7-day period.
 PLAN_BUDGETS: dict[str, dict[str, float]] = {
-    "pro":    {"5h_output_tokens": 125_000,  "weekly_cost": 1_000.0},
-    "max5x":  {"5h_output_tokens": 625_000,  "weekly_cost": 5_000.0},
+    "pro": {"5h_output_tokens": 125_000, "weekly_cost": 1_000.0},
+    "max5x": {"5h_output_tokens": 625_000, "weekly_cost": 5_000.0},
     "max20x": {"5h_output_tokens": 2_500_000, "weekly_cost": 20_000.0},
 }
 DEFAULT_PLAN = "max5x"
@@ -46,6 +67,7 @@ VALID_PLANS = list(PLAN_BUDGETS.keys())
 @dataclass
 class SessionUsage:
     """Aggregated token/cost data from a single transcript."""
+
     session_id: str = ""
     model: str = ""
     started_at: Optional[datetime] = None
@@ -215,8 +237,8 @@ def _dashboard_panel() -> Panel:
     # Weekly resets mirror Anthropic's web dashboard:
     #   All models  → last Friday  09:00 UTC
     #   Sonnet only → last Monday  09:00 UTC
-    cutoff_fri = _last_weekday_9am(4, now)   # Friday
-    cutoff_mon = _last_weekday_9am(0, now)   # Monday
+    cutoff_fri = _last_weekday_9am(4, now)  # Friday
+    cutoff_mon = _last_weekday_9am(0, now)  # Monday
 
     # Parse all transcripts once back to the earlier of the two cutoffs.
     cutoff_parse = min(cutoff_fri, cutoff_mon) - timedelta(hours=5)  # also covers 5h window
@@ -258,13 +280,25 @@ def _dashboard_panel() -> Panel:
         cost_str = f"${cost:.0f}" if cost >= 100 else f"${cost:.2f}"
         return f" [{D_YELLOW}]~{cost_str}[/]  [{D_GREEN}]{_fmt_tokens(in_t)}[/] [{D_COMMENT}]in[/] [{D_ORANGE}]{_fmt_tokens(out_t)}[/] [{D_COMMENT}]out[/]"
 
-    table.add_row("session", _bar(pct_5h), f"[bold]{pct_5h * 100:.0f}%[/]", _detail(w5h.cost, w5h.in_tokens, w5h.out_tokens))
+    table.add_row(
+        "session", _bar(pct_5h), f"[bold]{pct_5h * 100:.0f}%[/]", _detail(w5h.cost, w5h.in_tokens, w5h.out_tokens)
+    )
     table.add_row("", "", "", f" [{D_COMMENT}]{reset_str}[/]")
     table.add_row("", "", "", "")
-    table.add_row("all models", _bar(pct_wk_all), f"[bold]{pct_wk_all * 100:.0f}%[/]", _detail(wk_all.cost, wk_all.in_tokens, wk_all.out_tokens))
+    table.add_row(
+        "all models",
+        _bar(pct_wk_all),
+        f"[bold]{pct_wk_all * 100:.0f}%[/]",
+        _detail(wk_all.cost, wk_all.in_tokens, wk_all.out_tokens),
+    )
     table.add_row("", "", "", f" [{D_COMMENT}]{fri_reset_str}  ·  {wk_all.sessions} sessions[/]")
     table.add_row("", "", "", "")
-    table.add_row("sonnet only", _bar(pct_wk_son), f"[bold]{pct_wk_son * 100:.0f}%[/]", _detail(wk_son.cost, wk_son.in_tokens, wk_son.out_tokens))
+    table.add_row(
+        "sonnet only",
+        _bar(pct_wk_son),
+        f"[bold]{pct_wk_son * 100:.0f}%[/]",
+        _detail(wk_son.cost, wk_son.in_tokens, wk_son.out_tokens),
+    )
     table.add_row("", "", "", f" [{D_COMMENT}]{mon_reset_str}  ·  {wk_son.sessions} sessions[/]")
 
     title = Text()
@@ -283,26 +317,25 @@ def _show_channels() -> None:
     channels_enabled = data.get("channelsEnabled") is True
     allowed_plugins = data.get("allowedChannelPlugins", [])
     wrapper_exists = Path("~/.devlair/bin/claude-telegram").expanduser().exists()
-    bun_ok = (
-        Path("~/.bun/bin/bun").expanduser().exists()
-        or bool(__import__("shutil").which("bun"))
-    )
+    bun_ok = Path("~/.bun/bin/bun").expanduser().exists() or bool(__import__("shutil").which("bun"))
     token_configured = Path("~/.claude/channels/telegram/.env").expanduser().exists()
 
     # Check if plugin is installed
     import shutil as _shutil
     import subprocess as _subprocess
+
     plugin_installed = False
     if _shutil.which("claude"):
         try:
             result = _subprocess.run(
                 ["claude", "plugin", "list", "--json"],
-                capture_output=True, text=True, check=False,
+                capture_output=True,
+                text=True,
+                check=False,
             )
             plugins = json.loads(result.stdout) if result.returncode == 0 else []
             plugin_installed = any(
-                p.get("name") == "telegram" and p.get("marketplace") == "claude-plugins-official"
-                for p in plugins
+                p.get("name") == "telegram" and p.get("marketplace") == "claude-plugins-official" for p in plugins
             )
         except (json.JSONDecodeError, OSError):
             pass
@@ -321,8 +354,11 @@ def _show_channels() -> None:
     def _warn(label: str, fix: str) -> str:
         return f"  [{D_RED}]○[/] {label}  [{D_RED}]missing[/]  — {fix}"
 
-    rows.append(_ok("channelsEnabled") if channels_enabled
-                else _warn("channelsEnabled", f"run [bold]sudo devlair init --only claude[/bold]"))
+    rows.append(
+        _ok("channelsEnabled")
+        if channels_enabled
+        else _warn("channelsEnabled", "run [bold]sudo devlair init --only claude[/bold]")
+    )
 
     if allowed_plugins:
         rows.append(f"  [{D_COMMENT}]allowed plugins:[/]")
@@ -331,29 +367,47 @@ def _show_channels() -> None:
             name = p.get("plugin", "?")
             rows.append(f"    [{D_FG}]{name}[/]  [{D_COMMENT}]@ {mkt}[/]")
     else:
-        rows.append(f"  [{D_RED}]○[/] allowed plugins  [{D_RED}]none[/]  — run [bold]sudo devlair init --only claude[/bold]")
+        rows.append(
+            f"  [{D_RED}]○[/] allowed plugins  [{D_RED}]none[/]  — run [bold]sudo devlair init --only claude[/bold]"
+        )
 
-    rows.append(_ok("telegram plugin") if plugin_installed
-                else _warn("telegram plugin", "run [bold]sudo devlair init --only claude[/bold]"))
+    rows.append(
+        _ok("telegram plugin")
+        if plugin_installed
+        else _warn("telegram plugin", "run [bold]sudo devlair init --only claude[/bold]")
+    )
 
-    rows.append(_ok("claude-telegram wrapper") if wrapper_exists
-                else _warn("claude-telegram", "run [bold]sudo devlair init --only claude[/bold]"))
+    rows.append(
+        _ok("claude-telegram wrapper")
+        if wrapper_exists
+        else _warn("claude-telegram", "run [bold]sudo devlair init --only claude[/bold]")
+    )
 
-    rows.append(_ok("bun") if bun_ok
-                else _warn("bun", "run [bold]sudo devlair init --only devtools[/bold]  (required for plugins)"))
+    rows.append(
+        _ok("bun")
+        if bun_ok
+        else _warn("bun", "run [bold]sudo devlair init --only devtools[/bold]  (required for plugins)")
+    )
 
-    rows.append(_ok("telegram token") if token_configured
-                else f"  [{D_ORANGE}]○[/] telegram token  [{D_ORANGE}]not set[/]  — see step 1 below")
+    rows.append(
+        _ok("telegram token")
+        if token_configured
+        else f"  [{D_ORANGE}]○[/] telegram token  [{D_ORANGE}]not set[/]  — see step 1 below"
+    )
 
     # ── Setup guide ────────────────────────────────────────────────────────────
     rows.append("")
     rows.append(f"  [{D_COMMENT}]Setup (one-time):[/]")
-    rows.append(f"    [{D_COMMENT}]1.[/] Create a bot: open Telegram → [{D_FG}]@BotFather[/] → [{D_FG}]/newbot[/] → copy token")
+    rows.append(
+        f"    [{D_COMMENT}]1.[/] Create a bot: open Telegram → [{D_FG}]@BotFather[/] → [{D_FG}]/newbot[/] → copy token"
+    )
     rows.append(f"    [{D_COMMENT}]2.[/] Configure your token (inside any Claude Code session):[/]")
     rows.append(f"         [{D_FG}]/telegram:configure <token>[/]")
     rows.append(f"    [{D_COMMENT}]3.[/] Launch with channels:[/]")
     rows.append(f"         [{D_FG}]claude-telegram[/]")
-    rows.append(f"    [{D_COMMENT}]4.[/] Pair: message your bot in Telegram → it replies with a code → in Claude Code:[/]")
+    rows.append(
+        f"    [{D_COMMENT}]4.[/] Pair: message your bot in Telegram → it replies with a code → in Claude Code:[/]"
+    )
     rows.append(f"         [{D_FG}]/telegram:access pair <code>[/]")
     rows.append(f"         [{D_FG}]/telegram:access policy allowlist[/]")
 

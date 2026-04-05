@@ -7,9 +7,9 @@ from pathlib import Path
 
 import typer
 
-from devlair.context import CheckItem, ModuleResult, SetupContext
 from devlair import runner
 from devlair.console import console
+from devlair.context import CheckItem, ModuleResult, SetupContext
 
 LABEL = "PicoCLAW Agent"
 
@@ -376,15 +376,19 @@ def run(ctx: SetupContext) -> ModuleResult:
 
     if not evolution_key:
         import secrets as _secrets
+
         evolution_key = _secrets.token_urlsafe(32)
-        console.print(f"  [muted]Generated Evolution API key.[/muted]")
+        console.print("  [muted]Generated Evolution API key.[/muted]")
 
     postgres_pw = existing_env.get("POSTGRES_PASSWORD", "")
     if not postgres_pw:
         import secrets as _secrets
+
         postgres_pw = _secrets.token_urlsafe(24)
 
-    env_content = f"ANTHROPIC_API_KEY={anthropic_key}\nEVOLUTION_API_KEY={evolution_key}\nPOSTGRES_PASSWORD={postgres_pw}\n"
+    env_content = (
+        f"ANTHROPIC_API_KEY={anthropic_key}\nEVOLUTION_API_KEY={evolution_key}\nPOSTGRES_PASSWORD={postgres_pw}\n"
+    )
     env_file.write_text(env_content)
     env_file.chmod(stat.S_IRUSR | stat.S_IWUSR)  # 0600
 
@@ -393,13 +397,15 @@ def run(ctx: SetupContext) -> ModuleResult:
 
     # UFW rule for Tailscale access
     from devlair.modules.firewall import add_ufw_rule
+
     add_ufw_rule(UFW_RULE, UFW_COMMENT)
 
     # Build picoclaw image, pull evolution image, and start stack
     console.print("  [muted]Building and starting claw stack...[/muted]")
     up_result = runner.run_shell(
         f'cd "{claw_dir}" && docker compose up -d --build',
-        quiet=True, check=False,
+        quiet=True,
+        check=False,
     )
     if up_result.returncode != 0:
         return ModuleResult(status="warn", detail="compose up failed — check docker logs")
@@ -414,11 +420,13 @@ def check() -> list[CheckItem]:
 
     # Skip all checks if claw is not provisioned
     if not (claw_dir / "docker-compose.yml").exists():
-        items.append(CheckItem(
-            label="claw provisioned",
-            status="warn",
-            detail="not configured — run devlair init --only claw",
-        ))
+        items.append(
+            CheckItem(
+                label="claw provisioned",
+                status="warn",
+                detail="not configured — run devlair init --only claw",
+            )
+        )
         return items
 
     # Container health — single inspect per container
@@ -430,11 +438,13 @@ def check() -> list[CheckItem]:
             info = {}
 
         status = info.get("State", {}).get("Status", "")
-        items.append(CheckItem(
-            label=f"{name} container",
-            status="ok" if status == "running" else "fail",
-            detail=status or "not found",
-        ))
+        items.append(
+            CheckItem(
+                label=f"{name} container",
+                status="ok" if status == "running" else "fail",
+                detail=status or "not found",
+            )
+        )
 
         if name != "picoclaw":
             continue
@@ -442,54 +452,63 @@ def check() -> list[CheckItem]:
         # Security checks from the same inspect payload
         user = info.get("Config", {}).get("User", "")
         non_root = user not in ("", "0", "root")
-        items.append(CheckItem(
-            label="picoclaw non-root",
-            status="ok" if non_root else "fail",
-            detail=f"user={user}" if user else "not set",
-        ))
+        items.append(
+            CheckItem(
+                label="picoclaw non-root",
+                status="ok" if non_root else "fail",
+                detail=f"user={user}" if user else "not set",
+            )
+        )
 
         host_cfg = info.get("HostConfig", {})
         ro = host_cfg.get("ReadonlyRootfs", False)
-        items.append(CheckItem(
-            label="picoclaw read-only rootfs",
-            status="ok" if ro else "fail",
-            detail="enabled" if ro else "disabled",
-        ))
+        items.append(
+            CheckItem(
+                label="picoclaw read-only rootfs",
+                status="ok" if ro else "fail",
+                detail="enabled" if ro else "disabled",
+            )
+        )
 
         cap_drop = host_cfg.get("CapDrop") or []
-        items.append(CheckItem(
-            label="picoclaw cap_drop ALL",
-            status="ok" if "ALL" in cap_drop else "fail",
-            detail=str(cap_drop) if cap_drop else "none",
-        ))
+        items.append(
+            CheckItem(
+                label="picoclaw cap_drop ALL",
+                status="ok" if "ALL" in cap_drop else "fail",
+                detail=str(cap_drop) if cap_drop else "none",
+            )
+        )
 
         bind_mounts = [m for m in info.get("Mounts", []) if m.get("Type") == "bind"]
         _EXPECTED_DESTS = {"/agent-data", "/etc/picoclaw/config.yml", "/etc/picoclaw/allowlist.json"}
-        agent_data_only = all(
-            m.get("Destination", "").rstrip("/") in _EXPECTED_DESTS
-            for m in bind_mounts
-        )
+        agent_data_only = all(m.get("Destination", "").rstrip("/") in _EXPECTED_DESTS for m in bind_mounts)
         docker_socket = any("/var/run/docker.sock" in m.get("Source", "") for m in bind_mounts)
-        items.append(CheckItem(
-            label="no docker socket mount",
-            status="ok" if not docker_socket else "fail",
-            detail="clean" if not docker_socket else "DOCKER SOCKET MOUNTED",
-        ))
-        items.append(CheckItem(
-            label="only expected bind mounts",
-            status="ok" if agent_data_only else "warn",
-            detail="agent-data + config only" if agent_data_only else f"{len(bind_mounts)} bind mount(s)",
-        ))
+        items.append(
+            CheckItem(
+                label="no docker socket mount",
+                status="ok" if not docker_socket else "fail",
+                detail="clean" if not docker_socket else "DOCKER SOCKET MOUNTED",
+            )
+        )
+        items.append(
+            CheckItem(
+                label="only expected bind mounts",
+                status="ok" if agent_data_only else "warn",
+                detail="agent-data + config only" if agent_data_only else f"{len(bind_mounts)} bind mount(s)",
+            )
+        )
 
     # .env permissions
     env_file = claw_dir / ".env"
     if env_file.exists():
         mode = oct(env_file.stat().st_mode & 0o777)
-        items.append(CheckItem(
-            label=".env permissions",
-            status="ok" if mode == "0o600" else "fail",
-            detail=mode,
-        ))
+        items.append(
+            CheckItem(
+                label=".env permissions",
+                status="ok" if mode == "0o600" else "fail",
+                detail=mode,
+            )
+        )
     else:
         items.append(CheckItem(label=".env permissions", status="fail", detail="missing"))
 
@@ -501,33 +520,39 @@ def check() -> list[CheckItem]:
         phones = []
     if not isinstance(phones, list):
         phones = []
-    items.append(CheckItem(
-        label="sender allowlist",
-        status="ok" if phones else "warn",
-        detail=f"{len(phones)} number(s)" if phones else "empty — add with devlair claw --allow",
-    ))
+    items.append(
+        CheckItem(
+            label="sender allowlist",
+            status="ok" if phones else "warn",
+            detail=f"{len(phones)} number(s)" if phones else "empty — add with devlair claw --allow",
+        )
+    )
 
     # Verify dangerous tools are only in blocked_tools, not in allowed_tools
     config_file = claw_dir / "picoclaw.yml"
     if config_file.exists():
         try:
             import yaml
+
             cfg = yaml.safe_load(config_file.read_text()) or {}
         except Exception:
             cfg = {}
         allowed = cfg.get("mcp", {}).get("allowed_tools", [])
         dangerous = {"shell", "exec", "bash", "terminal", "filesystem_browse"}
         leaked = dangerous & set(allowed)
-        items.append(CheckItem(
-            label="no shell/exec MCP tools",
-            status="ok" if not leaked else "fail",
-            detail="clean" if not leaked else f"dangerous in allowed_tools: {leaked}",
-        ))
+        items.append(
+            CheckItem(
+                label="no shell/exec MCP tools",
+                status="ok" if not leaked else "fail",
+                detail="clean" if not leaked else f"dangerous in allowed_tools: {leaked}",
+            )
+        )
 
     return items
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────
+
 
 def _parse_env(path: Path) -> dict[str, str]:
     """Parse a simple KEY=VALUE .env file."""
@@ -543,5 +568,3 @@ def _parse_env(path: Path) -> dict[str, str]:
         key, _, value = line.partition("=")
         env[key.strip()] = value.strip()
     return env
-
-

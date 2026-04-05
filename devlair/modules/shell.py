@@ -2,7 +2,6 @@ import shutil
 from pathlib import Path
 
 from devlair.context import CheckItem, ModuleResult, SetupContext
-from devlair import runner
 
 LABEL = "Shell aliases"
 
@@ -190,8 +189,8 @@ def _clean_zshrc(text: str) -> str:
     skip_patterns = [
         '. "$HOME/.local/bin/env"',
         "export NVM_DIR=",
-        "\\. \"$NVM_DIR/nvm.sh\"",
-        "\\. \"$NVM_DIR/bash_completion\"",
+        '\\. "$NVM_DIR/nvm.sh"',
+        '\\. "$NVM_DIR/bash_completion"',
         "# This loads nvm",
         "export BUN_INSTALL=",
         '[ -s "$BUN_INSTALL/bin/bun" ]',
@@ -217,7 +216,7 @@ def run(ctx: SetupContext) -> ModuleResult:
 
     if MARKER in existing:
         # Clean any third-party pollution and refresh the aliases block
-        header = existing[:existing.index(MARKER)]
+        header = existing[: existing.index(MARKER)]
         header = _clean_zshrc(header)
         zshrc.write_text(header + ZSHRC_ALIASES.lstrip("\n"))
         shutil.chown(zshrc, ctx.username, ctx.username)
