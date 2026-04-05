@@ -1,21 +1,278 @@
 import os
 import pwd
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 from typing import Optional
 
 import typer
+import typer.core
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
 from devlair import __version__
-from devlair.console import console, D_PURPLE, D_PINK, D_GREEN, D_RED, D_ORANGE, D_COMMENT
+from devlair.console import (
+    console, D_PURPLE, D_PINK, D_GREEN, D_RED, D_ORANGE, D_COMMENT, D_CYAN, D_FG,
+)
 from devlair.context import ModuleResult, SetupContext
+
+
+# ── logo ──────────────────────────────────────────────────────────────────────
+
+def _logo_full() -> list[Text]:
+    """Full logo — 7 rows, 52 visible columns (2 indent + 50 box)."""
+    W = 48                     # inner width between │ chars
+    border = "─" * W
+
+    grad   = "░░▒▒▓▓██"       # 8 chars
+    grad_r = "██▓▓▒▒░░"       # 8 chars
+    gap    = W - len(grad) - len(grad_r) - 4  # 28
+
+    name  = "d e v l a i r"   # 13 chars
+    iw    = len(name) + 4      # 17  (║ + space + name + space + ║)
+    ib    = "═" * (iw - 2)     # 15
+    itop  = f"╔{ib}╗"
+    ibot  = f"╚{ib}╝"
+    pt    = (W - iw) // 2      # left padding inside outer box
+    pr    = W - iw - pt        # right padding
+
+    lines: list[Text] = []
+
+    # top border
+    t = Text()
+    t.append("  ╭", style=D_PURPLE)
+    t.append(border, style=D_PURPLE)
+    t.append("╮", style=D_PURPLE)
+    lines.append(t)
+
+    # gradient row
+    def _grad_row() -> Text:
+        t = Text()
+        t.append("  │", style=D_PURPLE)
+        t.append("  ")
+        t.append(grad, style=D_COMMENT)
+        t.append(" " * gap)
+        t.append(grad_r, style=D_COMMENT)
+        t.append("  ")
+        t.append("│", style=D_PURPLE)
+        return t
+
+    lines.append(_grad_row())
+
+    # inner box — top
+    t = Text()
+    t.append("  │", style=D_PURPLE)
+    t.append(" " * pt)
+    t.append(itop, style=D_PINK)
+    t.append(" " * pr)
+    t.append("│", style=D_PURPLE)
+    lines.append(t)
+
+    # inner box — name
+    t = Text()
+    t.append("  │", style=D_PURPLE)
+    t.append(" " * pt)
+    t.append("║ ", style=D_PINK)
+    t.append(name, style=f"bold {D_FG}")
+    t.append(" ║", style=D_PINK)
+    t.append(" " * pr)
+    t.append("│", style=D_PURPLE)
+    lines.append(t)
+
+    # inner box — bottom
+    t = Text()
+    t.append("  │", style=D_PURPLE)
+    t.append(" " * pt)
+    t.append(ibot, style=D_PINK)
+    t.append(" " * pr)
+    t.append("│", style=D_PURPLE)
+    lines.append(t)
+
+    # gradient row (repeated)
+    lines.append(_grad_row())
+
+    # bottom border
+    t = Text()
+    t.append("  ╰", style=D_PURPLE)
+    t.append(border, style=D_PURPLE)
+    t.append("╯", style=D_PURPLE)
+    lines.append(t)
+
+    return lines
+
+
+def _logo_medium() -> list[Text]:
+    """Medium logo — 3 rows, 42 visible columns."""
+    W = 38
+    border = "─" * W
+
+    grad   = "░▒▓█"            # 4 chars
+    grad_r = "█▓▒░"            # 4 chars
+    name   = "d e v l a i r"   # 13 chars
+    content_w = len(grad) + 2 + len(name) + 2 + len(grad_r)  # 25
+    pt = (W - content_w) // 2
+    pr = W - content_w - pt
+
+    lines: list[Text] = []
+
+    t = Text()
+    t.append("  ╭", style=D_PURPLE)
+    t.append(border, style=D_PURPLE)
+    t.append("╮", style=D_PURPLE)
+    lines.append(t)
+
+    t = Text()
+    t.append("  │", style=D_PURPLE)
+    t.append(" " * pt)
+    t.append(grad, style=D_COMMENT)
+    t.append("  ")
+    t.append(name, style=f"bold {D_FG}")
+    t.append("  ")
+    t.append(grad_r, style=D_COMMENT)
+    t.append(" " * pr)
+    t.append("│", style=D_PURPLE)
+    lines.append(t)
+
+    t = Text()
+    t.append("  ╰", style=D_PURPLE)
+    t.append(border, style=D_PURPLE)
+    t.append("╯", style=D_PURPLE)
+    lines.append(t)
+
+    return lines
+
+
+def _logo_short() -> list[Text]:
+    """Short logo — 3 rows, 24 visible columns."""
+    W = 20
+    border = "─" * W
+    name = "d e v l a i r"    # 13 chars
+    pt = (W - len(name)) // 2
+    pr = W - len(name) - pt
+
+    lines: list[Text] = []
+
+    t = Text()
+    t.append("  ╭", style=D_PURPLE)
+    t.append(border, style=D_PURPLE)
+    t.append("╮", style=D_PURPLE)
+    lines.append(t)
+
+    t = Text()
+    t.append("  │", style=D_PURPLE)
+    t.append(" " * pt)
+    t.append(name, style=f"bold {D_FG}")
+    t.append(" " * pr)
+    t.append("│", style=D_PURPLE)
+    lines.append(t)
+
+    t = Text()
+    t.append("  ╰", style=D_PURPLE)
+    t.append(border, style=D_PURPLE)
+    t.append("╯", style=D_PURPLE)
+    lines.append(t)
+
+    return lines
+
+
+def _render_logo() -> None:
+    """Print the devlair logo, adapting to terminal width."""
+    if console.color_system is None:
+        console.print("[bold]devlair[/bold]")
+        return
+
+    width = shutil.get_terminal_size().columns
+
+    if width >= 54:
+        lines = _logo_full()
+    elif width >= 44:
+        lines = _logo_medium()
+    else:
+        lines = _logo_short()
+
+    for line in lines:
+        console.print(line)
+
+
+# ── custom help ───────────────────────────────────────────────────────────────
+
+HELP_SECTIONS = [
+    (
+        "Setup & Health",
+        [
+            ("init [--only MOD] [--skip MOD]", "Set up this machine from scratch"),
+            ("doctor [--fix]", "Check system health & fix drift"),
+            ("upgrade [--no-self]", "Upgrade tools & re-apply configs"),
+            ("disable-password", "Lock SSH to key-only auth"),
+        ],
+    ),
+    (
+        "Cloud & Filesystem",
+        [
+            ("sync [--add|--remove|--now]", "Manage rclone folder syncs"),
+            ("filesystem", "AI-guided folder structure design"),
+        ],
+    ),
+    (
+        "AI Agents & Channels",
+        [
+            ("claude [--plan TIER] [--1m on|off]", "Usage dashboard & config"),
+            ("claw [--pair|--start|--stop]", "PicoCLAW WhatsApp agent"),
+        ],
+    ),
+    (
+        "tmux Sessions",
+        [
+            ("t", "Start/attach default 'dev' session"),
+            ("tmx <name>", "Attach to a named session"),
+            ("tmx new --name N", "Create a plain session"),
+            ("tmx new --name N --claude", "Session with Claude Code"),
+            ("tmx new --name N --claude-telegram", "Create Telegram channel"),
+            ("Ctrl+A  y", "Claude Code popup (any session)"),
+        ],
+    ),
+]
+
+
+def _render_help() -> None:
+    console.print()
+    _render_logo()
+    console.print(f"  [{D_COMMENT}]v{__version__}[/]")
+
+    cmd_w = max(
+        len(cmd) for _, entries in HELP_SECTIONS for cmd, _ in entries
+    )
+
+    for section_title, entries in HELP_SECTIONS:
+        console.print()
+        console.print(f"  [{D_PINK}]{section_title}[/]")
+        for cmd, desc in entries:
+            console.print(
+                f"    [{D_PURPLE}]{cmd:<{cmd_w}}[/]  [{D_COMMENT}]{desc}[/]"
+            )
+
+    console.print()
+    console.print(
+        f"  [{D_COMMENT}]Options:  "
+        f"[{D_CYAN}]--version[/] [{D_COMMENT}]-v[/]  "
+        f"[{D_COMMENT}]Show version    "
+        f"[{D_CYAN}]--help[/]  [{D_COMMENT}]Show this screen[/]"
+    )
+    console.print()
+
+
+class DevlairGroup(typer.core.TyperGroup):
+    """Override the default Typer help to show grouped panels."""
+
+    def format_help(self, ctx: typer.Context, formatter: typer.core.click.HelpFormatter) -> None:
+        _render_help()
+
 
 app = typer.Typer(
     name="devlair",
+    cls=DevlairGroup,
     help="Set up your dev lair from scratch.",
     add_completion=False,
     no_args_is_help=True,

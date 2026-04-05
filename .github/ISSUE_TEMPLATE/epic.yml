@@ -1,0 +1,37 @@
+name: Epic
+description: A multi-issue initiative tracking a larger goal.
+labels: ["epic"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is this epic about? One paragraph.
+    validations:
+      required: true
+
+  - type: textarea
+    id: goals
+    attributes:
+      label: Goals
+      description: What does "done" look like?
+      placeholder: |
+        - [ ] Goal 1
+        - [ ] Goal 2
+    validations:
+      required: true
+
+  - type: textarea
+    id: tasks
+    attributes:
+      label: Child issues / tasks
+      description: Break the work into trackable pieces. Link issues as they're created.
+      placeholder: |
+        - [ ] #NNN — description
+        - [ ] #NNN — description
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context & constraints
+      description: Dependencies, deadlines, architectural decisions, or anything else relevant.

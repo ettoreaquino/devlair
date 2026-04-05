@@ -1,6 +1,10 @@
 <div align="center">
 
-# devlair
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/logo.svg">
+  <source media="(prefers-color-scheme: light)" srcset="assets/logo-light.svg">
+  <img alt="devlair" src="assets/logo.svg" width="480">
+</picture>
 
 **One command to provision a fully configured Ubuntu development machine.**
 
@@ -10,13 +14,13 @@
 [![Arch](https://img.shields.io/badge/arch-x86__64_%7C_aarch64-blue?style=flat-square)](https://github.com/ettoreaquino/devlair/releases/latest)
 [![License](https://img.shields.io/github/license/ettoreaquino/devlair?style=flat-square)](LICENSE)
 
-devlair automates the setup of a fresh Ubuntu server or workstation — installing tools,
-hardening security, configuring shell and terminal with the [Dracula](https://draculatheme.com) theme,
-and wiring up dev toolchains. Run it once on a fresh machine or re-run anytime to converge.
-
 </div>
 
 ---
+
+devlair automates the setup of a fresh Ubuntu server or workstation — installing tools,
+hardening security, configuring shell and terminal with the [Dracula](https://draculatheme.com) theme,
+and wiring up dev toolchains. Run it once on a fresh machine or re-run anytime to converge.
 
 ## Quick start
 
@@ -55,7 +59,44 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
 </tr>
 </table>
 
-## Usage
+## Commands
+
+```
+╭────────────────────────────────────────────────╮
+│  ░░▒▒▓▓██                            ██▓▓▒▒░░  │
+│               ╔═══════════════╗                │
+│               ║ d e v l a i r ║                │
+│               ╚═══════════════╝                │
+│  ░░▒▒▓▓██                            ██▓▓▒▒░░  │
+╰────────────────────────────────────────────────╯
+  v0.7.0
+
+  Setup & Health
+    init [--only MOD] [--skip MOD]      Set up this machine from scratch
+    doctor [--fix]                      Check system health & fix drift
+    upgrade [--no-self]                 Upgrade tools & re-apply configs
+    disable-password                    Lock SSH to key-only auth
+
+  Cloud & Filesystem
+    sync [--add|--remove|--now]         Manage rclone folder syncs
+    filesystem                          AI-guided folder structure design
+
+  AI Agents & Channels
+    claude [--plan TIER] [--1m on|off]  Usage dashboard & config
+    claw [--pair|--start|--stop]        PicoCLAW WhatsApp agent
+
+  tmux Sessions
+    t                                   Start/attach default 'dev' session
+    tmx <name>                          Attach to a named session
+    tmx new --name N                    Create a plain session
+    tmx new --name N --claude           Session with Claude Code
+    tmx new --name N --claude-telegram  Create Telegram channel
+    Ctrl+A  y                           Claude Code popup (any session)
+
+  Options:  --version -v  Show version    --help  Show this screen
+```
+
+## Usage examples
 
 ```bash
 # Full setup from scratch
@@ -75,29 +116,16 @@ devlair doctor --fix
 
 # Upgrade all tools + re-apply configs + update devlair itself
 devlair upgrade
+```
 
-# Upgrade tools only (skip devlair binary update)
-devlair upgrade --no-self
+<details>
+<summary><b>Cloud sync</b></summary>
 
-# Disable SSH password auth (key-only)
-devlair disable-password
-
-# AI-guided folder structure (requires Claude CLI)
-devlair filesystem
-
-# Claude Code usage dashboard
-devlair claude
-
-# Set your Claude Max plan tier
-devlair claude --plan max5x
-
-# Show Telegram channel configuration
-devlair claude --channels
-
+```bash
 # Show configured cloud syncs and timer status
 devlair sync
 
-# Configure a new cloud folder sync (interactive — prompts for name, remote, local path)
+# Configure a new cloud folder sync (interactive)
 devlair sync --add
 
 # Configure with a preset name
@@ -106,13 +134,36 @@ devlair sync --add --name store
 # Run all syncs immediately
 devlair sync --now
 
-# Remove a configured sync (interactive)
+# Remove a configured sync
 devlair sync --remove
 
 # Remove a specific sync by name
 devlair sync --remove --name store
+```
 
-# PicoCLAW — WhatsApp AI agent status
+</details>
+
+<details>
+<summary><b>Claude Code dashboard</b></summary>
+
+```bash
+# Claude Code usage dashboard
+devlair claude
+
+# Set your Claude Max plan tier
+devlair claude --plan max5x
+
+# Show Telegram channel configuration
+devlair claude --channels
+```
+
+</details>
+
+<details>
+<summary><b>PicoCLAW (WhatsApp agent)</b></summary>
+
+```bash
+# Status dashboard
 devlair claw
 
 # Pair WhatsApp via QR code
@@ -132,7 +183,29 @@ devlair claw --stop
 devlair claw --logs
 ```
 
-Commands that need root automatically elevate with `sudo`.
+</details>
+
+<details>
+<summary><b>tmux sessions</b></summary>
+
+```bash
+# Start/attach default session
+t
+
+# Attach to a named session
+tmx work
+
+# Create a new session
+tmx new --name work
+
+# Create session with Claude Code running
+tmx new --name work --claude
+
+# Create a Telegram bot session
+tmx new --name support --claude-telegram
+```
+
+</details>
 
 ## Claude Code integration
 
@@ -262,18 +335,7 @@ Generates an `ed25519` SSH key for GitHub, configures `~/.ssh/config`, tests the
 <details>
 <summary><b>Shell</b> — aliases + login banner</summary>
 
-Appends aliases to `.zshrc` (`ll`, `..`, `ports`, `dps`, `t` for tmux, `bcat` → `bat`, etc.) and a `tmx` command for session management:
-
-```bash
-tmx <name>                          # attach to existing session
-tmx new --name <name>               # create and attach (plain shell)
-tmx new --name <name> --claude      # create and attach with Claude Code running
-tmx new --name <name> --claude-telegram  # create a named Telegram bot session
-```
-
-`--claude-telegram` prompts for a bot token, creates an isolated state directory at `~/.claude/channels/telegram-<name>/`, registers the session in a manifest, and launches `claude-telegram` with `TELEGRAM_STATE_DIR` set — so each session has its own bot, allowlist, and pairing codes.
-
-The login banner shows live tmux sessions and named channel sessions:
+Appends aliases to `.zshrc` (`ll`, `..`, `ports`, `dps`, `t` for tmux, `bcat` → `bat`, etc.) and a `tmx` command for session management. The login banner shows live tmux sessions and named channel sessions:
 
 ```
 ╭─ myhost ──────────────────────────────────────╮
@@ -326,13 +388,7 @@ Provisions a two-container stack: [Evolution API](https://github.com/EvolutionAP
 devlair doctor
 ```
 
-Verifies every component without making changes — checks installed tools, config files, service status, and SSH connectivity. Useful after setup or to audit an existing machine.
-
-Use `--fix` to automatically re-apply configurations and install missing dev tools for modules with detected drift:
-
-```bash
-devlair doctor --fix
-```
+Verifies every component without making changes — checks installed tools, config files, service status, and SSH connectivity. Use `--fix` to automatically re-apply configurations and install missing dev tools for modules with detected drift.
 
 ## Upgrading
 
@@ -376,6 +432,9 @@ devlair/
   console.py            # Rich console + Dracula color tokens
   modules/              # one file per init module (14 modules)
   features/             # doctor, upgrade, disable-password, filesystem, claude, sync, claw
+assets/
+  logo.svg              # brand mark (dark background)
+  logo-light.svg        # brand mark (light background variant)
 install.sh              # curl-pipe installer
 ```
 
