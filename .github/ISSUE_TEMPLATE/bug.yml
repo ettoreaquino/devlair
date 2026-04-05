@@ -1,0 +1,56 @@
+name: Bug Report
+description: Report something that isn't working correctly.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened? What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps to trigger the bug.
+      placeholder: |
+        1. Run `devlair init --only ssh`
+        2. ...
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: devlair version
+      description: Output of `devlair --version`.
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Platform
+      options:
+        - Ubuntu 24.04 (native)
+        - Ubuntu 24.04 (WSL)
+        - macOS
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: arch
+    attributes:
+      label: Architecture
+      placeholder: "x86_64 or aarch64"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output / logs
+      description: Paste terminal output, error messages, or `devlair doctor` results.
+      render: shell

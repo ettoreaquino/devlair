@@ -1,21 +1,215 @@
 import os
 import pwd
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 from typing import Optional
 
 import typer
+import typer.core
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
 from devlair import __version__
-from devlair.console import console, D_PURPLE, D_PINK, D_GREEN, D_RED, D_ORANGE, D_COMMENT
+from devlair.console import (
+    console, D_PURPLE, D_PINK, D_GREEN, D_RED, D_ORANGE, D_COMMENT, D_CYAN, D_FG,
+)
 from devlair.context import ModuleResult, SetupContext
+
+
+# ── logo ──────────────────────────────────────────────────────────────────────
+
+_BRAND = "d e v l a i r"
+_INDENT = "  "
+
+# (inner_width, gradient_chars, show_inner_box)
+# Total visible width = inner_width + 2 (border chars) + 2 (indent)
+_LOGO_FULL   = (48, "░░▒▒▓▓██", True)    # 52 cols, 7 rows
+_LOGO_MEDIUM = (38, "░▒▓█",     False)   # 42 cols, 3 rows
+_LOGO_SHORT  = (20, "",         False)   # 24 cols, 3 rows
+
+
+def _border(W: int, left: str, right: str) -> Text:
+    t = Text()
+    t.append(f"{_INDENT}{left}", style=D_PURPLE)
+    t.append("─" * W, style=D_PURPLE)
+    t.append(right, style=D_PURPLE)
+    return t
+
+
+def _content_row(W: int, inner: Text) -> Text:
+    """Wrap inner Text inside │...│ centered to W."""
+    pad = W - inner.cell_len
+    pad_l = pad // 2
+    pad_r = pad - pad_l
+    t = Text()
+    t.append(f"{_INDENT}│", style=D_PURPLE)
+    t.append(" " * pad_l)
+    t.append_text(inner)
+    t.append(" " * pad_r)
+    t.append("│", style=D_PURPLE)
+    return t
+
+
+def _build_logo(W: int, grad: str, inner_box: bool) -> list[Text]:
+    lines: list[Text] = [_border(W, "╭", "╮")]
+
+    if grad:
+        grad_r = grad[::-1]
+        gap = W - len(grad) - len(grad_r) - 4
+
+        def _grad_row() -> Text:
+            t = Text()
+            t.append(f"{_INDENT}│", style=D_PURPLE)
+            t.append("  ")
+            t.append(grad, style=D_COMMENT)
+            t.append(" " * gap)
+            t.append(grad_r, style=D_COMMENT)
+            t.append("  ")
+            t.append("│", style=D_PURPLE)
+            return t
+
+        if inner_box:
+            iw = len(_BRAND) + 4
+            ib = "═" * (iw - 2)
+            pt = (W - iw) // 2
+            pr = W - iw - pt
+
+            def _inner_row(content: str, style: str) -> Text:
+                t = Text()
+                t.append(f"{_INDENT}│", style=D_PURPLE)
+                t.append(" " * pt)
+                t.append(content, style=style)
+                t.append(" " * pr)
+                t.append("│", style=D_PURPLE)
+                return t
+
+            name_row = Text()
+            name_row.append(f"{_INDENT}│", style=D_PURPLE)
+            name_row.append(" " * pt)
+            name_row.append("║ ", style=D_PINK)
+            name_row.append(_BRAND, style=f"bold {D_FG}")
+            name_row.append(" ║", style=D_PINK)
+            name_row.append(" " * pr)
+            name_row.append("│", style=D_PURPLE)
+
+            lines.append(_grad_row())
+            lines.append(_inner_row(f"╔{ib}╗", D_PINK))
+            lines.append(name_row)
+            lines.append(_inner_row(f"╚{ib}╝", D_PINK))
+            lines.append(_grad_row())
+        else:
+            inner = Text()
+            inner.append(grad, style=D_COMMENT)
+            inner.append("  ")
+            inner.append(_BRAND, style=f"bold {D_FG}")
+            inner.append("  ")
+            inner.append(grad_r, style=D_COMMENT)
+            lines.append(_content_row(W, inner))
+    else:
+        inner = Text()
+        inner.append(_BRAND, style=f"bold {D_FG}")
+        lines.append(_content_row(W, inner))
+
+    lines.append(_border(W, "╰", "╯"))
+    return lines
+
+
+def _render_logo() -> None:
+    """Print the devlair logo, adapting to terminal width."""
+    if console.color_system is None:
+        console.print("[bold]devlair[/bold]")
+        return
+
+    width = shutil.get_terminal_size().columns
+    for spec in (_LOGO_FULL, _LOGO_MEDIUM, _LOGO_SHORT):
+        W, grad, inner_box = spec
+        if width >= W + 4:
+            break
+
+    for line in _build_logo(W, grad, inner_box):
+        console.print(line)
+
+
+# ── custom help ───────────────────────────────────────────────────────────────
+
+HELP_SECTIONS = [
+    (
+        "Setup & Health",
+        [
+            ("init [--only MOD] [--skip MOD]", "Set up this machine from scratch"),
+            ("doctor [--fix]", "Check system health & fix drift"),
+            ("upgrade [--no-self]", "Upgrade tools & re-apply configs"),
+            ("disable-password", "Lock SSH to key-only auth"),
+        ],
+    ),
+    (
+        "Cloud & Filesystem",
+        [
+            ("sync [--add|--remove|--now]", "Manage rclone folder syncs"),
+            ("filesystem", "AI-guided folder structure design"),
+        ],
+    ),
+    (
+        "AI Agents & Channels",
+        [
+            ("claude [--plan TIER] [--1m on|off]", "Usage dashboard & config"),
+            ("claw [--pair|--start|--stop]", "PicoCLAW WhatsApp agent"),
+        ],
+    ),
+    (
+        "tmux Sessions",  # shell aliases & keybindings, not Typer commands
+        [
+            ("t", "Start/attach default 'dev' session"),
+            ("tmx <name>", "Attach to a named session"),
+            ("tmx new --name N", "Create a plain session"),
+            ("tmx new --name N --claude", "Session with Claude Code"),
+            ("tmx new --name N --claude-telegram", "Create Telegram channel"),
+            ("Ctrl+A  y", "Claude Code popup (any session)"),
+        ],
+    ),
+]
+
+
+def _render_help() -> None:
+    console.print()
+    _render_logo()
+    console.print(f"  [{D_COMMENT}]v{__version__}[/]")
+
+    cmd_w = max(
+        len(cmd) for _, entries in HELP_SECTIONS for cmd, _ in entries
+    )
+
+    for section_title, entries in HELP_SECTIONS:
+        console.print()
+        console.print(f"  [{D_PINK}]{section_title}[/]")
+        for cmd, desc in entries:
+            console.print(
+                f"    [{D_PURPLE}]{cmd:<{cmd_w}}[/]  [{D_COMMENT}]{desc}[/]"
+            )
+
+    console.print()
+    console.print(
+        f"  [{D_COMMENT}]Options:  "
+        f"[{D_CYAN}]--version[/] [{D_COMMENT}]-v[/]  "
+        f"[{D_COMMENT}]Show version    "
+        f"[{D_CYAN}]--help[/]  [{D_COMMENT}]Show this screen[/]"
+    )
+    console.print()
+
+
+class DevlairGroup(typer.core.TyperGroup):
+    """Override the default Typer help to show grouped panels."""
+
+    def format_help(self, ctx: typer.Context, formatter: typer.core.click.HelpFormatter) -> None:
+        _render_help()
+
 
 app = typer.Typer(
     name="devlair",
+    cls=DevlairGroup,
     help="Set up your dev lair from scratch.",
     add_completion=False,
     no_args_is_help=True,
