@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/ettoreaquino/devlair/compare/v1.3.0...v1.3.1) (2026-04-06)
+
+
+### Bug Fixes
+
+* **install:** replace python3 dependency with grep for tag parsing ([c3f3d71](https://github.com/ettoreaquino/devlair/commit/c3f3d71316cf45403f460805320da245fd8f6aca))
+
 ## [1.3.0](https://github.com/ettoreaquino/devlair/compare/v1.2.0...v1.3.0) (2026-04-06)
 
 
