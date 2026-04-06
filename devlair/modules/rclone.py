@@ -1,13 +1,25 @@
 from devlair import runner
+from devlair.console import console
 from devlair.context import CheckItem, ModuleResult, SetupContext
+from devlair.features.audit import log_tool_install
 
 LABEL = "rclone sync"
 
 
 def run(ctx: SetupContext) -> ModuleResult:
     if not runner.cmd_exists("rclone"):
-        return ModuleResult(status="skip", detail="rclone not installed")
-    return ModuleResult(status="skip", detail="run 'devlair sync --add' to configure a sync")
+        console.print("    [muted]rclone...[/muted]")
+        script = runner.safe_tempfile(suffix=".sh")
+        try:
+            runner.run_shell(f'curl -fsSL "https://rclone.org/install.sh" -o "{script}"', quiet=True)
+            runner.run_shell(f'bash "{script}"', quiet=True)
+        finally:
+            script.unlink(missing_ok=True)
+        try:
+            log_tool_install(ctx.user_home, tool="rclone", source="rclone.org")
+        except Exception:
+            pass
+    return ModuleResult(status="ok", detail="run 'devlair sync --add' to configure a sync")
 
 
 def check() -> list[CheckItem]:
