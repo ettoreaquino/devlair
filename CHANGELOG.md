@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/ettoreaquino/devlair/compare/v1.4.0...v1.4.1) (2026-04-06)
+
+
+### Bug Fixes
+
+* **wsl:** UTF-8 rendering, GPG fallback, and upgrade opt-in guards ([#23](https://github.com/ettoreaquino/devlair/issues/23)) ([c06f533](https://github.com/ettoreaquino/devlair/commit/c06f533768994a5b1d710485ab8ebb09b3cdff0f))
+
 ## [1.4.0](https://github.com/ettoreaquino/devlair/compare/v1.3.2...v1.4.0) (2026-04-06)
 
 
