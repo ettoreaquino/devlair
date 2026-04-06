@@ -83,7 +83,7 @@ def safe_tempfile(suffix: str = "") -> Path:
     f = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)
     f.close()
     p = Path(f.name)
-    p.chmod(0o644)
+    p.chmod(0o644)  # world-readable so run_shell_as (different user) can read scripts
     return p
 
 

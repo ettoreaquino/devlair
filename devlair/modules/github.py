@@ -43,7 +43,9 @@ Host github.com
         shutil.chown(ssh_conf, ctx.username, ctx.username)
 
     pub = gh_key.with_suffix(".pub").read_text().strip()
-    hostname = runner.get_output("hostname")
+    import socket
+
+    hostname = socket.gethostname()
     console.print("\n  [info]Add this public key to GitHub → Settings → SSH keys:[/info]")
     console.print(f"\n  [detail]{pub}[/detail]")
     console.print("\n  [info]Add it here:[/info] [accent]https://github.com/settings/ssh/new[/accent]")
