@@ -370,6 +370,8 @@ def init(
     total = len(selected)
     results: list[tuple[str, ModuleResult]] = []
 
+    from devlair.features.audit import log_module_result
+
     for i, s in enumerate(selected, 1):
         prefix = f"[muted]\\[{i}/{total}][/muted] [step]{s.label}[/step]"
         console.print(f"  ⏳ {prefix} ...")
@@ -381,6 +383,10 @@ def init(
         detail = f"  [detail]{result.detail}[/detail]" if result.detail else ""
         console.print(f"  {icon}  {prefix}{detail}")
         results.append((s.label, result))
+        try:
+            log_module_result(ctx.user_home, module=s.key, status=result.status, detail=result.detail)
+        except Exception:
+            pass  # audit logging must never break init
 
     _print_summary(results)
 

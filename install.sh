@@ -30,10 +30,30 @@ fi
 
 echo "Installing devlair ${LATEST} (${SUFFIX})..."
 
-# ── Download binary ───────────────────────────────────────────────────────────
-URL="https://github.com/${REPO}/releases/download/${LATEST}/${BIN}-${SUFFIX}"
+# ── Download binary + checksums ───────────────────────────────────────────────
+BASE_URL="https://github.com/${REPO}/releases/download/${LATEST}"
 TMP=$(mktemp)
-curl -fsSL "$URL" -o "$TMP"
+TMP_CHECKSUMS=$(mktemp)
+curl -fsSL "${BASE_URL}/${BIN}-${SUFFIX}" -o "$TMP"
+curl -fsSL "${BASE_URL}/checksums.txt" -o "$TMP_CHECKSUMS"
+
+# ── Verify SHA-256 checksum ──────────────────────────────────────────────────
+EXPECTED=$(grep "${BIN}-${SUFFIX}" "$TMP_CHECKSUMS" | awk '{print $1}')
+ACTUAL=$(sha256sum "$TMP" | awk '{print $1}')
+rm -f "$TMP_CHECKSUMS"
+
+if [[ -z "$EXPECTED" ]]; then
+  echo "WARNING: No checksum found for ${BIN}-${SUFFIX} — skipping verification."
+elif [[ "$ACTUAL" != "$EXPECTED" ]]; then
+  echo "ERROR: Checksum mismatch!"
+  echo "  Expected: ${EXPECTED}"
+  echo "  Got:      ${ACTUAL}"
+  rm -f "$TMP"
+  exit 1
+else
+  echo "✓ SHA-256 verified"
+fi
+
 chmod +x "$TMP"
 
 # ── Install (sudo if needed) ──────────────────────────────────────────────────
