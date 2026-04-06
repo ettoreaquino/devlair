@@ -52,7 +52,7 @@ Module groups: **core** (system, timezone, zsh, shell), **coding** (devtools, gi
 - **Output:** Use `console.print()` with Rich markup. Use `_print_header(command, subtitle)` for command headers.
 - **Lint:** ruff with `E`, `F`, `W`, `I` rules. `E501` and `E701` are intentionally ignored.
 - **Commits:** Conventional Commits — `feat(scope):`, `fix(scope):`, `docs:`, `refactor:`. Enforced by commit-msg hook.
-- **Branches:** GitHub Flow — `feat/name`, `fix/name` branches, PR to main, squash merge.
+- **Branches:** GitHub Flow — `feat/name`, `fix/name` branches, PR to main, squash merge. Branches auto-delete on merge.
 
 ## Quality gates
 
@@ -71,11 +71,14 @@ Setup: `pre-commit install && pre-commit install --hook-type commit-msg`
 ## Release process
 
 1. Branch from main: `git checkout -b feat/my-feature`
-2. Open PR, get lint CI green
-3. Squash merge to main
-4. Tag: `git tag v1.x.x && git push origin v1.x.x`
-5. CI builds binaries for x86_64 + aarch64, creates GitHub Release
-6. Pre-release tags: `v2.0.0-alpha.1` (marked as pre-release, not served by install.sh)
+2. Open PR with `Closes #N` in the body to link the issue
+3. Get CI green (lint, test, commit-messages)
+4. Squash merge to main — branch auto-deletes, linked issue auto-closes
+5. Tag: `git tag v1.x.x && git push origin v1.x.x`
+6. CI builds binaries for x86_64 + aarch64, creates GitHub Release
+7. Pre-release tags: `v2.0.0-alpha.1` (marked as pre-release, not served by install.sh)
+
+**Important:** Every PR must reference the issue it addresses using `Closes #N` in the PR body. This ensures GitHub automatically closes the issue on merge and maintains traceability between issues, PRs, and the project board.
 
 ## Evolution context
 
