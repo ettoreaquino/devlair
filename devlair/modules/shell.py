@@ -44,6 +44,12 @@ export PATH="$BUN_INSTALL/bin:$PATH"
 # ── fzf ───────────────────────────────────────────────────────────────────────
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
+# ── WSL browser ──────────────────────────────────────────────────────────────
+# Redirect xdg-open / BROWSER to the Windows default browser via wslview
+if [ -n "$WSL_DISTRO_NAME" ] && command -v wslview &>/dev/null; then
+  export BROWSER=wslview
+fi
+
 # ── Claude Code ───────────────────────────────────────────────────────────────
 export CLAUDE_CODE_DISABLE_1M_CONTEXT=1
 # Use 1M context for a single session: CLAUDE_CODE_DISABLE_1M_CONTEXT=0 claude
