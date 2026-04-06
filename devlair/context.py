@@ -41,6 +41,7 @@ class SetupContext:
     user_home: Path
     platform: Platform = field(default="linux")
     wsl_version: int | None = field(default=None)
+    profile: dict = field(default_factory=dict)
 
 
 @dataclass
