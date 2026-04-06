@@ -110,7 +110,6 @@ Releases are automated via [release-please](https://github.com/googleapis/releas
 
 1. Branch from main: `git checkout -b feat/my-feature`
 2. Open PR with `Closes #N` in the body to link the issue
-<<<<<<< HEAD
 3. Add the PR to the **devlair roadmap** project board and set status to **In Progress**
 4. Get CI green (lint, test, commit-messages)
 5. Squash merge to main — branch auto-deletes, linked issue auto-closes
