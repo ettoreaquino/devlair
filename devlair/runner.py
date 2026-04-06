@@ -82,7 +82,9 @@ def safe_tempfile(suffix: str = "") -> Path:
 
     f = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)
     f.close()
-    return Path(f.name)
+    p = Path(f.name)
+    p.chmod(0o644)
+    return p
 
 
 class ChecksumError(Exception):

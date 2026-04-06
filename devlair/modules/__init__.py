@@ -30,13 +30,14 @@ class ModuleSpec:
     deps: list[str] = field(default_factory=list)
     reapply: bool = False
     platforms: set[str] = field(default_factory=lambda: {"linux", "wsl"})
+    default_on: set[str] | None = None  # None → same as platforms
 
 
 # fmt: off
 MODULE_SPECS: list[ModuleSpec] = [
     ModuleSpec("system",         "System update",          system,         "core"),
     ModuleSpec("timezone",       "Timezone",               timezone,       "core",                                    platforms={"linux"}),
-    ModuleSpec("tailscale",      "Tailscale",              tailscale,      "network"),
+    ModuleSpec("tailscale",      "Tailscale",              tailscale,      "network",                                 default_on={"linux"}),
     ModuleSpec("ssh",            "SSH",                    ssh,            "network",     deps=["tailscale"],        platforms={"linux"}),
     ModuleSpec("firewall",       "Firewall + Fail2Ban",    firewall,       "network",     deps=["ssh"],              platforms={"linux"}),
     ModuleSpec("zsh",            "Zsh + Dracula",          zsh,            "core",        reapply=True),
@@ -46,8 +47,8 @@ MODULE_SPECS: list[ModuleSpec] = [
     ModuleSpec("github",         "GitHub SSH key",         github,         "coding"),
     ModuleSpec("shell",          "Shell aliases",          shell,          "core",        deps=["zsh"], reapply=True),
     ModuleSpec("gnome_terminal", "Gnome Terminal Dracula", gnome_terminal, "desktop",     reapply=True,              platforms={"linux"}),
-    ModuleSpec("claude",         "Claude Code",            claude,         "ai",          deps=["devtools"], reapply=True),
-    ModuleSpec("claw",           "PicoCLAW Agent",         claw,           "ai",          deps=["devtools"], reapply=True),
+    ModuleSpec("claude",         "Claude Code",            claude,         "ai",          deps=["devtools"], reapply=True, default_on=set()),
+    ModuleSpec("claw",           "PicoCLAW Agent",         claw,           "ai",          deps=["devtools"], reapply=True, default_on=set()),
 ]
 # fmt: on
 
