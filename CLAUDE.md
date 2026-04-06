@@ -20,9 +20,9 @@ devlair/
   cli.py           # Typer CLI entrypoint, logo, grouped help screen
   console.py       # Rich console + Dracula color tokens (D_PURPLE, D_PINK, etc.)
   context.py       # SetupContext dataclass, ModuleResult, CheckItem, JSON helpers
-  runner.py        # subprocess helpers (run, run_as, apt_install, cmd_exists)
+  runner.py        # subprocess helpers (run, run_as, apt_install, cmd_exists, verify_checksum)
   modules/         # 14 init modules — each has LABEL, run(ctx), check()
-  features/        # doctor, upgrade, disable-password, filesystem, claude, sync, claw
+  features/        # doctor, upgrade, disable-password, filesystem, claude, sync, claw, audit
 assets/
   logo.svg         # brand mark (dark background)
   logo-light.svg   # brand mark (light background)
@@ -81,6 +81,20 @@ Schema (version 1):
 - `config: {mapping}` — per-module config, keyed by module name
 
 Precedence: CLI flags (`--only`, `--group`, `--skip`) override profile selection. `--skip` is always additive with profile `skip`.
+
+## Security hardening
+
+Tool installs follow a download-then-execute pattern instead of piping curl to shell. This prevents partial script execution on network failure and allows inspection.
+
+- **install.sh** — SHA-256 checksum verification of the devlair binary against `checksums.txt` published with each release
+- **AWS CLI v2** — GPG signature verification using AWS's published public key
+- **Docker, gh** — installed via apt with GPG-signed keyrings (already verified)
+- **fzf** — installed via git clone (git provides integrity)
+- **uv, pyenv, nvm, rclone, bun** — download script to temp file, then execute (no pipe)
+
+Audit logging writes JSON Lines to `~/.devlair/audit.json` (0600 permissions):
+- `log_tool_install()` — records tool name, source, and whether the install was cryptographically verified
+- `log_module_result()` — records module name, status, and detail after each `init` module runs
 
 ## Conventions
 

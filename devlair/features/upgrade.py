@@ -86,7 +86,10 @@ def run_upgrade(self_update: bool = False) -> None:
 
     # ── rclone ────────────────────────────────────────────────────────────────
     with console.status("[step]rclone...[/step]", spinner="dots", spinner_style=D_PURPLE):
-        runner.run_shell("curl -fsSL https://rclone.org/install.sh | bash", check=False)
+        script = Path(tempfile.mktemp(suffix=".sh"))
+        runner.run_shell(f'curl -fsSL "https://rclone.org/install.sh" -o "{script}"', check=False)
+        runner.run_shell(f'bash "{script}"', check=False)
+        script.unlink(missing_ok=True)
     console.print("  [success]✓[/success]  rclone")
 
     # ── Bun ───────────────────────────────────────────────────────────────────
@@ -97,7 +100,10 @@ def run_upgrade(self_update: bool = False) -> None:
         console.print("  [success]✓[/success]  Bun")
     else:
         with console.status("[step]Bun (installing)...[/step]", spinner="dots", spinner_style=D_PURPLE):
-            runner.run_shell_as(username, "curl -fsSL https://bun.sh/install | bash", check=False)
+            script = Path(tempfile.mktemp(suffix=".sh"))
+            runner.run_shell(f'curl -fsSL "https://bun.sh/install" -o "{script}"', check=False)
+            runner.run_shell_as(username, f'bash "{script}"', check=False)
+            script.unlink(missing_ok=True)
         console.print("  [success]✓[/success]  Bun (installed)")
 
     from devlair.features.sync import discover_timers, timer_status

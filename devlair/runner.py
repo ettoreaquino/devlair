@@ -1,3 +1,4 @@
+import hashlib
 import shlex
 import shutil
 import subprocess
@@ -67,3 +68,26 @@ def apt_install(*packages: str, quiet: bool = False) -> None:
 def get_output(cmd: str | list) -> str:
     result = run(cmd, capture=True, check=False)
     return result.stdout.strip()
+
+
+class ChecksumError(Exception):
+    """Raised when a SHA-256 checksum does not match."""
+
+
+def sha256_file(path: Path) -> str:
+    """Compute the SHA-256 hex digest of a file."""
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 16), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def verify_checksum(path: Path, expected: str) -> None:
+    """Verify SHA-256 checksum of *path* against *expected* hex digest.
+
+    Raises ChecksumError on mismatch.
+    """
+    actual = sha256_file(path)
+    if actual != expected.lower().strip():
+        raise ChecksumError(f"SHA-256 mismatch for {path.name}: expected {expected}, got {actual}")
