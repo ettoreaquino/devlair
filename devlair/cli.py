@@ -366,15 +366,17 @@ def init(
     optional_specs: list = []
     if want is None:
         optional_specs = [s for s in selected if s.default_on is not None and platform not in s.default_on]
-        selected = [s for s in selected if s not in optional_specs]
+        optional_keys = {s.key for s in optional_specs}
+        selected = [s for s in selected if s.key not in optional_keys]
 
     if platform_skipped:
         names = ", ".join(s.key for s in platform_skipped)
         console.print(f"  [{D_COMMENT}]Skipping on {platform}: {names}[/]")
         console.print()
 
-    # Docker pre-flight on WSL
-    if platform == "wsl" and not runner.cmd_exists("docker"):
+    # Docker pre-flight on WSL — only if a selected module needs it
+    docker_needed = any(s.key in ("devtools", "claw") for s in selected)
+    if platform == "wsl" and docker_needed and not runner.cmd_exists("docker"):
         console.print("  [error]Docker not found.[/error]")
         console.print("  On WSL, Docker must be provided by Docker Desktop for Windows.")
         console.print(

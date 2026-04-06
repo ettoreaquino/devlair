@@ -64,9 +64,9 @@ Platform detection is in `devlair/context.py` (`detect_platform()`, `detect_wsl_
 - **timezone** — `timedatectl` unavailable in WSL
 - **ssh** — `systemctl restart ssh` unavailable in WSL
 - **firewall** — `ufw` + `fail2ban` unavailable in WSL
+- **gnome_terminal** — GNOME desktop not present in WSL
 
 Docker on WSL: `devlair init` requires Docker Desktop for Windows with WSL integration enabled. The devtools module skips apt-based Docker installation on WSL and init aborts early if `docker` is not on PATH.
-- **gnome_terminal** — GNOME desktop not present in WSL
 
 `resolve_order()` accepts an optional `platform` parameter to filter incompatible modules. The `init`, `upgrade`, and `doctor` commands detect the platform automatically.
 
