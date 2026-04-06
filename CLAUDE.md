@@ -120,14 +120,17 @@ Setup: `pre-commit install && pre-commit install --hook-type commit-msg`
 
 ## Release process
 
+Releases are automated via [release-please](https://github.com/googleapis/release-please). **Never tag manually.**
+
 1. Branch from main: `git checkout -b feat/my-feature`
 2. Open PR with `Closes #N` in the body to link the issue
 3. Add the PR to the **devlair roadmap** project board and set status to **In Progress**
 4. Get CI green (lint, test, commit-messages)
 5. Squash merge to main — branch auto-deletes, linked issue auto-closes
-6. Tag: `git tag v1.x.x && git push origin v1.x.x`
-7. CI builds binaries for x86_64 + aarch64, creates GitHub Release
-8. Pre-release tags: `v2.0.0-alpha.1` (marked as pre-release, not served by install.sh)
+6. Release-please auto-creates/updates a "Release PR" with version bump + CHANGELOG
+7. When ready to ship: merge the Release PR → auto-tags, creates GitHub Release, CI builds binaries
+
+Version bumps are determined from Conventional Commits: `fix:` → patch, `feat:` → minor, `feat!:` / `BREAKING CHANGE` → major.
 
 **Important:** Every PR must reference the issue it addresses using `Closes #N` in the PR body. This ensures GitHub automatically closes the issue on merge and maintains traceability between issues, PRs, and the project board.
 
