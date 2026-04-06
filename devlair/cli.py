@@ -12,7 +12,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from devlair import __version__
+from devlair import __version__, runner
 from devlair.console import (
     D_COMMENT,
     D_CYAN,
@@ -362,10 +362,29 @@ def init(
     platform_skipped = [s for s in all_specs if platform not in s.platforms]
     selected = [s for s in all_specs if platform in s.platforms and s.key not in skip_set]
 
+    # When no explicit selection, filter out modules not default for this platform
+    optional_specs: list = []
+    if want is None:
+        optional_specs = [s for s in selected if s.default_on is not None and platform not in s.default_on]
+        optional_keys = {s.key for s in optional_specs}
+        selected = [s for s in selected if s.key not in optional_keys]
+
     if platform_skipped:
         names = ", ".join(s.key for s in platform_skipped)
         console.print(f"  [{D_COMMENT}]Skipping on {platform}: {names}[/]")
         console.print()
+
+    # Docker pre-flight on WSL — only if a selected module needs it
+    docker_needed = any(s.key in ("devtools", "claw") for s in selected)
+    if platform == "wsl" and docker_needed and not runner.cmd_exists("docker"):
+        console.print("  [error]Docker not found.[/error]")
+        console.print("  On WSL, Docker must be provided by Docker Desktop for Windows.")
+        console.print(
+            "  Install it from: [accent]https://docs.docker.com/desktop/setup/install/windows-install/[/accent]"
+        )
+        console.print("  Then enable WSL integration in Docker Desktop → Settings → Resources → WSL Integration.")
+        console.print()
+        raise typer.Exit(1)
 
     total = len(selected)
     results: list[tuple[str, ModuleResult]] = []
@@ -389,6 +408,8 @@ def init(
             pass  # audit logging must never break init
 
     _print_summary(results)
+    if optional_specs:
+        _print_optional(optional_specs)
 
 
 @app.command()
@@ -556,6 +577,13 @@ def _print_summary(results: list[tuple[str, ModuleResult]]) -> None:
         console.print(
             "  [error]Some modules failed.[/error] Re-run with [accent]--only[/accent] to retry individual steps."
         )
+    console.print()
+
+
+def _print_optional(specs: list) -> None:
+    console.print("  [info]Optional add-ins:[/info]")
+    for s in specs:
+        console.print(f"    [accent]devlair init --only {s.key:<12}[/accent]  {s.label}")
     console.print()
 
 

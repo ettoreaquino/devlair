@@ -136,6 +136,9 @@ def run(ctx: SetupContext) -> ModuleResult:
     # ── Docker ────────────────────────────────────────────────────────────────
     if runner.cmd_exists("docker"):
         skipped.append("docker")
+    elif ctx.platform == "wsl":
+        console.print("    [warning]docker — install Docker Desktop on Windows, not inside WSL[/warning]")
+        skipped.append("docker")
     else:
         console.print("    [muted]docker...[/muted]")
         runner.run_shell(
@@ -157,9 +160,10 @@ def run(ctx: SetupContext) -> ModuleResult:
         installed.append("docker")
 
     # Ensure user is in docker group
-    groups = runner.get_output(f"id -nG {ctx.username}")
-    if "docker" not in groups.split():
-        runner.run(["usermod", "-aG", "docker", ctx.username])
+    if runner.cmd_exists("docker"):
+        groups = runner.get_output(f"id -nG {ctx.username}")
+        if "docker" not in groups.split():
+            runner.run(["usermod", "-aG", "docker", ctx.username])
 
     # ── GitHub CLI ────────────────────────────────────────────────────────────
     if runner.cmd_exists("gh"):

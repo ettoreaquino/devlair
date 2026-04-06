@@ -43,8 +43,13 @@ Host github.com
         shutil.chown(ssh_conf, ctx.username, ctx.username)
 
     pub = gh_key.with_suffix(".pub").read_text().strip()
+    import socket
+
+    hostname = socket.gethostname()
     console.print("\n  [info]Add this public key to GitHub → Settings → SSH keys:[/info]")
-    console.print(f"\n  [detail]{pub}[/detail]\n")
+    console.print(f"\n  [detail]{pub}[/detail]")
+    console.print("\n  [info]Add it here:[/info] [accent]https://github.com/settings/ssh/new[/accent]")
+    console.print(f"  [muted]Suggested title: {ctx.username}@{hostname}[/muted]\n")
     typer.prompt("  Press Enter after adding the key to GitHub", default="", show_default=False)
 
     # Test connection

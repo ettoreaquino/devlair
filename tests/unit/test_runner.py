@@ -87,3 +87,11 @@ class TestSafeTempfile:
             assert path.read_text() == "hello"
         finally:
             path.unlink(missing_ok=True)
+
+    def test_file_is_world_readable(self):
+        path = safe_tempfile(suffix=".sh")
+        try:
+            mode = path.stat().st_mode & 0o777
+            assert mode == 0o644, f"expected 0644, got {oct(mode)}"
+        finally:
+            path.unlink(missing_ok=True)
