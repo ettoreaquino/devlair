@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.2](https://github.com/ettoreaquino/devlair/compare/v1.3.1...v1.3.2) (2026-04-06)
+
+
+### Bug Fixes
+
+* **install:** set 755 permissions on installed binary ([6015bab](https://github.com/ettoreaquino/devlair/commit/6015babe7d3a96632015ec94568fdcca74691047))
+
 ## [1.3.1](https://github.com/ettoreaquino/devlair/compare/v1.3.0...v1.3.1) (2026-04-06)
 
 
