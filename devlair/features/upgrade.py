@@ -20,6 +20,18 @@ def run_upgrade(self_update: bool = False) -> None:
         console.print("  [error]This command must be run as root.[/error]")
         raise typer.Exit(1)
 
+    # ── Self-update first ─────────────────────────────────────────────────────
+    # Download new binary before anything else.  If a new version is installed,
+    # re-exec so the rest of the upgrade runs new code (new packages, new
+    # shell aliases, etc.).
+    if self_update:
+        new_binary = _self_update()
+        if new_binary:
+            console.print("  [info]Re-running upgrade with new version...[/info]")
+            console.print()
+            os.execv(str(new_binary), [str(new_binary), "upgrade", "--no-self"])
+            # execv replaces the process — code below never runs
+
     username = _get_username()
     user_home = Path(f"~{username}").expanduser()
 
@@ -113,10 +125,6 @@ def run_upgrade(self_update: bool = False) -> None:
             f"[{style}]{active}[/{style}]  ·  last: [muted]{last}[/muted]"
         )
 
-    # ── Self-update ───────────────────────────────────────────────────────────
-    if self_update:
-        _self_update()
-
     console.print()
     console.print("  [success]Update complete.[/success]")
     console.print()
@@ -169,12 +177,16 @@ def _installed_version() -> str:
     return __version__
 
 
-def _self_update() -> None:
+def _self_update() -> Path | None:
+    """Check for and install a newer devlair binary.
+
+    Returns the install path if a new version was installed, None otherwise.
+    """
     current = _installed_version()
 
     if "dev" in current:
         console.print("  [muted]Dev install detected — skipping self-update.[/muted]")
-        return
+        return None
 
     with console.status("[step]Checking for devlair updates...[/step]", spinner="dots", spinner_style=D_PURPLE):
         try:
@@ -186,15 +198,15 @@ def _self_update() -> None:
             latest = resp.json()["tag_name"].removeprefix("v")
         except Exception as exc:
             console.print(f"  [warning]Could not check for updates: {exc}[/warning]")
-            return
+            return None
 
     if latest == current:
         console.print(f"  [muted]devlair {current} is already up to date.[/muted]")
-        return
+        return None
 
     console.print(f"  New version available: [accent]{latest}[/accent] (current: [muted]{current}[/muted])")
     if not typer.confirm("  Update now?", default=True):
-        return
+        return None
 
     import platform
 
@@ -213,4 +225,5 @@ def _self_update() -> None:
         tmp.replace(install_path)
         install_path.chmod(0o755)
 
-    console.print(f"  [success]✓[/success]  devlair updated to v{latest} at {install_path} — restart to apply")
+    console.print(f"  [success]✓[/success]  devlair updated to v{latest}")
+    return install_path
