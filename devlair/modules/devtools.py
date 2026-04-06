@@ -194,7 +194,8 @@ def run(ctx: SetupContext) -> ModuleResult:
         arch = runner.get_output("dpkg --print-architecture")
         aws_arch = "x86_64" if arch == "amd64" else "aarch64"
         aws_base = f"https://awscli.amazonaws.com/awscli-exe-linux-{aws_arch}"
-        gpg_verified = False
+        gpg_ok_marker = Path("/tmp/.awscli_gpg_ok")
+        gpg_ok_marker.unlink(missing_ok=True)
         runner.run_shell(
             f"""
             curl -fsSL "{aws_base}.zip" -o /tmp/awscliv2.zip
@@ -204,6 +205,7 @@ def run(ctx: SetupContext) -> ModuleResult:
                 gpg --batch --import /tmp/aws-cli-key.asc 2>/dev/null || true
                 if gpg --batch --verify /tmp/awscliv2.zip.sig /tmp/awscliv2.zip 2>/dev/null; then
                     echo "✓ AWS CLI GPG signature verified"
+                    touch /tmp/.awscli_gpg_ok
                 else
                     echo "⚠ GPG verification failed — installing anyway" >&2
                 fi
@@ -217,9 +219,8 @@ def run(ctx: SetupContext) -> ModuleResult:
         """,
             quiet=True,
         )
-        # Check after install whether GPG was actually available and could verify
-        if runner.cmd_exists("gpg"):
-            gpg_verified = True  # best-effort; audit records intent, not certainty
+        gpg_verified = gpg_ok_marker.exists()
+        gpg_ok_marker.unlink(missing_ok=True)
         _audit(ctx.user_home, tool="aws", source="awscli.amazonaws.com", verified=gpg_verified)
         installed.append("aws")
 

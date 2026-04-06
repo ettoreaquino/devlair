@@ -1,9 +1,23 @@
+import logging
+from pathlib import Path
+
 from devlair import runner
 from devlair.console import console
 from devlair.context import CheckItem, ModuleResult, SetupContext
-from devlair.features.audit import log_tool_install
+
+_log = logging.getLogger(__name__)
 
 LABEL = "rclone sync"
+
+
+def _audit(user_home: Path, **kwargs: object) -> None:
+    """Best-effort audit log — never breaks the primary flow."""
+    try:
+        from devlair.features.audit import log_tool_install
+
+        log_tool_install(user_home, **kwargs)  # type: ignore[arg-type]
+    except Exception:
+        _log.debug("audit log write failed", exc_info=True)
 
 
 def run(ctx: SetupContext) -> ModuleResult:
@@ -15,10 +29,7 @@ def run(ctx: SetupContext) -> ModuleResult:
             runner.run_shell(f'bash "{script}"', quiet=True)
         finally:
             script.unlink(missing_ok=True)
-        try:
-            log_tool_install(ctx.user_home, tool="rclone", source="rclone.org")
-        except Exception:
-            pass
+        _audit(ctx.user_home, tool="rclone", source="rclone.org")
     return ModuleResult(status="ok", detail="run 'devlair sync --add' to configure a sync")
 
 
