@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/ettoreaquino/devlair/compare/v1.4.2...v1.5.0) (2026-04-06)
+
+
+### Features
+
+* **wsl:** redirect browser to Windows via wslview ([#29](https://github.com/ettoreaquino/devlair/issues/29)) ([f59ca30](https://github.com/ettoreaquino/devlair/commit/f59ca30dc039841accc9713f6e646071da6fe3a2))
+
 ## [1.4.2](https://github.com/ettoreaquino/devlair/compare/v1.4.1...v1.4.2) (2026-04-06)
 
 
