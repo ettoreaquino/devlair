@@ -34,6 +34,10 @@ def run(ctx: SetupContext) -> ModuleResult:
     runner.run("apt-get upgrade -y -qq", capture=True)
     runner.apt_install(*ESSENTIALS, quiet=True)
 
+    # WSL extras: wslu provides wslview for opening URLs in the Windows browser
+    if ctx.platform == "wsl":
+        runner.apt_install("wslu", quiet=True)
+
     # Ensure UTF-8 locale is available (bare WSL ships with C/POSIX only)
     runner.run_shell(
         "locale-gen en_US.UTF-8 && update-locale LANG=en_US.UTF-8",
