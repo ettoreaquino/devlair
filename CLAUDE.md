@@ -48,14 +48,25 @@ Module groups and dependencies are defined in `devlair/modules/__init__.py` via 
 
 | Group | Modules | Key dependencies |
 |-------|---------|-----------------|
-| core | system, timezone, zsh, shell | shell → zsh |
-| network | tailscale, ssh, firewall | ssh → tailscale, firewall → ssh |
+| core | system, timezone*, zsh, shell | shell → zsh |
+| network | tailscale, ssh*, firewall* | ssh → tailscale, firewall → ssh |
 | coding | tmux, devtools, github | — |
 | cloud-sync | rclone | — |
 | ai | claude, claw | claude → devtools, claw → devtools |
-| desktop | gnome_terminal | — |
+| desktop | gnome_terminal* | — |
 
-Use `devlair init --group core,network` to run only specific groups. Dependencies are auto-expanded.
+\* = Linux-only (auto-skipped on WSL). Use `devlair init --group core,network` to run only specific groups. Dependencies are auto-expanded.
+
+## Platform support
+
+Platform detection is in `devlair/context.py` (`detect_platform()`, `detect_wsl_version()`). Each `ModuleSpec` has a `platforms` field (default `{"linux", "wsl"}`). Modules with `platforms={"linux"}` are auto-skipped on WSL:
+
+- **timezone** — `timedatectl` unavailable in WSL
+- **ssh** — `systemctl restart ssh` unavailable in WSL
+- **firewall** — `ufw` + `fail2ban` unavailable in WSL
+- **gnome_terminal** — GNOME desktop not present in WSL
+
+`resolve_order()` accepts an optional `platform` parameter to filter incompatible modules. The `init`, `upgrade`, and `doctor` commands detect the platform automatically.
 
 ## Conventions
 

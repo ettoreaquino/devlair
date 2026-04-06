@@ -1,7 +1,7 @@
 from rich.table import Table
 
 from devlair.console import D_COMMENT, D_GREEN, D_ORANGE, D_RED, console
-from devlair.context import CheckItem
+from devlair.context import CheckItem, detect_platform
 from devlair.modules import MODULE_SPECS
 
 STATUS_STYLE = {
@@ -21,8 +21,11 @@ def run_doctor(fix: bool = False) -> None:
 
     total = ok = warn = fail = 0
     failed_keys: set[str] = set()
+    platform = detect_platform()
 
     for s in MODULE_SPECS:
+        if platform not in s.platforms:
+            continue
         if not hasattr(s.module, "check"):
             continue
         items: list[CheckItem] = s.module.check()
@@ -61,17 +64,19 @@ def run_doctor(fix: bool = False) -> None:
             console.print(f"  [warning]{warn} warnings.[/warning]")
 
     if fix and failed_keys:
-        from devlair.context import SetupContext, resolve_invoking_user
+        from devlair.context import SetupContext, detect_wsl_version, resolve_invoking_user
         from devlair.modules import REAPPLY_KEYS, resolve_order
 
         username, user_home = resolve_invoking_user()
-        ctx = SetupContext(username=username, user_home=user_home)
+        ctx = SetupContext(
+            username=username, user_home=user_home, platform=platform, wsl_version=detect_wsl_version(platform)
+        )
 
         console.print()
         console.print(f"  [step]Attempting to fix {len(failed_keys)} module(s)...[/step]")
         console.print()
 
-        for s in resolve_order(failed_keys):
+        for s in resolve_order(failed_keys, platform=platform):
             if s.key not in REAPPLY_KEYS:
                 console.print(f"  [{D_COMMENT}]–  {s.label} (manual fix required)[/]")
                 continue

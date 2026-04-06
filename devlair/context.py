@@ -1,12 +1,46 @@
-from dataclasses import dataclass
+import os
+import sys
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
+
+Platform = Literal["linux", "wsl", "macos"]
+
+
+def detect_platform() -> Platform:
+    """Detect the current platform: linux, wsl, or macos."""
+    if os.environ.get("WSL_DISTRO_NAME"):
+        return "wsl"
+    try:
+        proc_version = Path("/proc/version").read_text().lower()
+        if "microsoft" in proc_version:
+            return "wsl"
+    except OSError:
+        pass
+    if sys.platform == "darwin":
+        return "macos"
+    return "linux"
+
+
+def detect_wsl_version(platform: Platform | None = None) -> int | None:
+    """Return 1 or 2 for WSL, None otherwise."""
+    if (platform or detect_platform()) != "wsl":
+        return None
+    try:
+        proc_version = Path("/proc/version").read_text()
+        if "WSL2" in proc_version or "microsoft-standard" in proc_version.lower():
+            return 2
+    except OSError:
+        pass
+    return 1
 
 
 @dataclass
 class SetupContext:
     username: str
     user_home: Path
+    platform: Platform = field(default="linux")
+    wsl_version: int | None = field(default=None)
 
 
 @dataclass

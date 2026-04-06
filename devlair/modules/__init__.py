@@ -29,22 +29,23 @@ class ModuleSpec:
     group: str
     deps: list[str] = field(default_factory=list)
     reapply: bool = False
+    platforms: set[str] = field(default_factory=lambda: {"linux", "wsl"})
 
 
 # fmt: off
 MODULE_SPECS: list[ModuleSpec] = [
     ModuleSpec("system",         "System update",          system,         "core"),
-    ModuleSpec("timezone",       "Timezone",               timezone,       "core"),
+    ModuleSpec("timezone",       "Timezone",               timezone,       "core",                                    platforms={"linux"}),
     ModuleSpec("tailscale",      "Tailscale",              tailscale,      "network"),
-    ModuleSpec("ssh",            "SSH",                    ssh,            "network",     deps=["tailscale"]),
-    ModuleSpec("firewall",       "Firewall + Fail2Ban",    firewall,       "network",     deps=["ssh"]),
+    ModuleSpec("ssh",            "SSH",                    ssh,            "network",     deps=["tailscale"],        platforms={"linux"}),
+    ModuleSpec("firewall",       "Firewall + Fail2Ban",    firewall,       "network",     deps=["ssh"],              platforms={"linux"}),
     ModuleSpec("zsh",            "Zsh + Dracula",          zsh,            "core",        reapply=True),
     ModuleSpec("tmux",           "tmux",                   tmux,           "coding",      reapply=True),
     ModuleSpec("devtools",       "Dev tools",              devtools,       "coding",      reapply=True),
     ModuleSpec("rclone",         "rclone sync",            rclone,         "cloud-sync"),
     ModuleSpec("github",         "GitHub SSH key",         github,         "coding"),
     ModuleSpec("shell",          "Shell aliases",          shell,          "core",        deps=["zsh"], reapply=True),
-    ModuleSpec("gnome_terminal", "Gnome Terminal Dracula", gnome_terminal, "desktop",     reapply=True),
+    ModuleSpec("gnome_terminal", "Gnome Terminal Dracula", gnome_terminal, "desktop",     reapply=True,              platforms={"linux"}),
     ModuleSpec("claude",         "Claude Code",            claude,         "ai",          deps=["devtools"], reapply=True),
     ModuleSpec("claw",           "PicoCLAW Agent",         claw,           "ai",          deps=["devtools"], reapply=True),
 ]
@@ -70,10 +71,11 @@ def _validate_dag() -> None:
 _validate_dag()
 
 
-def resolve_order(keys: set[str] | None = None) -> list[ModuleSpec]:
+def resolve_order(keys: set[str] | None = None, platform: str | None = None) -> list[ModuleSpec]:
     """Return ModuleSpecs in dependency-safe order, optionally filtered to keys.
 
     If keys is provided, dependencies are pulled in automatically.
+    If platform is provided, modules incompatible with it are excluded.
     """
     if keys is not None:
         expanded: set[str] = set()
@@ -89,7 +91,10 @@ def resolve_order(keys: set[str] | None = None) -> list[ModuleSpec]:
             _expand(k)
         keys = expanded
 
-    return [s for s in MODULE_SPECS if keys is None or s.key in keys]
+    specs = [s for s in MODULE_SPECS if keys is None or s.key in keys]
+    if platform is not None:
+        specs = [s for s in specs if platform in s.platforms]
+    return specs
 
 
 def keys_for_groups(groups: set[str]) -> set[str]:
