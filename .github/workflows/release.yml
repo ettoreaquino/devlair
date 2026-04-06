@@ -1,29 +1,14 @@
-name: Release
+name: Release Binaries
 
 on:
-  push:
-    tags:
-      - "v*"
+  release:
+    types: [published]
 
 permissions:
   contents: write
 
 jobs:
-  create-release:
-    runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.create.outputs.upload_url }}
-    steps:
-      - name: Create GitHub release
-        id: create
-        uses: softprops/action-gh-release@v2
-        with:
-          draft: false
-          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
-          generate_release_notes: true
-
   build:
-    needs: create-release
     strategy:
       matrix:
         include:
@@ -40,11 +25,6 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           version: "latest"
-
-      - name: Stamp version from tag
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          sed -i "s/__version__ = \"0.0.0.dev0\"/__version__ = \"${VERSION}\"/" devlair/__init__.py
 
       - name: Install dependencies
         run: uv sync --group dev
