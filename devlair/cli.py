@@ -449,6 +449,9 @@ def upgrade(
     for s in resolve_order(REAPPLY_KEYS, platform=platform):
         if not hasattr(s.module, "run"):
             continue
+        # Skip opt-in modules that weren't explicitly installed
+        if s.default_on is not None and platform not in s.default_on:
+            continue
         try:
             result = s.module.run(ctx)
             icon = STATUS_ICON[result.status]
