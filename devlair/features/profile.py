@@ -8,17 +8,15 @@ import yaml
 class ProfileError(Exception):
     """Raised when a profile fails validation."""
 
-    def __init__(self, message: str):
-        super().__init__(message)
-        self.message = message
-
 
 def load_profile(path: Path) -> dict:
     """Load a YAML profile from disk. Raises ProfileError on failure."""
-    if not path.exists():
-        raise ProfileError(f"Profile not found: {path}")
     try:
         data = yaml.safe_load(path.read_text())
+    except FileNotFoundError:
+        raise ProfileError(f"Profile not found: {path}")
+    except OSError as exc:
+        raise ProfileError(f"Cannot read profile {path}: {exc}")
     except yaml.YAMLError as exc:
         raise ProfileError(f"Invalid YAML in {path}: {exc}")
     if not isinstance(data, dict):
@@ -50,6 +48,8 @@ def validate_profile(data: dict) -> dict:
     if modules is not None:
         if not isinstance(modules, list):
             raise ProfileError(f"'modules' must be a list, got {type(modules).__name__}")
+        if groups is not None:
+            raise ProfileError("'modules' and 'groups' are mutually exclusive — use one or the other")
         for m in modules:
             if m not in _SPEC_MAP:
                 raise ProfileError(f"Unknown module '{m}'. Valid modules: {', '.join(sorted(_SPEC_MAP))}")

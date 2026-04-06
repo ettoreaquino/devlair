@@ -319,12 +319,12 @@ def init(
     profile_data: dict = {}
     profile_name: str | None = None
     if config:
-        from devlair.features.profile import ProfileError, load_profile, validate_profile
+        from devlair.features.profile import ProfileError, load_profile, resolve_profile_keys, validate_profile
 
         try:
             profile_data = validate_profile(load_profile(config))
         except ProfileError as exc:
-            console.print(f"  [error]Profile error: {exc.message}[/error]")
+            console.print(f"  [error]Profile error: {exc}[/error]")
             raise typer.Exit(1)
         profile_name = profile_data.get("name")
 
@@ -352,8 +352,6 @@ def init(
             only_set = set(only.split(","))
             want = only_set if want is None else want & only_set
     elif profile_data:
-        from devlair.features.profile import resolve_profile_keys
-
         want, skip_set = resolve_profile_keys(profile_data)
 
     # CLI --skip is always additive

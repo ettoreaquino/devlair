@@ -33,6 +33,12 @@ class TestLoadProfile:
         with pytest.raises(ProfileError, match="must be a YAML mapping"):
             load_profile(f)
 
+    def test_load_unreadable_raises(self, tmp_path):
+        d = tmp_path / "is_a_dir.yaml"
+        d.mkdir()
+        with pytest.raises(ProfileError, match="Cannot read profile"):
+            load_profile(d)
+
 
 class TestValidateProfile:
     def test_valid_minimal(self):
@@ -85,10 +91,14 @@ class TestValidateProfile:
         with pytest.raises(ProfileError, match="must be a string"):
             validate_profile({"version": 1, "name": 123})
 
+    def test_modules_and_groups_mutually_exclusive(self):
+        with pytest.raises(ProfileError, match="mutually exclusive"):
+            validate_profile({"version": 1, "modules": ["system"], "groups": ["core"]})
+
 
 class TestResolveProfileKeys:
-    def test_modules_override_groups(self):
-        data = {"version": 1, "modules": ["system", "zsh"], "groups": ["coding"]}
+    def test_modules_used_when_present(self):
+        data = {"version": 1, "modules": ["system", "zsh"]}
         want, skip_set = resolve_profile_keys(data)
         assert want == {"system", "zsh"}
         assert skip_set == set()
