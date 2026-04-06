@@ -110,7 +110,12 @@ def show_status(username: str, user_home: Path) -> None:
 def add_sync(username: str, user_home: Path, name: Optional[str] = None) -> None:
     if not runner.cmd_exists("rclone"):
         console.print("  [muted]Installing rclone...[/muted]")
-        runner.run_shell("curl -fsSL https://rclone.org/install.sh | bash", quiet=True)
+        script = runner.safe_tempfile(suffix=".sh")
+        try:
+            runner.run_shell(f'curl -fsSL "https://rclone.org/install.sh" -o "{script}"', quiet=True)
+            runner.run_shell(f'bash "{script}"', quiet=True)
+        finally:
+            script.unlink(missing_ok=True)
         if not runner.cmd_exists("rclone"):
             console.print("  [error]rclone installation failed.[/error]")
             return
