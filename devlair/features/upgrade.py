@@ -1,5 +1,4 @@
 import os
-import stat
 from pathlib import Path
 
 import httpx
@@ -215,7 +214,8 @@ def _self_update() -> None:
         resp.raise_for_status()
         tmp = runner.safe_tempfile()
         tmp.write_bytes(resp.content)
-        tmp.chmod(tmp.stat().st_mode | stat.S_IEXEC)
+        tmp.chmod(0o755)
         tmp.replace(install_path)
+        install_path.chmod(0o755)
 
     console.print(f"  [success]✓[/success]  devlair updated to v{latest} at {install_path} — restart to apply")

@@ -54,7 +54,7 @@ else
   echo "✓ SHA-256 verified"
 fi
 
-chmod +x "$TMP"
+chmod 755 "$TMP"
 
 # ── Install (sudo if needed) ──────────────────────────────────────────────────
 if [[ -w "$INSTALL_DIR" ]]; then
@@ -62,6 +62,9 @@ if [[ -w "$INSTALL_DIR" ]]; then
 else
   sudo mv "$TMP" "${INSTALL_DIR}/${BIN}"
 fi
+
+# Ensure the installed binary is readable + executable by all
+chmod 755 "${INSTALL_DIR}/${BIN}" 2>/dev/null || sudo chmod 755 "${INSTALL_DIR}/${BIN}"
 
 echo ""
 echo "✓ devlair ${LATEST} installed to ${INSTALL_DIR}/${BIN}"
