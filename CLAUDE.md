@@ -83,13 +83,41 @@ Setup: `pre-commit install && pre-commit install --hook-type commit-msg`
 
 1. Branch from main: `git checkout -b feat/my-feature`
 2. Open PR with `Closes #N` in the body to link the issue
-3. Get CI green (lint, test, commit-messages)
-4. Squash merge to main — branch auto-deletes, linked issue auto-closes
-5. Tag: `git tag v1.x.x && git push origin v1.x.x`
-6. CI builds binaries for x86_64 + aarch64, creates GitHub Release
-7. Pre-release tags: `v2.0.0-alpha.1` (marked as pre-release, not served by install.sh)
+3. Add the PR to the **devlair roadmap** project board and set status to **In Progress**
+4. Get CI green (lint, test, commit-messages)
+5. Squash merge to main — branch auto-deletes, linked issue auto-closes
+6. Tag: `git tag v1.x.x && git push origin v1.x.x`
+7. CI builds binaries for x86_64 + aarch64, creates GitHub Release
+8. Pre-release tags: `v2.0.0-alpha.1` (marked as pre-release, not served by install.sh)
 
 **Important:** Every PR must reference the issue it addresses using `Closes #N` in the PR body. This ensures GitHub automatically closes the issue on merge and maintains traceability between issues, PRs, and the project board.
+
+## Project board
+
+All work is tracked on the **devlair roadmap** project (GitHub Projects #2). The board has three columns: **Todo**, **In Progress**, **Done**.
+
+Workflow:
+1. **When starting work on an issue/epic:** set the issue to **In Progress** on the project board
+2. **When opening a PR:** add the PR to the project board as **In Progress** — use `gh project item-add 2 --owner ettoreaquino --url <PR_URL>` then set the status field
+3. **When the PR merges:** the `Closes #N` keyword auto-closes the issue; set both the issue and merged PR to **Done** on the board
+4. **Epics** stay **In Progress** until all child tasks/PRs are merged, then move to **Done**
+
+CLI commands for project board management:
+```bash
+# Add an item (issue or PR) to the project
+gh project item-add 2 --owner ettoreaquino --url <URL>
+
+# Update status (get item ID from item-list, field/option IDs from field-list)
+gh project item-edit --project-id PVT_kwHOAI_A384BTyaU \
+  --id <ITEM_ID> \
+  --field-id PVTSSF_lAHOAI_A384BTyaUzhA-6Fg \
+  --single-select-option-id <STATUS_OPTION_ID>
+
+# Status option IDs:
+#   Todo:        f75ad846
+#   In Progress: 47fc9ee4
+#   Done:        98236657
+```
 
 ## Evolution context
 
