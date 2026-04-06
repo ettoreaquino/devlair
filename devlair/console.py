@@ -1,5 +1,19 @@
+import sys
+
 from rich.console import Console
 from rich.theme import Theme
+
+# Bare WSL ships with C/POSIX locale → Python stdout is ascii → Rich
+# cannot render box-drawing characters.  Reconfigure to UTF-8 early so
+# Panel borders, the logo, and status icons display correctly everywhere.
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        if (sys.stdout.encoding or "").lower().replace("-", "") != "utf8":
+            sys.stdout.reconfigure(encoding="utf-8")
+        if (sys.stderr.encoding or "").lower().replace("-", "") != "utf8":
+            sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 # Dracula palette
 D_BG = "#282a36"

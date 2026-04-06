@@ -25,6 +25,7 @@ ESSENTIALS = [
     "zsh",
     "bat",
     "fzf",
+    "locales",
 ]
 
 
@@ -32,6 +33,13 @@ def run(ctx: SetupContext) -> ModuleResult:
     runner.run("apt-get update -qq", capture=True)
     runner.run("apt-get upgrade -y -qq", capture=True)
     runner.apt_install(*ESSENTIALS, quiet=True)
+
+    # Ensure UTF-8 locale is available (bare WSL ships with C/POSIX only)
+    runner.run_shell(
+        "locale-gen en_US.UTF-8 && update-locale LANG=en_US.UTF-8",
+        check=False,
+    )
+
     return ModuleResult(status="ok", detail="packages up to date")
 
 

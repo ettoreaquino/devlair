@@ -83,14 +83,15 @@ def run_upgrade(self_update: bool = False) -> None:
         console.print("  [success]✓[/success]  nvm + Node LTS")
 
     # ── rclone ────────────────────────────────────────────────────────────────
-    with console.status("[step]rclone...[/step]", spinner="dots", spinner_style=D_PURPLE):
-        script = runner.safe_tempfile(suffix=".sh")
-        try:
-            runner.run_shell(f'curl -fsSL "https://rclone.org/install.sh" -o "{script}"', check=False)
-            runner.run_shell(f'bash "{script}"', check=False)
-        finally:
-            script.unlink(missing_ok=True)
-    console.print("  [success]✓[/success]  rclone")
+    if runner.cmd_exists("rclone"):
+        with console.status("[step]rclone...[/step]", spinner="dots", spinner_style=D_PURPLE):
+            script = runner.safe_tempfile(suffix=".sh")
+            try:
+                runner.run_shell(f'curl -fsSL "https://rclone.org/install.sh" -o "{script}"', check=False)
+                runner.run_shell(f'bash "{script}"', check=False)
+            finally:
+                script.unlink(missing_ok=True)
+        console.print("  [success]✓[/success]  rclone")
 
     # ── Bun ───────────────────────────────────────────────────────────────────
     bun_bin = user_home / ".bun" / "bin" / "bun"
@@ -98,15 +99,6 @@ def run_upgrade(self_update: bool = False) -> None:
         with console.status("[step]Bun...[/step]", spinner="dots", spinner_style=D_PURPLE):
             runner.run_shell_as(username, f"{bun_bin} upgrade", check=False)
         console.print("  [success]✓[/success]  Bun")
-    else:
-        with console.status("[step]Bun (installing)...[/step]", spinner="dots", spinner_style=D_PURPLE):
-            script = runner.safe_tempfile(suffix=".sh")
-            try:
-                runner.run_shell(f'curl -fsSL "https://bun.sh/install" -o "{script}"', check=False)
-                runner.run_shell_as(username, f'bash "{script}"', check=False)
-            finally:
-                script.unlink(missing_ok=True)
-        console.print("  [success]✓[/success]  Bun (installed)")
 
     from devlair.features.sync import discover_timers, timer_status
 

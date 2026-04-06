@@ -25,6 +25,7 @@ from devlair.console import (
     console,
 )
 from devlair.context import ModuleResult, SetupContext
+from devlair.modules import ModuleSpec
 
 # ── logo ──────────────────────────────────────────────────────────────────────
 
@@ -363,7 +364,7 @@ def init(
     selected = [s for s in all_specs if platform in s.platforms and s.key not in skip_set]
 
     # When no explicit selection, filter out modules not default for this platform
-    optional_specs: list = []
+    optional_specs: list[ModuleSpec] = []
     if want is None:
         optional_specs = [s for s in selected if s.default_on is not None and platform not in s.default_on]
         optional_keys = {s.key for s in optional_specs}
@@ -449,6 +450,10 @@ def upgrade(
     for s in resolve_order(REAPPLY_KEYS, platform=platform):
         if not hasattr(s.module, "run"):
             continue
+        # Skip opt-in modules unless they were actually installed
+        if s.default_on is not None and platform not in s.default_on:
+            if hasattr(s.module, "check") and all(c.status != "ok" for c in s.module.check()):
+                continue
         try:
             result = s.module.run(ctx)
             icon = STATUS_ICON[result.status]
@@ -580,7 +585,7 @@ def _print_summary(results: list[tuple[str, ModuleResult]]) -> None:
     console.print()
 
 
-def _print_optional(specs: list) -> None:
+def _print_optional(specs: list[ModuleSpec]) -> None:
     console.print("  [info]Optional add-ins:[/info]")
     for s in specs:
         console.print(f"    [accent]devlair init --only {s.key:<12}[/accent]  {s.label}")
