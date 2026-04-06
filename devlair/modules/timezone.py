@@ -1,8 +1,8 @@
 import typer
 
-from devlair.context import CheckItem, ModuleResult, SetupContext
 from devlair import runner
 from devlair.console import console
+from devlair.context import CheckItem, ModuleResult, SetupContext
 
 LABEL = "Timezone"
 DEFAULT_TZ = "UTC"

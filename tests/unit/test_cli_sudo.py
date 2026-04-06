@@ -1,11 +1,11 @@
 """Tests for the sudo elevation experience in cli.py."""
+
 import os
 import subprocess
 import sys
 
 import click
 import pytest
-import typer
 
 from devlair import cli
 
@@ -129,8 +129,9 @@ class TestCommandsCallElevate:
         mocker.patch("devlair.features.upgrade.run_upgrade")
 
         from typer.testing import CliRunner
+
         runner = CliRunner()
-        result = runner.invoke(cli.app, ["upgrade"])
+        runner.invoke(cli.app, ["upgrade"])
 
         mock_elevate.assert_called_once()
 
@@ -139,7 +140,8 @@ class TestCommandsCallElevate:
         mocker.patch("devlair.features.disable_password.run_disable_password")
 
         from typer.testing import CliRunner
+
         runner = CliRunner()
-        result = runner.invoke(cli.app, ["disable-password"])
+        runner.invoke(cli.app, ["disable-password"])
 
         mock_elevate.assert_called_once()

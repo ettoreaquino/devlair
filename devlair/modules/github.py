@@ -1,10 +1,11 @@
 import shutil
-import typer
 from pathlib import Path
 
-from devlair.context import CheckItem, ModuleResult, SetupContext
+import typer
+
 from devlair import runner
 from devlair.console import console
+from devlair.context import CheckItem, ModuleResult, SetupContext
 
 LABEL = "GitHub SSH key"
 
@@ -42,7 +43,7 @@ Host github.com
         shutil.chown(ssh_conf, ctx.username, ctx.username)
 
     pub = gh_key.with_suffix(".pub").read_text().strip()
-    console.print(f"\n  [info]Add this public key to GitHub → Settings → SSH keys:[/info]")
+    console.print("\n  [info]Add this public key to GitHub → Settings → SSH keys:[/info]")
     console.print(f"\n  [detail]{pub}[/detail]\n")
     typer.prompt("  Press Enter after adding the key to GitHub", default="", show_default=False)
 

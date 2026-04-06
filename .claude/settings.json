@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command // \"\"' | head -1 | grep -qE '^gh pr create\\b' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"A pull request was just created. Please review it by running /review on the PR number shown above.\"}}' || true",
+            "timeout": 5,
+            "statusMessage": "Checking for PR review..."
+          }
+        ]
+      }
+    ]
+  }
+}

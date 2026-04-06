@@ -1,9 +1,7 @@
 """Tests for the firewall module — validates logic, mocks all system calls."""
-import pytest
-import click
-from pathlib import Path
-from devlair.modules import firewall
+
 from devlair.context import SetupContext
+from devlair.modules import firewall
 
 
 def test_run_calls_ufw_and_fail2ban(ctx: SetupContext, mock_runner, tmp_path, mocker):

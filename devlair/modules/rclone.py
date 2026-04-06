@@ -1,5 +1,5 @@
-from devlair.context import CheckItem, ModuleResult, SetupContext
 from devlair import runner
+from devlair.context import CheckItem, ModuleResult, SetupContext
 
 LABEL = "rclone sync"
 
@@ -15,11 +15,13 @@ def check() -> list[CheckItem]:
     from devlair.features.sync import discover_timers, timer_status
 
     installed = runner.cmd_exists("rclone")
-    items = [CheckItem(
-        label="rclone",
-        status="ok" if installed else "fail",
-        detail="installed" if installed else "missing",
-    )]
+    items = [
+        CheckItem(
+            label="rclone",
+            status="ok" if installed else "fail",
+            detail="installed" if installed else "missing",
+        )
+    ]
 
     if not installed:
         return items
@@ -34,10 +36,12 @@ def check() -> list[CheckItem]:
     for timer in timers:
         remote_name = timer.stem.removeprefix("rclone-")
         active, last = timer_status(username, user_home, timer.name)
-        items.append(CheckItem(
-            label=f"rclone-{remote_name}",
-            status="ok" if active == "active" else "warn",
-            detail=f"timer {active} · last: {last}",
-        ))
+        items.append(
+            CheckItem(
+                label=f"rclone-{remote_name}",
+                status="ok" if active == "active" else "warn",
+                detail=f"timer {active} · last: {last}",
+            )
+        )
 
     return items

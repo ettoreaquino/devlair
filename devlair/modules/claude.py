@@ -3,8 +3,8 @@ import shutil
 import stat
 from pathlib import Path
 
-from devlair.context import CheckItem, ModuleResult, SetupContext, read_json, update_json
 from devlair import runner
+from devlair.context import CheckItem, ModuleResult, SetupContext, update_json
 
 LABEL = "Claude Code"
 
@@ -16,34 +16,40 @@ DEVLAIR_SETTINGS = {
     "model": "sonnet",
     "effortLevel": "medium",
     "channelsEnabled": True,
-    "allowedChannelPlugins": [
-        {"marketplace": "claude-plugins-official", "plugin": "telegram"}
-    ],
+    "allowedChannelPlugins": [{"marketplace": "claude-plugins-official", "plugin": "telegram"}],
     "hooks": {
-        "SessionStart": [{
-            "matcher": "",
-            "hooks": [{
-                "type": "command",
-                "command": (
-                    "jq -c '{pid:(env.PPID|tonumber? // 0),session_id,model,cwd,"
-                    "channels:(env.CLAUDE_CHANNELS // \"\"),"
-                    "started_at:(now|todate)}' > ~/.claude/devlair-active; "
-                    "tmux refresh-client -S 2>/dev/null; true"
-                ),
-            }],
-        }],
-        "Stop": [{
-            "matcher": "",
-            "hooks": [{
-                "type": "command",
-                "command": (
-                    "jq -c '{session_id,transcript_path,cwd,ended_at:(now|todate)}'"
-                    " >> ~/.claude/devlair-sessions.jsonl; "
-                    "rm -f ~/.claude/devlair-active; "
-                    "tmux refresh-client -S 2>/dev/null; true"
-                ),
-            }],
-        }],
+        "SessionStart": [
+            {
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": (
+                            "jq -c '{pid:(env.PPID|tonumber? // 0),session_id,model,cwd,"
+                            'channels:(env.CLAUDE_CHANNELS // ""),'
+                            "started_at:(now|todate)}' > ~/.claude/devlair-active; "
+                            "tmux refresh-client -S 2>/dev/null; true"
+                        ),
+                    }
+                ],
+            }
+        ],
+        "Stop": [
+            {
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": (
+                            "jq -c '{session_id,transcript_path,cwd,ended_at:(now|todate)}'"
+                            " >> ~/.claude/devlair-sessions.jsonl; "
+                            "rm -f ~/.claude/devlair-active; "
+                            "tmux refresh-client -S 2>/dev/null; true"
+                        ),
+                    }
+                ],
+            }
+        ],
     },
 }
 
@@ -203,33 +209,36 @@ def _ensure_telegram_plugin(username: str) -> str:
 
     # Add marketplace if not present
     result = runner.run_as(
-        username, ["claude", "plugin", "marketplace", "list", "--json"],
-        capture=True, check=False,
+        username,
+        ["claude", "plugin", "marketplace", "list", "--json"],
+        capture=True,
+        check=False,
     )
     marketplaces = json.loads(result.stdout) if result.returncode == 0 else []
     has_marketplace = any(m.get("name") == "claude-plugins-official" for m in marketplaces)
 
     if not has_marketplace:
         runner.run_as(
-            username, ["claude", "plugin", "marketplace", "add", TELEGRAM_MARKETPLACE],
+            username,
+            ["claude", "plugin", "marketplace", "add", TELEGRAM_MARKETPLACE],
             capture=True,
         )
         details.append("marketplace added")
 
     # Install plugin if not present
     result = runner.run_as(
-        username, ["claude", "plugin", "list", "--json"],
-        capture=True, check=False,
+        username,
+        ["claude", "plugin", "list", "--json"],
+        capture=True,
+        check=False,
     )
     plugins = json.loads(result.stdout) if result.returncode == 0 else []
-    has_plugin = any(
-        p.get("name") == "telegram" and p.get("marketplace") == "claude-plugins-official"
-        for p in plugins
-    )
+    has_plugin = any(p.get("name") == "telegram" and p.get("marketplace") == "claude-plugins-official" for p in plugins)
 
     if not has_plugin:
         runner.run_as(
-            username, ["claude", "plugin", "install", TELEGRAM_PLUGIN],
+            username,
+            ["claude", "plugin", "install", TELEGRAM_PLUGIN],
             capture=True,
         )
         details.append("telegram plugin installed")
@@ -259,7 +268,7 @@ def run(ctx: SetupContext) -> ModuleResult:
         except Exception as exc:
             plugin_detail = f"telegram plugin failed: {exc}"
 
-    detail = f"settings.json merged, hooks installed, scripts deployed"
+    detail = "settings.json merged, hooks installed, scripts deployed"
     if plugin_detail:
         detail += f", {plugin_detail}"
     return ModuleResult(status="ok", detail=detail)
@@ -287,8 +296,10 @@ def check() -> list[CheckItem]:
             pass
 
     claude_ok = runner.cmd_exists("claude")
-    context_disabled = Path("~/.zshrc").expanduser().exists() and \
-        "CLAUDE_CODE_DISABLE_1M_CONTEXT" in Path("~/.zshrc").expanduser().read_text()
+    context_disabled = (
+        Path("~/.zshrc").expanduser().exists()
+        and "CLAUDE_CODE_DISABLE_1M_CONTEXT" in Path("~/.zshrc").expanduser().read_text()
+    )
     telegram_wrapper = Path("~/.devlair/bin/claude-telegram").expanduser().exists()
     tmx_new_ok = Path("~/.devlair/bin/tmx-new").expanduser().exists()
     bun_ok = runner.cmd_exists("bun") or Path("~/.bun/bin/bun").expanduser().exists()
@@ -300,26 +311,26 @@ def check() -> list[CheckItem]:
         try:
             result = runner.run(
                 ["claude", "plugin", "list", "--json"],
-                capture=True, check=False,
+                capture=True,
+                check=False,
             )
             plugins = json.loads(result.stdout) if result.returncode == 0 else []
             plugin_installed = any(
-                p.get("name") == "telegram" and p.get("marketplace") == "claude-plugins-official"
-                for p in plugins
+                p.get("name") == "telegram" and p.get("marketplace") == "claude-plugins-official" for p in plugins
             )
         except (json.JSONDecodeError, OSError):
             pass
 
     return [
-        CheckItem("claude installed",        "ok" if claude_ok        else "warn"),
-        CheckItem("settings.json managed",   "ok" if settings_ok      else "warn"),
-        CheckItem("Stop hook configured",    "ok" if hooks_ok         else "warn"),
-        CheckItem("1M context disabled",     "ok" if context_disabled else "warn"),
-        CheckItem("channels enabled",        "ok" if channels_enabled else "warn"),
+        CheckItem("claude installed", "ok" if claude_ok else "warn"),
+        CheckItem("settings.json managed", "ok" if settings_ok else "warn"),
+        CheckItem("Stop hook configured", "ok" if hooks_ok else "warn"),
+        CheckItem("1M context disabled", "ok" if context_disabled else "warn"),
+        CheckItem("channels enabled", "ok" if channels_enabled else "warn"),
         CheckItem("telegram plugin allowed", "ok" if telegram_allowed else "warn"),
         CheckItem("telegram plugin installed", "ok" if plugin_installed else "warn"),
-        CheckItem("claude-telegram",         "ok" if telegram_wrapper else "warn"),
-        CheckItem("tmx-new script",          "ok" if tmx_new_ok      else "warn"),
-        CheckItem("bun installed",           "ok" if bun_ok           else "warn"),
-        CheckItem("telegram token configured", "ok" if telegram_env   else "warn"),
+        CheckItem("claude-telegram", "ok" if telegram_wrapper else "warn"),
+        CheckItem("tmx-new script", "ok" if tmx_new_ok else "warn"),
+        CheckItem("bun installed", "ok" if bun_ok else "warn"),
+        CheckItem("telegram token configured", "ok" if telegram_env else "warn"),
     ]

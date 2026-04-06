@@ -1,9 +1,8 @@
-import shutil
 from pathlib import Path
 
-from devlair.context import CheckItem, ModuleResult, SetupContext
 from devlair import runner
 from devlair.console import console
+from devlair.context import CheckItem, ModuleResult, SetupContext
 
 LABEL = "Dev tools"
 
@@ -24,7 +23,9 @@ def run(ctx: SetupContext) -> ModuleResult:
         skipped.append("uv")
     else:
         console.print("    [muted]uv...[/muted]")
-        runner.run_shell_as(ctx.username, "INSTALLER_NO_MODIFY_PATH=1 curl -LsSf https://astral.sh/uv/install.sh | sh", quiet=True)
+        runner.run_shell_as(
+            ctx.username, "INSTALLER_NO_MODIFY_PATH=1 curl -LsSf https://astral.sh/uv/install.sh | sh", quiet=True
+        )
         installed.append("uv")
 
     # ── pyenv ─────────────────────────────────────────────────────────────────
@@ -34,9 +35,17 @@ def run(ctx: SetupContext) -> ModuleResult:
     else:
         console.print("    [muted]pyenv...[/muted]")
         runner.apt_install(
-            "libssl-dev", "libbz2-dev", "libreadline-dev", "libsqlite3-dev",
-            "libncursesw5-dev", "xz-utils", "tk-dev", "libxml2-dev",
-            "libxmlsec1-dev", "libffi-dev", "liblzma-dev",
+            "libssl-dev",
+            "libbz2-dev",
+            "libreadline-dev",
+            "libsqlite3-dev",
+            "libncursesw5-dev",
+            "xz-utils",
+            "tk-dev",
+            "libxml2-dev",
+            "libxmlsec1-dev",
+            "libffi-dev",
+            "liblzma-dev",
             quiet=True,
         )
         runner.run_shell_as(
@@ -97,7 +106,8 @@ def run(ctx: SetupContext) -> ModuleResult:
         skipped.append("docker")
     else:
         console.print("    [muted]docker...[/muted]")
-        runner.run_shell("""
+        runner.run_shell(
+            """
             install -m 0755 -d /etc/apt/keyrings
             curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
                 | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
@@ -108,7 +118,9 @@ def run(ctx: SetupContext) -> ModuleResult:
             apt-get update -qq
             apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin
             systemctl enable docker
-        """, quiet=True)
+        """,
+            quiet=True,
+        )
         installed.append("docker")
 
     # Ensure user is in docker group
@@ -121,7 +133,8 @@ def run(ctx: SetupContext) -> ModuleResult:
         skipped.append("gh")
     else:
         console.print("    [muted]gh...[/muted]")
-        runner.run_shell("""
+        runner.run_shell(
+            """
             curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
                 | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
             chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
@@ -130,7 +143,9 @@ def run(ctx: SetupContext) -> ModuleResult:
                 | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
             apt-get update -qq
             apt-get install -y -qq gh
-        """, quiet=True)
+        """,
+            quiet=True,
+        )
         installed.append("gh")
 
     # ── AWS CLI v2 ────────────────────────────────────────────────────────────
@@ -140,12 +155,15 @@ def run(ctx: SetupContext) -> ModuleResult:
         console.print("    [muted]aws cli...[/muted]")
         arch = runner.get_output("dpkg --print-architecture")
         aws_arch = "x86_64" if arch == "amd64" else "aarch64"
-        runner.run_shell(f"""
+        runner.run_shell(
+            f"""
             curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-{aws_arch}.zip" -o /tmp/awscliv2.zip
             unzip -qo /tmp/awscliv2.zip -d /tmp
             /tmp/aws/install
             rm -rf /tmp/awscliv2.zip /tmp/aws
-        """, quiet=True)
+        """,
+            quiet=True,
+        )
         installed.append("aws")
 
     # ── rclone ────────────────────────────────────────────────────────────────
@@ -153,9 +171,12 @@ def run(ctx: SetupContext) -> ModuleResult:
         skipped.append("rclone")
     else:
         console.print("    [muted]rclone...[/muted]")
-        runner.run_shell("""
+        runner.run_shell(
+            """
             curl -fsSL https://rclone.org/install.sh | bash
-        """, quiet=True)
+        """,
+            quiet=True,
+        )
         installed.append("rclone")
 
     # ── Bun ───────────────────────────────────────────────────────────────────
@@ -171,8 +192,10 @@ def run(ctx: SetupContext) -> ModuleResult:
         installed.append("bun")
 
     parts = []
-    if installed: parts.append(f"installed: {', '.join(installed)}")
-    if skipped:   parts.append(f"skipped: {', '.join(skipped)}")
+    if installed:
+        parts.append(f"installed: {', '.join(installed)}")
+    if skipped:
+        parts.append(f"skipped: {', '.join(skipped)}")
     return ModuleResult(status="ok", detail=" | ".join(parts))
 
 

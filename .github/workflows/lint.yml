@@ -1,4 +1,4 @@
-name: Lint
+name: CI
 
 on:
   push:
@@ -6,11 +6,15 @@ on:
   pull_request:
 
 jobs:
-  syntax:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
       - name: Check for invalid escape sequences
         run: |
           python3 -W error::SyntaxWarning -c "
@@ -26,3 +30,54 @@ jobs:
               print('\n'.join(errors)); sys.exit(1)
           print('clean')
           "
+
+      - name: Ruff lint
+        run: uv run ruff check devlair/ tests/
+
+      - name: Ruff format
+        run: uv run ruff format --check devlair/ tests/
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Run unit tests
+        run: uv run pytest tests/unit/ -v
+
+  commit-messages:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate Conventional Commits
+        run: |
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+          PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .+'
+          BAD=0
+          while IFS= read -r msg; do
+            # Allow auto-generated merge and revert commits
+            echo "$msg" | grep -qE '^(Merge|Revert) ' && continue
+            if ! echo "$msg" | grep -qE "$PATTERN"; then
+              echo "::error::Bad commit message: $msg"
+              BAD=1
+            fi
+          done < <(git log --format='%s' "$BASE".."$HEAD")
+          if [ "$BAD" = "1" ]; then
+            echo ""
+            echo "Commit messages must follow Conventional Commits:"
+            echo "  feat(scope): description"
+            echo "  fix(scope): description"
+            echo "  docs: description"
+            echo "  refactor(scope): description"
+            exit 1
+          fi
+          echo "All commit messages follow Conventional Commits ✓"

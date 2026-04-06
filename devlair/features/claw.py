@@ -15,11 +15,13 @@ def _compose_cmd(subcmd: str, quiet: bool = True):
     claw_dir = _claw_dir()
     return runner.run_shell(
         f'cd "{claw_dir}" && docker compose {subcmd}',
-        quiet=quiet, check=False,
+        quiet=quiet,
+        check=False,
     )
 
 
 # ── Status ────────────────────────────────────────────────────────────────
+
 
 def _container_status(name: str) -> str:
     return runner.get_output(f"docker inspect -f '{{{{.State.Status}}}}' {name}") or "stopped"
@@ -80,7 +82,9 @@ def show_status() -> None:
     if instance_state != "open":
         if instance_name:
             style = "warning"
-            console.print(f"  [{style}]●[/{style}]  WhatsApp instance: [accent]{instance_name}[/accent] ({instance_state})")
+            console.print(
+                f"  [{style}]●[/{style}]  WhatsApp instance: [accent]{instance_name}[/accent] ({instance_state})"
+            )
         console.print()
         console.print("  [muted]Next:[/muted] [accent]devlair claw --pair[/accent]")
         console.print()
@@ -95,7 +99,7 @@ def show_status() -> None:
         phones = json.loads(allowlist_file.read_text()) if allowlist_file.exists() else []
     except (json.JSONDecodeError, OSError):
         phones = []
-        console.print(f"  [error]Corrupt allowlist.json[/error]")
+        console.print("  [error]Corrupt allowlist.json[/error]")
 
     # Stage 4: No phones
     if not phones:
@@ -106,7 +110,7 @@ def show_status() -> None:
         return
 
     # Stage 5: Ready — full dashboard
-    console.print(f"\n  [muted]Allowed numbers:[/muted]")
+    console.print("\n  [muted]Allowed numbers:[/muted]")
     for phone in phones:
         console.print(f"    [accent]{phone}[/accent]")
     console.print()
@@ -114,21 +118,22 @@ def show_status() -> None:
 
 # ── Pair ──────────────────────────────────────────────────────────────────
 
+
 def pair_whatsapp() -> None:
-    claw_dir = _claw_dir()
     evolution_key = _get_env_var("EVOLUTION_API_KEY")
     if not evolution_key:
         console.print("  [error].env missing or no EVOLUTION_API_KEY set.[/error]")
         return
 
     # Check if Evolution API is reachable
-    status = runner.get_output(f"docker inspect -f '{{{{.State.Status}}}}' evolution")
+    status = runner.get_output("docker inspect -f '{{.State.Status}}' evolution")
     if status != "running":
         console.print("  [error]Evolution API container is not running.[/error]")
         console.print("  [muted]Start it with [accent]devlair claw --start[/accent][/muted]")
         return
 
     import typer
+
     instance_name = typer.prompt("  Instance name", default="picoclaw")
 
     # Create instance if it doesn't exist
@@ -146,17 +151,17 @@ def pair_whatsapp() -> None:
             qr = data.get("qrcode", {})
             if isinstance(qr, dict) and qr.get("base64"):
                 console.print("\n  [info]Scan the QR code from your WhatsApp app.[/info]")
-                console.print(f"  [muted]QR code available at:[/muted]")
+                console.print("  [muted]QR code available at:[/muted]")
                 console.print(f"  [accent]http://<tailscale-ip>:8080/instance/connect/{instance_name}[/accent]")
-                console.print(f"\n  [muted]Or use the Evolution API manager at:[/muted]")
-                console.print(f"  [accent]http://<tailscale-ip>:8080/manager[/accent]")
+                console.print("\n  [muted]Or use the Evolution API manager at:[/muted]")
+                console.print("  [accent]http://<tailscale-ip>:8080/manager[/accent]")
                 return
         except (json.JSONDecodeError, TypeError):
             pass
 
     # If instance already exists, connect it
     console.print("  [muted]Connecting existing instance...[/muted]")
-    connect_result = runner.get_output(
+    runner.get_output(
         f"""curl -sf http://127.0.0.1:8080/instance/connect/{instance_name} \
             -H 'apikey: {evolution_key}'"""
     )
@@ -164,13 +169,14 @@ def pair_whatsapp() -> None:
     ts_ip = runner.get_output("tailscale ip -4")
     host = ts_ip if ts_ip else "<tailscale-ip>"
 
-    console.print(f"\n  [info]Scan the QR code to pair WhatsApp.[/info]")
-    console.print(f"  [muted]Open in your browser (from a Tailscale device):[/muted]")
+    console.print("\n  [info]Scan the QR code to pair WhatsApp.[/info]")
+    console.print("  [muted]Open in your browser (from a Tailscale device):[/muted]")
     console.print(f"  [accent]http://{host}:8080/manager[/accent]")
     console.print()
 
 
 # ── Allowlist ─────────────────────────────────────────────────────────────
+
 
 def allow_phone(phone: str) -> None:
     phone = phone.strip()
@@ -206,9 +212,9 @@ def revoke_phone(phone: str) -> None:
 
 # ── Logs ──────────────────────────────────────────────────────────────────
 
+
 def tail_logs() -> None:
     import subprocess
-    import sys
 
     claw_dir = _claw_dir()
     if not (claw_dir / "docker-compose.yml").exists():
@@ -226,6 +232,7 @@ def tail_logs() -> None:
 
 
 # ── Stop / Start ──────────────────────────────────────────────────────────
+
 
 def stop_stack() -> None:
     console.print("  [muted]Stopping claw stack...[/muted]")
@@ -247,6 +254,7 @@ def start_stack() -> None:
 
 # ── Helpers ───────────────────────────────────────────────────────────────
 
+
 def _get_env_var(key: str) -> str:
     return _parse_env(_claw_dir() / ".env").get(key, "")
 
@@ -264,6 +272,7 @@ def _write_allowlist(path: Path, phones: list[str]) -> None:
 
 
 # ── Entry point ───────────────────────────────────────────────────────────
+
 
 def run_claw(
     pair: bool = False,

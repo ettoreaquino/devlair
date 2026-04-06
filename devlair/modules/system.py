@@ -1,14 +1,30 @@
-from devlair.context import CheckItem, ModuleResult, SetupContext
 from devlair import runner
+from devlair.context import CheckItem, ModuleResult, SetupContext
 
 LABEL = "System update"
 
 ESSENTIALS = [
-    "openssh-server", "ufw", "fail2ban",
-    "curl", "wget", "git", "vim", "htop", "tmux", "unzip",
-    "net-tools", "avahi-daemon", "build-essential",
-    "ca-certificates", "gnupg", "jq", "tree", "rsync",
-    "zsh", "bat", "fzf",
+    "openssh-server",
+    "ufw",
+    "fail2ban",
+    "curl",
+    "wget",
+    "git",
+    "vim",
+    "htop",
+    "tmux",
+    "unzip",
+    "net-tools",
+    "avahi-daemon",
+    "build-essential",
+    "ca-certificates",
+    "gnupg",
+    "jq",
+    "tree",
+    "rsync",
+    "zsh",
+    "bat",
+    "fzf",
 ]
 
 
@@ -21,12 +37,20 @@ def run(ctx: SetupContext) -> ModuleResult:
 
 def check() -> list[CheckItem]:
     items = []
-    for label, cmd in [("git", "git"), ("curl", "curl"), ("tmux", "tmux"),
-                        ("zsh", "zsh"), ("ufw", "ufw"), ("fail2ban", "fail2ban-client")]:
+    for label, cmd in [
+        ("git", "git"),
+        ("curl", "curl"),
+        ("tmux", "tmux"),
+        ("zsh", "zsh"),
+        ("ufw", "ufw"),
+        ("fail2ban", "fail2ban-client"),
+    ]:
         ok = runner.cmd_exists(cmd)
-        items.append(CheckItem(
-            label=label,
-            status="ok" if ok else "fail",
-            detail="installed" if ok else "missing",
-        ))
+        items.append(
+            CheckItem(
+                label=label,
+                status="ok" if ok else "fail",
+                detail="installed" if ok else "missing",
+            )
+        )
     return items

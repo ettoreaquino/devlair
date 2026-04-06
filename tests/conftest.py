@@ -1,7 +1,10 @@
 """Shared fixtures for devlair tests."""
+
 import getpass
-import pytest
 from pathlib import Path
+
+import pytest
+
 from devlair.context import SetupContext
 
 _REAL_USER = getpass.getuser()
@@ -31,13 +34,13 @@ def mock_runner(mocker):
     Individual tests override specific calls as needed.
     """
     mocks = {
-        "run":          mocker.patch("devlair.runner.run",          return_value=_fake_proc()),
-        "run_as":       mocker.patch("devlair.runner.run_as",       return_value=_fake_proc()),
-        "run_shell":    mocker.patch("devlair.runner.run_shell",     return_value=_fake_proc()),
-        "run_shell_as": mocker.patch("devlair.runner.run_shell_as",  return_value=_fake_proc()),
-        "apt_install":  mocker.patch("devlair.runner.apt_install",   return_value=None),
-        "cmd_exists":   mocker.patch("devlair.runner.cmd_exists",    return_value=True),
-        "get_output":   mocker.patch("devlair.runner.get_output",    return_value=""),
+        "run": mocker.patch("devlair.runner.run", return_value=_fake_proc()),
+        "run_as": mocker.patch("devlair.runner.run_as", return_value=_fake_proc()),
+        "run_shell": mocker.patch("devlair.runner.run_shell", return_value=_fake_proc()),
+        "run_shell_as": mocker.patch("devlair.runner.run_shell_as", return_value=_fake_proc()),
+        "apt_install": mocker.patch("devlair.runner.apt_install", return_value=None),
+        "cmd_exists": mocker.patch("devlair.runner.cmd_exists", return_value=True),
+        "get_output": mocker.patch("devlair.runner.get_output", return_value=""),
     }
     return mocks
 
@@ -45,4 +48,5 @@ def mock_runner(mocker):
 def _fake_proc(stdout: str = "", stderr: str = "", returncode: int = 0):
     """Return a minimal CompletedProcess-like object."""
     import subprocess
+
     return subprocess.CompletedProcess(args=[], returncode=returncode, stdout=stdout, stderr=stderr)
