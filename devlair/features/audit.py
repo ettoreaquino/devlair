@@ -45,6 +45,16 @@ def log_module_result(user_home: Path, *, module: str, status: str, detail: str 
     log_event(user_home, event="module_result", detail={"module": module, "status": status, "detail": detail})
 
 
+def safe_log_install(user_home: Path, **kwargs: object) -> None:
+    """Best-effort audit log for tool installs — never breaks the caller."""
+    import logging
+
+    try:
+        log_tool_install(user_home, **kwargs)  # type: ignore[arg-type]
+    except Exception:
+        logging.getLogger(__name__).debug("audit log write failed", exc_info=True)
+
+
 def read_log(user_home: Path) -> list[dict]:
     """Read all audit entries. Returns empty list if no log exists."""
     path = _audit_path(user_home)

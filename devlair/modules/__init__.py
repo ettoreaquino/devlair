@@ -43,7 +43,7 @@ MODULE_SPECS: list[ModuleSpec] = [
     ModuleSpec("zsh",            "Zsh + Dracula",          zsh,            "core",        reapply=True),
     ModuleSpec("tmux",           "tmux",                   tmux,           "coding",      reapply=True),
     ModuleSpec("devtools",       "Dev tools",              devtools,       "coding",      reapply=True),
-    ModuleSpec("rclone",         "rclone sync",            rclone,         "cloud-sync"),
+    ModuleSpec("rclone",         "rclone sync",            rclone,         "cloud-sync",                              default_on=set()),
     ModuleSpec("github",         "GitHub SSH key",         github,         "coding"),
     ModuleSpec("shell",          "Shell aliases",          shell,          "core",        deps=["zsh"], reapply=True),
     ModuleSpec("gnome_terminal", "Gnome Terminal Dracula", gnome_terminal, "desktop",     reapply=True,              platforms={"linux"}),

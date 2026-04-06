@@ -51,7 +51,7 @@ Module groups and dependencies are defined in `devlair/modules/__init__.py` via 
 | core | system, timezone*, zsh, shell | shell → zsh |
 | network | tailscale†, ssh*, firewall* | ssh → tailscale, firewall → ssh |
 | coding | tmux, devtools, github | — |
-| cloud-sync | rclone | — |
+| cloud-sync | rclone‡ | — |
 | ai | claude‡, claw‡ | claude → devtools, claw → devtools |
 | desktop | gnome_terminal* | — |
 
