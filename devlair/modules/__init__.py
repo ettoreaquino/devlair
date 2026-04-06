@@ -50,8 +50,6 @@ MODULE_SPECS: list[ModuleSpec] = [
 ]
 # fmt: on
 
-# Backwards-compatible tuple list and reapply set
-MODULES = [(s.key, s.label, s.module) for s in MODULE_SPECS]
 REAPPLY_KEYS = {s.key for s in MODULE_SPECS if s.reapply}
 
 _SPEC_MAP = {s.key: s for s in MODULE_SPECS}

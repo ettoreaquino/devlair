@@ -4,7 +4,6 @@ from devlair.modules import (
     _SPEC_MAP,
     GROUPS,
     MODULE_SPECS,
-    MODULES,
     REAPPLY_KEYS,
     keys_for_groups,
     resolve_order,
@@ -32,13 +31,6 @@ class TestModuleSpecs:
             for dep in s.deps:
                 assert dep in seen, f"'{s.key}' depends on '{dep}' which appears later"
             seen.add(s.key)
-
-    def test_backwards_compat_modules_tuple(self):
-        assert len(MODULES) == len(MODULE_SPECS)
-        for (key, label, mod), s in zip(MODULES, MODULE_SPECS):
-            assert key == s.key
-            assert label == s.label
-            assert mod is s.module
 
     def test_reapply_keys_match_specs(self):
         assert REAPPLY_KEYS == {s.key for s in MODULE_SPECS if s.reapply}
