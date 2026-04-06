@@ -68,7 +68,9 @@ def run_doctor(fix: bool = False) -> None:
         from devlair.modules import REAPPLY_KEYS, resolve_order
 
         username, user_home = resolve_invoking_user()
-        ctx = SetupContext(username=username, user_home=user_home, platform=platform, wsl_version=detect_wsl_version())
+        ctx = SetupContext(
+            username=username, user_home=user_home, platform=platform, wsl_version=detect_wsl_version(platform)
+        )
 
         console.print()
         console.print(f"  [step]Attempting to fix {len(failed_keys)} module(s)...[/step]")

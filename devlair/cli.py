@@ -313,10 +313,12 @@ def init(
     username = _require_root()
     user_home = Path(pwd.getpwnam(username).pw_dir)
     platform = detect_platform()
-    ctx = SetupContext(username=username, user_home=user_home, platform=platform, wsl_version=detect_wsl_version())
+    ctx = SetupContext(
+        username=username, user_home=user_home, platform=platform, wsl_version=detect_wsl_version(platform)
+    )
 
-    platform_label = f"on {_hostname()}" if platform == "linux" else f"on {_hostname()} (WSL)"
-    _print_header("init", f"Configuring lair for [bold]{username}[/bold] {platform_label}")
+    suffix = {"wsl": " (WSL)", "macos": " (macOS)"}.get(platform, "")
+    _print_header("init", f"Configuring lair for [bold]{username}[/bold] on {_hostname()}{suffix}")
 
     # Build the set of requested keys
     want: set[str] | None = None
@@ -329,8 +331,7 @@ def init(
     skip_set = set(skip.split(",")) if skip else set()
     all_specs = resolve_order(want)
     platform_skipped = [s for s in all_specs if platform not in s.platforms]
-    specs = resolve_order(want, platform=platform)
-    selected = [s for s in specs if s.key not in skip_set]
+    selected = [s for s in all_specs if platform in s.platforms and s.key not in skip_set]
 
     if platform_skipped:
         names = ", ".join(s.key for s in platform_skipped)
@@ -384,7 +385,9 @@ def upgrade(
     # Re-apply module configurations in dependency order
     username, user_home = resolve_invoking_user()
     platform = detect_platform()
-    ctx = SetupContext(username=username, user_home=user_home, platform=platform, wsl_version=detect_wsl_version())
+    ctx = SetupContext(
+        username=username, user_home=user_home, platform=platform, wsl_version=detect_wsl_version(platform)
+    )
 
     console.print("  [step]Re-applying configurations...[/step]")
     for s in resolve_order(REAPPLY_KEYS, platform=platform):

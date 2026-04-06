@@ -22,9 +22,9 @@ def detect_platform() -> Platform:
     return "linux"
 
 
-def detect_wsl_version() -> int | None:
+def detect_wsl_version(platform: Platform | None = None) -> int | None:
     """Return 1 or 2 for WSL, None otherwise."""
-    if detect_platform() != "wsl":
+    if (platform or detect_platform()) != "wsl":
         return None
     try:
         proc_version = Path("/proc/version").read_text()
