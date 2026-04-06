@@ -1,10 +1,12 @@
-import tempfile
+import logging
 from pathlib import Path
 
 from devlair import runner
 from devlair.console import console
 from devlair.context import CheckItem, ModuleResult, SetupContext
 from devlair.features.audit import log_tool_install
+
+_log = logging.getLogger(__name__)
 
 LABEL = "Dev tools"
 
@@ -20,9 +22,21 @@ def _bun_exists(user_home: Path) -> bool:
 
 def _download_script(url: str) -> Path:
     """Download an installer script to a temp file instead of piping to shell."""
-    tmp = Path(tempfile.mktemp(suffix=".sh"))
-    runner.run_shell(f'curl -fsSL "{url}" -o "{tmp}"', quiet=True)
+    tmp = runner.safe_tempfile(suffix=".sh")
+    try:
+        runner.run_shell(f'curl -fsSL "{url}" -o "{tmp}"', quiet=True)
+    except Exception:
+        tmp.unlink(missing_ok=True)
+        raise
     return tmp
+
+
+def _audit(user_home: Path, **kwargs: object) -> None:
+    """Best-effort audit log — never breaks the primary flow."""
+    try:
+        log_tool_install(user_home, **kwargs)  # type: ignore[arg-type]
+    except Exception:
+        _log.debug("audit log write failed", exc_info=True)
 
 
 def run(ctx: SetupContext) -> ModuleResult:
@@ -36,9 +50,11 @@ def run(ctx: SetupContext) -> ModuleResult:
     else:
         console.print("    [muted]uv...[/muted]")
         script = _download_script("https://astral.sh/uv/install.sh")
-        runner.run_shell_as(ctx.username, f'INSTALLER_NO_MODIFY_PATH=1 bash "{script}"', quiet=True)
-        script.unlink(missing_ok=True)
-        log_tool_install(ctx.user_home, tool="uv", source="astral.sh")
+        try:
+            runner.run_shell_as(ctx.username, f'INSTALLER_NO_MODIFY_PATH=1 bash "{script}"', quiet=True)
+        finally:
+            script.unlink(missing_ok=True)
+        _audit(ctx.user_home, tool="uv", source="astral.sh")
         installed.append("uv")
 
     # ── pyenv ─────────────────────────────────────────────────────────────────
@@ -62,15 +78,17 @@ def run(ctx: SetupContext) -> ModuleResult:
             quiet=True,
         )
         script = _download_script("https://pyenv.run")
-        runner.run_shell_as(ctx.username, f'bash "{script}"', quiet=True)
-        script.unlink(missing_ok=True)
+        try:
+            runner.run_shell_as(ctx.username, f'bash "{script}"', quiet=True)
+        finally:
+            script.unlink(missing_ok=True)
         runner.run_shell_as(
             ctx.username,
             f'export PYENV_ROOT="{pyenv_dir}" && export PATH="$PYENV_ROOT/bin:$PATH" '
             f'&& eval "$(pyenv init -)" && pyenv install -s 3 && pyenv global "$(pyenv latest 3)"',
             quiet=True,
         )
-        log_tool_install(ctx.user_home, tool="pyenv", source="pyenv.run")
+        _audit(ctx.user_home, tool="pyenv", source="pyenv.run")
         installed.append("pyenv")
 
     # ── nvm / Node ────────────────────────────────────────────────────────────
@@ -80,8 +98,10 @@ def run(ctx: SetupContext) -> ModuleResult:
     else:
         console.print("    [muted]nvm + Node LTS...[/muted]")
         script = _download_script("https://raw.githubusercontent.com/nvm-sh/nvm/HEAD/install.sh")
-        runner.run_shell_as(ctx.username, f'export PROFILE=/dev/null && bash "{script}"', quiet=True)
-        script.unlink(missing_ok=True)
+        try:
+            runner.run_shell_as(ctx.username, f'export PROFILE=/dev/null && bash "{script}"', quiet=True)
+        finally:
+            script.unlink(missing_ok=True)
         result = runner.run_shell_as(
             ctx.username,
             f'export NVM_DIR="{nvm_dir}" && source "$NVM_DIR/nvm.sh" && nvm install --lts',
@@ -95,7 +115,7 @@ def run(ctx: SetupContext) -> ModuleResult:
                     node_ver = line.split("node ")[1].split(" ")[0] if "node " in line else ""
         if node_ver:
             next_steps.append(f"node {node_ver} installed via nvm")
-        log_tool_install(ctx.user_home, tool="nvm", source="github.com/nvm-sh/nvm")
+        _audit(ctx.user_home, tool="nvm", source="github.com/nvm-sh/nvm")
         installed.append("nvm+node")
 
     # ── fzf ──────────────────────────────────────────────────────────────────
@@ -110,7 +130,7 @@ def run(ctx: SetupContext) -> ModuleResult:
             f'&& "{fzf_dir}/install" --all --no-update-rc',
             quiet=True,
         )
-        log_tool_install(ctx.user_home, tool="fzf", source="github.com/junegunn/fzf", verified=True)
+        _audit(ctx.user_home, tool="fzf", source="github.com/junegunn/fzf", verified=True)
         installed.append("fzf")
 
     # ── Docker ────────────────────────────────────────────────────────────────
@@ -133,7 +153,7 @@ def run(ctx: SetupContext) -> ModuleResult:
         """,
             quiet=True,
         )
-        log_tool_install(ctx.user_home, tool="docker", source="apt:docker.com", verified=True)
+        _audit(ctx.user_home, tool="docker", source="apt:docker.com", verified=True)
         installed.append("docker")
 
     # Ensure user is in docker group
@@ -159,7 +179,7 @@ def run(ctx: SetupContext) -> ModuleResult:
         """,
             quiet=True,
         )
-        log_tool_install(ctx.user_home, tool="gh", source="apt:cli.github.com", verified=True)
+        _audit(ctx.user_home, tool="gh", source="apt:cli.github.com", verified=True)
         installed.append("gh")
 
     # ── AWS CLI v2 (with GPG signature verification) ────────────────────────
@@ -189,7 +209,7 @@ def run(ctx: SetupContext) -> ModuleResult:
         """,
             quiet=True,
         )
-        log_tool_install(ctx.user_home, tool="aws", source="awscli.amazonaws.com", verified=True)
+        _audit(ctx.user_home, tool="aws", source="awscli.amazonaws.com", verified=True)
         installed.append("aws")
 
     # ── rclone ────────────────────────────────────────────────────────────────
@@ -198,9 +218,11 @@ def run(ctx: SetupContext) -> ModuleResult:
     else:
         console.print("    [muted]rclone...[/muted]")
         script = _download_script("https://rclone.org/install.sh")
-        runner.run_shell(f'bash "{script}"', quiet=True)
-        script.unlink(missing_ok=True)
-        log_tool_install(ctx.user_home, tool="rclone", source="rclone.org")
+        try:
+            runner.run_shell(f'bash "{script}"', quiet=True)
+        finally:
+            script.unlink(missing_ok=True)
+        _audit(ctx.user_home, tool="rclone", source="rclone.org")
         installed.append("rclone")
 
     # ── Bun ───────────────────────────────────────────────────────────────────
@@ -209,9 +231,11 @@ def run(ctx: SetupContext) -> ModuleResult:
     else:
         console.print("    [muted]bun...[/muted]")
         script = _download_script("https://bun.sh/install")
-        runner.run_shell_as(ctx.username, f'bash "{script}"', quiet=True)
-        script.unlink(missing_ok=True)
-        log_tool_install(ctx.user_home, tool="bun", source="bun.sh")
+        try:
+            runner.run_shell_as(ctx.username, f'bash "{script}"', quiet=True)
+        finally:
+            script.unlink(missing_ok=True)
+        _audit(ctx.user_home, tool="bun", source="bun.sh")
         installed.append("bun")
 
     parts = []

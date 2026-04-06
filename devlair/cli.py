@@ -383,7 +383,10 @@ def init(
         detail = f"  [detail]{result.detail}[/detail]" if result.detail else ""
         console.print(f"  {icon}  {prefix}{detail}")
         results.append((s.label, result))
-        log_module_result(ctx.user_home, module=s.key, status=result.status, detail=result.detail)
+        try:
+            log_module_result(ctx.user_home, module=s.key, status=result.status, detail=result.detail)
+        except Exception:
+            pass  # audit logging must never break init
 
     _print_summary(results)
 

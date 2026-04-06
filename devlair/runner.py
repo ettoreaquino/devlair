@@ -70,6 +70,21 @@ def get_output(cmd: str | list) -> str:
     return result.stdout.strip()
 
 
+def safe_tempfile(suffix: str = "") -> Path:
+    """Create a temporary file safely and return its path.
+
+    Unlike ``tempfile.mktemp`` (which is deprecated due to race conditions),
+    this atomically creates the file via ``NamedTemporaryFile`` and returns a
+    ``Path`` that is guaranteed to exist.  The caller is responsible for
+    deleting the file when done.
+    """
+    import tempfile
+
+    f = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)
+    f.close()
+    return Path(f.name)
+
+
 class ChecksumError(Exception):
     """Raised when a SHA-256 checksum does not match."""
 

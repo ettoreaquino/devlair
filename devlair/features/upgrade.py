@@ -1,6 +1,5 @@
 import os
 import stat
-import tempfile
 from pathlib import Path
 
 import httpx
@@ -86,10 +85,12 @@ def run_upgrade(self_update: bool = False) -> None:
 
     # ── rclone ────────────────────────────────────────────────────────────────
     with console.status("[step]rclone...[/step]", spinner="dots", spinner_style=D_PURPLE):
-        script = Path(tempfile.mktemp(suffix=".sh"))
-        runner.run_shell(f'curl -fsSL "https://rclone.org/install.sh" -o "{script}"', check=False)
-        runner.run_shell(f'bash "{script}"', check=False)
-        script.unlink(missing_ok=True)
+        script = runner.safe_tempfile(suffix=".sh")
+        try:
+            runner.run_shell(f'curl -fsSL "https://rclone.org/install.sh" -o "{script}"', check=False)
+            runner.run_shell(f'bash "{script}"', check=False)
+        finally:
+            script.unlink(missing_ok=True)
     console.print("  [success]✓[/success]  rclone")
 
     # ── Bun ───────────────────────────────────────────────────────────────────
@@ -100,10 +101,12 @@ def run_upgrade(self_update: bool = False) -> None:
         console.print("  [success]✓[/success]  Bun")
     else:
         with console.status("[step]Bun (installing)...[/step]", spinner="dots", spinner_style=D_PURPLE):
-            script = Path(tempfile.mktemp(suffix=".sh"))
-            runner.run_shell(f'curl -fsSL "https://bun.sh/install" -o "{script}"', check=False)
-            runner.run_shell_as(username, f'bash "{script}"', check=False)
-            script.unlink(missing_ok=True)
+            script = runner.safe_tempfile(suffix=".sh")
+            try:
+                runner.run_shell(f'curl -fsSL "https://bun.sh/install" -o "{script}"', check=False)
+                runner.run_shell_as(username, f'bash "{script}"', check=False)
+            finally:
+                script.unlink(missing_ok=True)
         console.print("  [success]✓[/success]  Bun (installed)")
 
     from devlair.features.sync import discover_timers, timer_status
@@ -210,7 +213,7 @@ def _self_update() -> None:
     with console.status(f"[step]Downloading v{latest}...[/step]", spinner="dots", spinner_style=D_PURPLE):
         resp = httpx.get(url, follow_redirects=True, timeout=60)
         resp.raise_for_status()
-        tmp = Path(tempfile.mktemp())
+        tmp = runner.safe_tempfile()
         tmp.write_bytes(resp.content)
         tmp.chmod(tmp.stat().st_mode | stat.S_IEXEC)
         tmp.replace(install_path)

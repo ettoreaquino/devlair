@@ -1,10 +1,10 @@
-"""Tests for runner utilities — checksum verification."""
+"""Tests for runner utilities — checksum verification and safe temp files."""
 
 import hashlib
 
 import pytest
 
-from devlair.runner import ChecksumError, sha256_file, verify_checksum
+from devlair.runner import ChecksumError, safe_tempfile, sha256_file, verify_checksum
 
 
 class TestSha256File:
@@ -60,3 +60,30 @@ class TestVerifyChecksum:
         f.write_bytes(b"data")
         with pytest.raises(ChecksumError, match="myfile.zip"):
             verify_checksum(f, "0" * 64)
+
+
+class TestSafeTempfile:
+    def test_creates_file_that_exists(self):
+        path = safe_tempfile(suffix=".sh")
+        try:
+            assert path.exists()
+            assert path.name.endswith(".sh")
+        finally:
+            path.unlink(missing_ok=True)
+
+    def test_different_calls_return_different_paths(self):
+        a = safe_tempfile()
+        b = safe_tempfile()
+        try:
+            assert a != b
+        finally:
+            a.unlink(missing_ok=True)
+            b.unlink(missing_ok=True)
+
+    def test_file_is_writable(self):
+        path = safe_tempfile(suffix=".txt")
+        try:
+            path.write_text("hello")
+            assert path.read_text() == "hello"
+        finally:
+            path.unlink(missing_ok=True)

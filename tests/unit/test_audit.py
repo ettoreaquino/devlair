@@ -74,3 +74,31 @@ class TestReadLog:
         log_event(tmp_path, event="b")
         log_event(tmp_path, event="c")
         assert len(read_log(tmp_path)) == 3
+
+
+class TestAuditResilience:
+    def test_log_event_raises_on_read_only_dir(self, tmp_path):
+        """Audit functions raise when the target is not writable.
+
+        The _audit() wrapper in devtools catches this so init doesn't break.
+        """
+        ro_dir = tmp_path / "readonly"
+        ro_dir.mkdir()
+        os.chmod(ro_dir, 0o444)
+        try:
+            with __import__("pytest").raises(PermissionError):
+                log_event(ro_dir, event="boom")
+        finally:
+            os.chmod(ro_dir, 0o755)
+
+    def test_devtools_audit_wrapper_swallows_errors(self, tmp_path):
+        """The _audit helper in devtools must not propagate exceptions."""
+        from devlair.modules.devtools import _audit
+
+        ro_dir = tmp_path / "readonly"
+        ro_dir.mkdir()
+        os.chmod(ro_dir, 0o444)
+        try:
+            _audit(ro_dir, tool="uv", source="test")  # should not raise
+        finally:
+            os.chmod(ro_dir, 0o755)

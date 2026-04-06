@@ -1,6 +1,3 @@
-import tempfile
-from pathlib import Path
-
 from devlair import runner
 from devlair.console import console
 from devlair.context import CheckItem, ModuleResult, SetupContext
@@ -11,10 +8,12 @@ LABEL = "Tailscale"
 def run(ctx: SetupContext) -> ModuleResult:
     if not runner.cmd_exists("tailscale"):
         console.print("\n  Installing Tailscale...")
-        script = Path(tempfile.mktemp(suffix=".sh"))
-        runner.run_shell(f'curl -fsSL "https://tailscale.com/install.sh" -o "{script}"', quiet=True)
-        runner.run_shell(f'bash "{script}"')
-        script.unlink(missing_ok=True)
+        script = runner.safe_tempfile(suffix=".sh")
+        try:
+            runner.run_shell(f'curl -fsSL "https://tailscale.com/install.sh" -o "{script}"', quiet=True)
+            runner.run_shell(f'bash "{script}"')
+        finally:
+            script.unlink(missing_ok=True)
 
     status = runner.run("tailscale status", capture=True, check=False)
     if status.returncode != 0:
