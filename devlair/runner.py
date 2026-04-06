@@ -87,6 +87,17 @@ def safe_tempfile(suffix: str = "") -> Path:
     return p
 
 
+def download_script(url: str) -> Path:
+    """Download an installer script to a temp file instead of piping to shell."""
+    tmp = safe_tempfile(suffix=".sh")
+    try:
+        run_shell(f'curl -fsSL "{url}" -o "{tmp}"', quiet=True)
+    except Exception:
+        tmp.unlink(missing_ok=True)
+        raise
+    return tmp
+
+
 class ChecksumError(Exception):
     """Raised when a SHA-256 checksum does not match."""
 

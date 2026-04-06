@@ -1,12 +1,9 @@
-import logging
 from pathlib import Path
 
 from devlair import runner
 from devlair.console import console
 from devlair.context import CheckItem, ModuleResult, SetupContext
-from devlair.features.audit import log_tool_install
-
-_log = logging.getLogger(__name__)
+from devlair.features.audit import safe_log_install
 
 LABEL = "Dev tools"
 
@@ -20,25 +17,6 @@ def _bun_exists(user_home: Path) -> bool:
     return runner.cmd_exists("bun") or (user_home / ".bun" / "bin" / "bun").exists()
 
 
-def _download_script(url: str) -> Path:
-    """Download an installer script to a temp file instead of piping to shell."""
-    tmp = runner.safe_tempfile(suffix=".sh")
-    try:
-        runner.run_shell(f'curl -fsSL "{url}" -o "{tmp}"', quiet=True)
-    except Exception:
-        tmp.unlink(missing_ok=True)
-        raise
-    return tmp
-
-
-def _audit(user_home: Path, **kwargs: object) -> None:
-    """Best-effort audit log — never breaks the primary flow."""
-    try:
-        log_tool_install(user_home, **kwargs)  # type: ignore[arg-type]
-    except Exception:
-        _log.debug("audit log write failed", exc_info=True)
-
-
 def run(ctx: SetupContext) -> ModuleResult:
     installed: list[str] = []
     skipped: list[str] = []
@@ -49,12 +27,12 @@ def run(ctx: SetupContext) -> ModuleResult:
         skipped.append("uv")
     else:
         console.print("    [muted]uv...[/muted]")
-        script = _download_script("https://astral.sh/uv/install.sh")
+        script = runner.download_script("https://astral.sh/uv/install.sh")
         try:
             runner.run_shell_as(ctx.username, f'INSTALLER_NO_MODIFY_PATH=1 bash "{script}"', quiet=True)
         finally:
             script.unlink(missing_ok=True)
-        _audit(ctx.user_home, tool="uv", source="astral.sh")
+        safe_log_install(ctx.user_home, tool="uv", source="astral.sh")
         installed.append("uv")
 
     # ── pyenv ─────────────────────────────────────────────────────────────────
@@ -77,7 +55,7 @@ def run(ctx: SetupContext) -> ModuleResult:
             "liblzma-dev",
             quiet=True,
         )
-        script = _download_script("https://pyenv.run")
+        script = runner.download_script("https://pyenv.run")
         try:
             runner.run_shell_as(ctx.username, f'bash "{script}"', quiet=True)
         finally:
@@ -88,7 +66,7 @@ def run(ctx: SetupContext) -> ModuleResult:
             f'&& eval "$(pyenv init -)" && pyenv install -s 3 && pyenv global "$(pyenv latest 3)"',
             quiet=True,
         )
-        _audit(ctx.user_home, tool="pyenv", source="pyenv.run")
+        safe_log_install(ctx.user_home, tool="pyenv", source="pyenv.run")
         installed.append("pyenv")
 
     # ── nvm / Node ────────────────────────────────────────────────────────────
@@ -97,7 +75,7 @@ def run(ctx: SetupContext) -> ModuleResult:
         skipped.append("nvm")
     else:
         console.print("    [muted]nvm + Node LTS...[/muted]")
-        script = _download_script("https://raw.githubusercontent.com/nvm-sh/nvm/HEAD/install.sh")
+        script = runner.download_script("https://raw.githubusercontent.com/nvm-sh/nvm/HEAD/install.sh")
         try:
             runner.run_shell_as(ctx.username, f'export PROFILE=/dev/null && bash "{script}"', quiet=True)
         finally:
@@ -115,7 +93,7 @@ def run(ctx: SetupContext) -> ModuleResult:
                     node_ver = line.split("node ")[1].split(" ")[0] if "node " in line else ""
         if node_ver:
             next_steps.append(f"node {node_ver} installed via nvm")
-        _audit(ctx.user_home, tool="nvm", source="github.com/nvm-sh/nvm")
+        safe_log_install(ctx.user_home, tool="nvm", source="github.com/nvm-sh/nvm")
         installed.append("nvm+node")
 
     # ── fzf ──────────────────────────────────────────────────────────────────
@@ -130,7 +108,7 @@ def run(ctx: SetupContext) -> ModuleResult:
             f'&& "{fzf_dir}/install" --all --no-update-rc',
             quiet=True,
         )
-        _audit(ctx.user_home, tool="fzf", source="github.com/junegunn/fzf", verified=True)
+        safe_log_install(ctx.user_home, tool="fzf", source="github.com/junegunn/fzf", verified=True)
         installed.append("fzf")
 
     # ── Docker ────────────────────────────────────────────────────────────────
@@ -156,7 +134,7 @@ def run(ctx: SetupContext) -> ModuleResult:
         """,
             quiet=True,
         )
-        _audit(ctx.user_home, tool="docker", source="apt:docker.com", verified=True)
+        safe_log_install(ctx.user_home, tool="docker", source="apt:docker.com", verified=True)
         installed.append("docker")
 
     # Ensure user is in docker group
@@ -183,7 +161,7 @@ def run(ctx: SetupContext) -> ModuleResult:
         """,
             quiet=True,
         )
-        _audit(ctx.user_home, tool="gh", source="apt:cli.github.com", verified=True)
+        safe_log_install(ctx.user_home, tool="gh", source="apt:cli.github.com", verified=True)
         installed.append("gh")
 
     # ── AWS CLI v2 (with GPG signature verification) ────────────────────────
@@ -194,8 +172,8 @@ def run(ctx: SetupContext) -> ModuleResult:
         arch = runner.get_output("dpkg --print-architecture")
         aws_arch = "x86_64" if arch == "amd64" else "aarch64"
         aws_base = f"https://awscli.amazonaws.com/awscli-exe-linux-{aws_arch}"
-        gpg_ok_marker = Path("/tmp/.awscli_gpg_ok")
-        gpg_ok_marker.unlink(missing_ok=True)
+        gpg_ok_marker = runner.safe_tempfile(suffix=".gpg_ok")
+        gpg_ok_marker.unlink()  # remove so touch is the signal
         runner.run_shell(
             f"""
             curl -fsSL "{aws_base}.zip" -o /tmp/awscliv2.zip
@@ -205,7 +183,7 @@ def run(ctx: SetupContext) -> ModuleResult:
                 gpg --batch --import /tmp/aws-cli-key.asc 2>/dev/null || true
                 if gpg --batch --verify /tmp/awscliv2.zip.sig /tmp/awscliv2.zip 2>/dev/null; then
                     echo "✓ AWS CLI GPG signature verified"
-                    touch /tmp/.awscli_gpg_ok
+                    touch "{gpg_ok_marker}"
                 else
                     echo "⚠ GPG verification failed — installing anyway" >&2
                 fi
@@ -221,7 +199,7 @@ def run(ctx: SetupContext) -> ModuleResult:
         )
         gpg_verified = gpg_ok_marker.exists()
         gpg_ok_marker.unlink(missing_ok=True)
-        _audit(ctx.user_home, tool="aws", source="awscli.amazonaws.com", verified=gpg_verified)
+        safe_log_install(ctx.user_home, tool="aws", source="awscli.amazonaws.com", verified=gpg_verified)
         installed.append("aws")
 
     # ── Bun ───────────────────────────────────────────────────────────────────
@@ -229,12 +207,12 @@ def run(ctx: SetupContext) -> ModuleResult:
         skipped.append("bun")
     else:
         console.print("    [muted]bun...[/muted]")
-        script = _download_script("https://bun.sh/install")
+        script = runner.download_script("https://bun.sh/install")
         try:
             runner.run_shell_as(ctx.username, f'bash "{script}"', quiet=True)
         finally:
             script.unlink(missing_ok=True)
-        _audit(ctx.user_home, tool="bun", source="bun.sh")
+        safe_log_install(ctx.user_home, tool="bun", source="bun.sh")
         installed.append("bun")
 
     parts = []

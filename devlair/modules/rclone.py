@@ -1,36 +1,22 @@
-import logging
-from pathlib import Path
-
 from devlair import runner
 from devlair.console import console
 from devlair.context import CheckItem, ModuleResult, SetupContext
-
-_log = logging.getLogger(__name__)
+from devlair.features.audit import safe_log_install
 
 LABEL = "rclone sync"
-
-
-def _audit(user_home: Path, **kwargs: object) -> None:
-    """Best-effort audit log — never breaks the primary flow."""
-    try:
-        from devlair.features.audit import log_tool_install
-
-        log_tool_install(user_home, **kwargs)  # type: ignore[arg-type]
-    except Exception:
-        _log.debug("audit log write failed", exc_info=True)
 
 
 def run(ctx: SetupContext) -> ModuleResult:
     if not runner.cmd_exists("rclone"):
         console.print("    [muted]rclone...[/muted]")
-        script = runner.safe_tempfile(suffix=".sh")
+        script = runner.download_script("https://rclone.org/install.sh")
         try:
-            runner.run_shell(f'curl -fsSL "https://rclone.org/install.sh" -o "{script}"', quiet=True)
             runner.run_shell(f'bash "{script}"', quiet=True)
         finally:
             script.unlink(missing_ok=True)
-        _audit(ctx.user_home, tool="rclone", source="rclone.org")
-    return ModuleResult(status="ok", detail="run 'devlair sync --add' to configure a sync")
+        safe_log_install(ctx.user_home, tool="rclone", source="rclone.org")
+        return ModuleResult(status="ok", detail="installed — run 'devlair sync --add' to configure")
+    return ModuleResult(status="skip", detail="already installed")
 
 
 def check() -> list[CheckItem]:

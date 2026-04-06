@@ -80,7 +80,7 @@ class TestAuditResilience:
     def test_log_event_raises_on_read_only_dir(self, tmp_path):
         """Audit functions raise when the target is not writable.
 
-        The _audit() wrapper in devtools catches this so init doesn't break.
+        The safe_log_install() wrapper catches this so init doesn't break.
         """
         ro_dir = tmp_path / "readonly"
         ro_dir.mkdir()
@@ -91,14 +91,14 @@ class TestAuditResilience:
         finally:
             os.chmod(ro_dir, 0o755)
 
-    def test_devtools_audit_wrapper_swallows_errors(self, tmp_path):
-        """The _audit helper in devtools must not propagate exceptions."""
-        from devlair.modules.devtools import _audit
+    def test_safe_log_install_swallows_errors(self, tmp_path):
+        """safe_log_install must not propagate exceptions."""
+        from devlair.features.audit import safe_log_install
 
         ro_dir = tmp_path / "readonly"
         ro_dir.mkdir()
         os.chmod(ro_dir, 0o444)
         try:
-            _audit(ro_dir, tool="uv", source="test")  # should not raise
+            safe_log_install(ro_dir, tool="uv", source="test")  # should not raise
         finally:
             os.chmod(ro_dir, 0o755)
