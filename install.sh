@@ -21,7 +21,7 @@ esac
 # ── Fetch latest release tag ──────────────────────────────────────────────────
 echo "Fetching latest devlair release..."
 LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
-  | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'])")
+  | grep -o '"tag_name": *"[^"]*"' | head -1 | grep -o '"v[^"]*"' | tr -d '"')
 
 if [[ -z "$LATEST" ]]; then
   echo "Could not determine latest version. Check your internet connection."
