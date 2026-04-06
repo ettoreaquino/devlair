@@ -1,4 +1,5 @@
 import shutil
+import socket
 from pathlib import Path
 
 import typer
@@ -43,8 +44,6 @@ Host github.com
         shutil.chown(ssh_conf, ctx.username, ctx.username)
 
     pub = gh_key.with_suffix(".pub").read_text().strip()
-    import socket
-
     hostname = socket.gethostname()
     console.print("\n  [info]Add this public key to GitHub → Settings → SSH keys:[/info]")
     console.print(f"\n  [detail]{pub}[/detail]")
