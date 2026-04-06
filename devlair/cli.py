@@ -146,7 +146,7 @@ HELP_SECTIONS = [
     (
         "Setup & Health",
         [
-            ("init [--only MOD] [--skip MOD]", "Set up this machine from scratch"),
+            ("init [--only MOD] [--skip MOD] [--group GRP]", "Set up this machine from scratch"),
             ("doctor [--fix]", "Check system health & fix drift"),
             ("upgrade [--no-self]", "Upgrade tools & re-apply configs"),
             ("disable-password", "Lock SSH to key-only auth"),
@@ -302,9 +302,12 @@ def main(
 def init(
     only: Optional[str] = typer.Option(None, "--only", help="Comma-separated modules to run, e.g. system,ssh"),
     skip: Optional[str] = typer.Option(None, "--skip", help="Comma-separated modules to skip"),
+    group: Optional[str] = typer.Option(
+        None, "--group", help="Comma-separated groups: core, network, coding, cloud-sync, ai, desktop"
+    ),
 ) -> None:
     """Set up this machine from scratch."""
-    from devlair.modules import MODULES
+    from devlair.modules import keys_for_groups, resolve_order
 
     username = _require_root()
     user_home = Path(pwd.getpwnam(username).pw_dir)
@@ -312,29 +315,32 @@ def init(
 
     _print_header("init", f"Configuring lair for [bold]{username}[/bold] on {_hostname()}")
 
-    only_set = set(only.split(",")) if only else None
-    skip_set = set(skip.split(",")) if skip else set()
+    # Build the set of requested keys
+    want: set[str] | None = None
+    if group:
+        want = keys_for_groups(set(group.split(",")))
+    if only:
+        only_set = set(only.split(","))
+        want = only_set if want is None else want & only_set
 
-    selected = [
-        (key, label, mod)
-        for key, label, mod in MODULES
-        if (only_set is None or key in only_set) and key not in skip_set
-    ]
+    skip_set = set(skip.split(",")) if skip else set()
+    specs = resolve_order(want)
+    selected = [s for s in specs if s.key not in skip_set]
 
     total = len(selected)
     results: list[tuple[str, ModuleResult]] = []
 
-    for i, (key, label, mod) in enumerate(selected, 1):
-        prefix = f"[muted]\\[{i}/{total}][/muted] [step]{label}[/step]"
+    for i, s in enumerate(selected, 1):
+        prefix = f"[muted]\\[{i}/{total}][/muted] [step]{s.label}[/step]"
         console.print(f"  ⏳ {prefix} ...")
         try:
-            result = mod.run(ctx)
+            result = s.module.run(ctx)
         except Exception as exc:
             result = ModuleResult(status="fail", detail=str(exc))
         icon = STATUS_ICON[result.status]
         detail = f"  [detail]{result.detail}[/detail]" if result.detail else ""
         console.print(f"  {icon}  {prefix}{detail}")
-        results.append((label, result))
+        results.append((s.label, result))
 
     _print_summary(results)
 
@@ -359,27 +365,27 @@ def upgrade(
     """Upgrade all tools, re-apply configs, and verify health."""
     from devlair.context import resolve_invoking_user
     from devlair.features.upgrade import run_upgrade
-    from devlair.modules import MODULES, REAPPLY_KEYS
+    from devlair.modules import REAPPLY_KEYS, resolve_order
 
     _elevate_if_needed()
     _print_header("upgrade", "Upgrading your lair")
     run_upgrade(self_update=not skip_self)
 
-    # Re-apply module configurations
+    # Re-apply module configurations in dependency order
     username, user_home = resolve_invoking_user()
     ctx = SetupContext(username=username, user_home=user_home)
 
     console.print("  [step]Re-applying configurations...[/step]")
-    for key, label, mod in MODULES:
-        if key not in REAPPLY_KEYS or not hasattr(mod, "run"):
+    for s in resolve_order(REAPPLY_KEYS):
+        if not hasattr(s.module, "run"):
             continue
         try:
-            result = mod.run(ctx)
+            result = s.module.run(ctx)
             icon = STATUS_ICON[result.status]
             detail = f"  [detail]{result.detail}[/detail]" if result.detail else ""
-            console.print(f"  {icon}  {label}{detail}")
+            console.print(f"  {icon}  {s.label}{detail}")
         except Exception as exc:
-            console.print(f"  {STATUS_ICON['fail']}  {label}  [detail]{exc}[/detail]")
+            console.print(f"  {STATUS_ICON['fail']}  {s.label}  [detail]{exc}[/detail]")
     console.print()
 
 

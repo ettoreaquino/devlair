@@ -2,7 +2,7 @@ from rich.table import Table
 
 from devlair.console import D_COMMENT, D_GREEN, D_ORANGE, D_RED, console
 from devlair.context import CheckItem
-from devlair.modules import MODULES
+from devlair.modules import MODULE_SPECS
 
 STATUS_STYLE = {
     "ok": f"bold {D_GREEN}",
@@ -22,10 +22,10 @@ def run_doctor(fix: bool = False) -> None:
     total = ok = warn = fail = 0
     failed_keys: set[str] = set()
 
-    for key, label, mod in MODULES:
-        if not hasattr(mod, "check"):
+    for s in MODULE_SPECS:
+        if not hasattr(s.module, "check"):
             continue
-        items: list[CheckItem] = mod.check()
+        items: list[CheckItem] = s.module.check()
         first = True
         for item in items:
             total += 1
@@ -37,12 +37,12 @@ def run_doctor(fix: bool = False) -> None:
                 fail += 1
 
             if item.status in ("warn", "fail"):
-                failed_keys.add(key)
+                failed_keys.add(s.key)
 
             style = STATUS_STYLE[item.status]
             icon = STATUS_ICON[item.status]
             table.add_row(
-                label if first else "",
+                s.label if first else "",
                 item.label,
                 f"[{style}]{icon}[/]",
                 f"[{D_COMMENT}]{item.detail}[/]" if item.detail else "",
@@ -62,7 +62,7 @@ def run_doctor(fix: bool = False) -> None:
 
     if fix and failed_keys:
         from devlair.context import SetupContext, resolve_invoking_user
-        from devlair.modules import REAPPLY_KEYS
+        from devlair.modules import REAPPLY_KEYS, resolve_order
 
         username, user_home = resolve_invoking_user()
         ctx = SetupContext(username=username, user_home=user_home)
@@ -71,18 +71,16 @@ def run_doctor(fix: bool = False) -> None:
         console.print(f"  [step]Attempting to fix {len(failed_keys)} module(s)...[/step]")
         console.print()
 
-        for key, label, mod in MODULES:
-            if key not in failed_keys:
+        for s in resolve_order(failed_keys):
+            if s.key not in REAPPLY_KEYS:
+                console.print(f"  [{D_COMMENT}]–  {s.label} (manual fix required)[/]")
                 continue
-            if key not in REAPPLY_KEYS:
-                console.print(f"  [{D_COMMENT}]–  {label} (manual fix required)[/]")
-                continue
-            if not hasattr(mod, "run"):
+            if not hasattr(s.module, "run"):
                 continue
             try:
-                mod.run(ctx)
-                console.print(f"  [success]✓[/success]  {label} re-applied")
+                s.module.run(ctx)
+                console.print(f"  [success]✓[/success]  {s.label} re-applied")
             except Exception as exc:
-                console.print(f"  [error]✗[/error]  {label}: {exc}")
+                console.print(f"  [error]✗[/error]  {s.label}: {exc}")
 
     console.print()

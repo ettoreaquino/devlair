@@ -44,7 +44,18 @@ def check() -> list[CheckItem]:
     return [CheckItem(label="what", status="ok")]
 ```
 
-Module groups: **core** (system, timezone, zsh, shell), **coding** (devtools, github, tmux), **network** (ssh, firewall, tailscale), **cloud-sync** (rclone), **ai** (claude, claw), **desktop** (gnome_terminal).
+Module groups and dependencies are defined in `devlair/modules/__init__.py` via `MODULE_SPECS`:
+
+| Group | Modules | Key dependencies |
+|-------|---------|-----------------|
+| core | system, timezone, zsh, shell | shell → zsh |
+| network | tailscale, ssh, firewall | ssh → tailscale, firewall → ssh |
+| coding | tmux, devtools, github | — |
+| cloud-sync | rclone | — |
+| ai | claude, claw | claude → devtools, claw → devtools |
+| desktop | gnome_terminal | — |
+
+Use `devlair init --group core,network` to run only specific groups. Dependencies are auto-expanded.
 
 ## Conventions
 
@@ -74,14 +85,43 @@ Releases are automated via [release-please](https://github.com/googleapis/releas
 
 1. Branch from main: `git checkout -b feat/my-feature`
 2. Open PR with `Closes #N` in the body to link the issue
-3. Get CI green (lint, test, commit-messages)
-4. Squash merge to main — branch auto-deletes, linked issue auto-closes
-5. Release-please auto-creates/updates a "Release PR" with version bump + CHANGELOG
-6. When ready to ship: merge the Release PR → auto-tags, creates GitHub Release, CI builds binaries
+<<<<<<< HEAD
+3. Add the PR to the **devlair roadmap** project board and set status to **In Progress**
+4. Get CI green (lint, test, commit-messages)
+5. Squash merge to main — branch auto-deletes, linked issue auto-closes
+6. Release-please auto-creates/updates a "Release PR" with version bump + CHANGELOG
+7. When ready to ship: merge the Release PR → auto-tags, creates GitHub Release, CI builds binaries
 
 Version bumps are determined from Conventional Commits: `fix:` → patch, `feat:` → minor, `feat!:` / `BREAKING CHANGE` → major.
 
 **Important:** Every PR must reference the issue it addresses using `Closes #N` in the PR body. This ensures GitHub automatically closes the issue on merge and maintains traceability between issues, PRs, and the project board.
+
+## Project board
+
+All work is tracked on the **devlair roadmap** project (GitHub Projects #2). The board has three columns: **Todo**, **In Progress**, **Done**.
+
+Workflow:
+1. **When starting work on an issue/epic:** set the issue to **In Progress** on the project board
+2. **When opening a PR:** add the PR to the project board as **In Progress** — use `gh project item-add 2 --owner ettoreaquino --url <PR_URL>` then set the status field
+3. **When the PR merges:** the `Closes #N` keyword auto-closes the issue; set both the issue and merged PR to **Done** on the board
+4. **Epics** stay **In Progress** until all child tasks/PRs are merged, then move to **Done**
+
+CLI commands for project board management:
+```bash
+# Add an item (issue or PR) to the project
+gh project item-add 2 --owner ettoreaquino --url <URL>
+
+# Update status (get item ID from item-list, field/option IDs from field-list)
+gh project item-edit --project-id PVT_kwHOAI_A384BTyaU \
+  --id <ITEM_ID> \
+  --field-id PVTSSF_lAHOAI_A384BTyaUzhA-6Fg \
+  --single-select-option-id <STATUS_OPTION_ID>
+
+# Status option IDs:
+#   Todo:        f75ad846
+#   In Progress: 47fc9ee4
+#   Done:        98236657
+```
 
 ## Evolution context
 
