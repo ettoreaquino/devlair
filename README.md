@@ -74,7 +74,7 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
   v1.0.0
 
   Setup & Health
-    init [--only MOD] [--skip MOD] [--group GRP]  Set up this machine from scratch
+    init [--only MOD] [--skip MOD] [--group GRP] [--config FILE]  Set up this machine from scratch
     doctor [--fix]                      Check system health & fix drift
     upgrade [--no-self]                 Upgrade tools & re-apply configs
     disable-password                    Lock SSH to key-only auth
@@ -109,6 +109,9 @@ devlair init --only ssh,tmux
 
 # Skip specific modules
 devlair init --skip devtools,gnome_terminal
+
+# Setup from a YAML profile
+devlair init --config setup.yaml
 
 # Check system health
 devlair doctor

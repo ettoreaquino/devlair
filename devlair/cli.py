@@ -146,7 +146,7 @@ HELP_SECTIONS = [
     (
         "Setup & Health",
         [
-            ("init [--only MOD] [--skip MOD] [--group GRP]", "Set up this machine from scratch"),
+            ("init [--only MOD] [--skip MOD] [--group GRP] [--config FILE]", "Set up this machine from scratch"),
             ("doctor [--fix]", "Check system health & fix drift"),
             ("upgrade [--no-self]", "Upgrade tools & re-apply configs"),
             ("disable-password", "Lock SSH to key-only auth"),
@@ -305,27 +305,67 @@ def init(
     group: Optional[str] = typer.Option(
         None, "--group", help="Comma-separated groups: core, network, coding, cloud-sync, ai, desktop"
     ),
+    config: Optional[Path] = typer.Option(None, "--config", help="Path to a setup.yaml profile"),
 ) -> None:
     """Set up this machine from scratch."""
+    from devlair.context import detect_platform, detect_wsl_version
     from devlair.modules import keys_for_groups, resolve_order
 
     username = _require_root()
     user_home = Path(pwd.getpwnam(username).pw_dir)
-    ctx = SetupContext(username=username, user_home=user_home)
+    platform = detect_platform()
 
-    _print_header("init", f"Configuring lair for [bold]{username}[/bold] on {_hostname()}")
+    # Load profile if provided
+    profile_data: dict = {}
+    profile_name: str | None = None
+    if config:
+        from devlair.features.profile import ProfileError, load_profile, resolve_profile_keys, validate_profile
 
-    # Build the set of requested keys
+        try:
+            profile_data = validate_profile(load_profile(config))
+        except ProfileError as exc:
+            console.print(f"  [error]Profile error: {exc}[/error]")
+            raise typer.Exit(1)
+        profile_name = profile_data.get("name")
+
+    ctx = SetupContext(
+        username=username,
+        user_home=user_home,
+        platform=platform,
+        wsl_version=detect_wsl_version(platform),
+        profile=profile_data.get("config", {}),
+    )
+
+    suffix = {"wsl": " (WSL)", "macos": " (macOS)"}.get(platform, "")
+    profile_suffix = f"  profile: [bold]{profile_name}[/bold]" if profile_name else ""
+    _print_header("init", f"Configuring lair for [bold]{username}[/bold] on {_hostname()}{suffix}{profile_suffix}")
+
+    # Build the set of requested keys — CLI flags override profile
     want: set[str] | None = None
-    if group:
-        want = keys_for_groups(set(group.split(",")))
-    if only:
-        only_set = set(only.split(","))
-        want = only_set if want is None else want & only_set
+    skip_set: set[str] = set()
 
-    skip_set = set(skip.split(",")) if skip else set()
-    specs = resolve_order(want)
-    selected = [s for s in specs if s.key not in skip_set]
+    if only or group:
+        # CLI flags take precedence
+        if group:
+            want = keys_for_groups(set(group.split(",")))
+        if only:
+            only_set = set(only.split(","))
+            want = only_set if want is None else want & only_set
+    elif profile_data:
+        want, skip_set = resolve_profile_keys(profile_data)
+
+    # CLI --skip is always additive
+    if skip:
+        skip_set = skip_set | set(skip.split(","))
+
+    all_specs = resolve_order(want)
+    platform_skipped = [s for s in all_specs if platform not in s.platforms]
+    selected = [s for s in all_specs if platform in s.platforms and s.key not in skip_set]
+
+    if platform_skipped:
+        names = ", ".join(s.key for s in platform_skipped)
+        console.print(f"  [{D_COMMENT}]Skipping on {platform}: {names}[/]")
+        console.print()
 
     total = len(selected)
     results: list[tuple[str, ModuleResult]] = []
@@ -363,7 +403,7 @@ def upgrade(
     skip_self: bool = typer.Option(False, "--no-self", help="Skip updating the devlair binary."),
 ) -> None:
     """Upgrade all tools, re-apply configs, and verify health."""
-    from devlair.context import resolve_invoking_user
+    from devlair.context import detect_platform, detect_wsl_version, resolve_invoking_user
     from devlair.features.upgrade import run_upgrade
     from devlair.modules import REAPPLY_KEYS, resolve_order
 
@@ -373,10 +413,13 @@ def upgrade(
 
     # Re-apply module configurations in dependency order
     username, user_home = resolve_invoking_user()
-    ctx = SetupContext(username=username, user_home=user_home)
+    platform = detect_platform()
+    ctx = SetupContext(
+        username=username, user_home=user_home, platform=platform, wsl_version=detect_wsl_version(platform)
+    )
 
     console.print("  [step]Re-applying configurations...[/step]")
-    for s in resolve_order(REAPPLY_KEYS):
+    for s in resolve_order(REAPPLY_KEYS, platform=platform):
         if not hasattr(s.module, "run"):
             continue
         try:
