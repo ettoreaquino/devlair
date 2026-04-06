@@ -146,7 +146,7 @@ HELP_SECTIONS = [
     (
         "Setup & Health",
         [
-            ("init [--only MOD] [--skip MOD] [--group GRP]", "Set up this machine from scratch"),
+            ("init [--only MOD] [--skip MOD] [--group GRP] [--config FILE]", "Set up this machine from scratch"),
             ("doctor [--fix]", "Check system health & fix drift"),
             ("upgrade [--no-self]", "Upgrade tools & re-apply configs"),
             ("disable-password", "Lock SSH to key-only auth"),
@@ -305,6 +305,7 @@ def init(
     group: Optional[str] = typer.Option(
         None, "--group", help="Comma-separated groups: core, network, coding, cloud-sync, ai, desktop"
     ),
+    config: Optional[Path] = typer.Option(None, "--config", help="Path to a setup.yaml profile"),
 ) -> None:
     """Set up this machine from scratch."""
     from devlair.context import detect_platform, detect_wsl_version
@@ -313,22 +314,50 @@ def init(
     username = _require_root()
     user_home = Path(pwd.getpwnam(username).pw_dir)
     platform = detect_platform()
+
+    # Load profile if provided
+    profile_data: dict = {}
+    profile_name: str | None = None
+    if config:
+        from devlair.features.profile import ProfileError, load_profile, resolve_profile_keys, validate_profile
+
+        try:
+            profile_data = validate_profile(load_profile(config))
+        except ProfileError as exc:
+            console.print(f"  [error]Profile error: {exc}[/error]")
+            raise typer.Exit(1)
+        profile_name = profile_data.get("name")
+
     ctx = SetupContext(
-        username=username, user_home=user_home, platform=platform, wsl_version=detect_wsl_version(platform)
+        username=username,
+        user_home=user_home,
+        platform=platform,
+        wsl_version=detect_wsl_version(platform),
+        profile=profile_data.get("config", {}),
     )
 
     suffix = {"wsl": " (WSL)", "macos": " (macOS)"}.get(platform, "")
-    _print_header("init", f"Configuring lair for [bold]{username}[/bold] on {_hostname()}{suffix}")
+    profile_suffix = f"  profile: [bold]{profile_name}[/bold]" if profile_name else ""
+    _print_header("init", f"Configuring lair for [bold]{username}[/bold] on {_hostname()}{suffix}{profile_suffix}")
 
-    # Build the set of requested keys
+    # Build the set of requested keys — CLI flags override profile
     want: set[str] | None = None
-    if group:
-        want = keys_for_groups(set(group.split(",")))
-    if only:
-        only_set = set(only.split(","))
-        want = only_set if want is None else want & only_set
+    skip_set: set[str] = set()
 
-    skip_set = set(skip.split(",")) if skip else set()
+    if only or group:
+        # CLI flags take precedence
+        if group:
+            want = keys_for_groups(set(group.split(",")))
+        if only:
+            only_set = set(only.split(","))
+            want = only_set if want is None else want & only_set
+    elif profile_data:
+        want, skip_set = resolve_profile_keys(profile_data)
+
+    # CLI --skip is always additive
+    if skip:
+        skip_set = skip_set | set(skip.split(","))
+
     all_specs = resolve_order(want)
     platform_skipped = [s for s in all_specs if platform not in s.platforms]
     selected = [s for s in all_specs if platform in s.platforms and s.key not in skip_set]

@@ -68,6 +68,20 @@ Platform detection is in `devlair/context.py` (`detect_platform()`, `detect_wsl_
 
 `resolve_order()` accepts an optional `platform` parameter to filter incompatible modules. The `init`, `upgrade`, and `doctor` commands detect the platform automatically.
 
+## Setup profiles
+
+`devlair init --config path/to/setup.yaml` loads a YAML profile to control module selection and per-module configuration. Profile loading and validation is in `devlair/features/profile.py`.
+
+Schema (version 1):
+- `version: 1` — required
+- `name: string` — optional, shown in init header
+- `groups: [list]` — groups to include (core, network, coding, cloud-sync, ai, desktop)
+- `modules: [list]` — explicit module keys (overrides groups when set)
+- `skip: [list]` — modules to exclude
+- `config: {mapping}` — per-module config, keyed by module name
+
+Precedence: CLI flags (`--only`, `--group`, `--skip`) override profile selection. `--skip` is always additive with profile `skip`.
+
 ## Conventions
 
 - **Colors:** Dracula palette via `devlair/console.py`. Purple = primary, Pink = accent, Cyan = info, Green = success, Orange = warning, Red = error, Comment gray = muted.
