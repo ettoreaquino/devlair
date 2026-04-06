@@ -194,26 +194,32 @@ def run(ctx: SetupContext) -> ModuleResult:
         arch = runner.get_output("dpkg --print-architecture")
         aws_arch = "x86_64" if arch == "amd64" else "aarch64"
         aws_base = f"https://awscli.amazonaws.com/awscli-exe-linux-{aws_arch}"
+        gpg_available = runner.cmd_exists("gpg")
         runner.run_shell(
             f"""
             curl -fsSL "{aws_base}.zip" -o /tmp/awscliv2.zip
-            curl -fsSL "{aws_base}.zip.sig" -o /tmp/awscliv2.zip.sig
-            curl -fsSL "{_AWS_CLI_GPG_KEY_URL}" -o /tmp/aws-cli-key.asc
-            gpg --import /tmp/aws-cli-key.asc 2>/dev/null
-            if gpg --verify /tmp/awscliv2.zip.sig /tmp/awscliv2.zip 2>/dev/null; then
-                echo "✓ AWS CLI GPG signature verified"
+            if command -v gpg >/dev/null 2>&1; then
+                curl -fsSL "{aws_base}.zip.sig" -o /tmp/awscliv2.zip.sig
+                curl -fsSL "{_AWS_CLI_GPG_KEY_URL}" -o /tmp/aws-cli-key.asc
+                gpg --import /tmp/aws-cli-key.asc 2>/dev/null
+                if gpg --verify /tmp/awscliv2.zip.sig /tmp/awscliv2.zip 2>/dev/null; then
+                    echo "✓ AWS CLI GPG signature verified"
+                else
+                    echo "ERROR: AWS CLI GPG signature verification failed!" >&2
+                    rm -f /tmp/awscliv2.zip /tmp/awscliv2.zip.sig /tmp/aws-cli-key.asc
+                    exit 1
+                fi
+                rm -f /tmp/awscliv2.zip.sig /tmp/aws-cli-key.asc
             else
-                echo "ERROR: AWS CLI GPG signature verification failed!" >&2
-                rm -f /tmp/awscliv2.zip /tmp/awscliv2.zip.sig /tmp/aws-cli-key.asc
-                exit 1
+                echo "⚠ gpg not found — skipping signature verification"
             fi
             unzip -qo /tmp/awscliv2.zip -d /tmp
             /tmp/aws/install
-            rm -rf /tmp/awscliv2.zip /tmp/awscliv2.zip.sig /tmp/aws-cli-key.asc /tmp/aws
+            rm -rf /tmp/awscliv2.zip /tmp/aws
         """,
             quiet=True,
         )
-        _audit(ctx.user_home, tool="aws", source="awscli.amazonaws.com", verified=True)
+        _audit(ctx.user_home, tool="aws", source="awscli.amazonaws.com", verified=gpg_available)
         installed.append("aws")
 
     # ── rclone ────────────────────────────────────────────────────────────────
