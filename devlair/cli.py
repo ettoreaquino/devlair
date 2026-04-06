@@ -307,13 +307,16 @@ def init(
     ),
 ) -> None:
     """Set up this machine from scratch."""
+    from devlair.context import detect_platform, detect_wsl_version
     from devlair.modules import keys_for_groups, resolve_order
 
     username = _require_root()
     user_home = Path(pwd.getpwnam(username).pw_dir)
-    ctx = SetupContext(username=username, user_home=user_home)
+    platform = detect_platform()
+    ctx = SetupContext(username=username, user_home=user_home, platform=platform, wsl_version=detect_wsl_version())
 
-    _print_header("init", f"Configuring lair for [bold]{username}[/bold] on {_hostname()}")
+    platform_label = f"on {_hostname()}" if platform == "linux" else f"on {_hostname()} (WSL)"
+    _print_header("init", f"Configuring lair for [bold]{username}[/bold] {platform_label}")
 
     # Build the set of requested keys
     want: set[str] | None = None
@@ -324,8 +327,15 @@ def init(
         want = only_set if want is None else want & only_set
 
     skip_set = set(skip.split(",")) if skip else set()
-    specs = resolve_order(want)
+    all_specs = resolve_order(want)
+    platform_skipped = [s for s in all_specs if platform not in s.platforms]
+    specs = resolve_order(want, platform=platform)
     selected = [s for s in specs if s.key not in skip_set]
+
+    if platform_skipped:
+        names = ", ".join(s.key for s in platform_skipped)
+        console.print(f"  [{D_COMMENT}]Skipping on {platform}: {names}[/]")
+        console.print()
 
     total = len(selected)
     results: list[tuple[str, ModuleResult]] = []
@@ -363,7 +373,7 @@ def upgrade(
     skip_self: bool = typer.Option(False, "--no-self", help="Skip updating the devlair binary."),
 ) -> None:
     """Upgrade all tools, re-apply configs, and verify health."""
-    from devlair.context import resolve_invoking_user
+    from devlair.context import detect_platform, detect_wsl_version, resolve_invoking_user
     from devlair.features.upgrade import run_upgrade
     from devlair.modules import REAPPLY_KEYS, resolve_order
 
@@ -373,10 +383,11 @@ def upgrade(
 
     # Re-apply module configurations in dependency order
     username, user_home = resolve_invoking_user()
-    ctx = SetupContext(username=username, user_home=user_home)
+    platform = detect_platform()
+    ctx = SetupContext(username=username, user_home=user_home, platform=platform, wsl_version=detect_wsl_version())
 
     console.print("  [step]Re-applying configurations...[/step]")
-    for s in resolve_order(REAPPLY_KEYS):
+    for s in resolve_order(REAPPLY_KEYS, platform=platform):
         if not hasattr(s.module, "run"):
             continue
         try:

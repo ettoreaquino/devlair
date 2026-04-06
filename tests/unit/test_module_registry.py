@@ -38,6 +38,16 @@ class TestModuleSpecs:
     def test_spec_count(self):
         assert len(MODULE_SPECS) == 14
 
+    def test_all_specs_have_valid_platforms(self):
+        valid = {"linux", "wsl", "macos"}
+        for s in MODULE_SPECS:
+            assert s.platforms <= valid, f"Module '{s.key}' has invalid platforms: {s.platforms - valid}"
+
+    def test_default_platforms_include_linux_and_wsl(self):
+        """Most modules should be compatible with both linux and wsl."""
+        linux_only = {s.key for s in MODULE_SPECS if s.platforms == {"linux"}}
+        assert linux_only == {"timezone", "ssh", "firewall", "gnome_terminal"}
+
 
 class TestResolveOrder:
     def test_all_modules_when_none(self):
@@ -75,6 +85,32 @@ class TestResolveOrder:
         assert set(keys) >= REAPPLY_KEYS
         # zsh must come before shell
         assert keys.index("zsh") < keys.index("shell")
+
+    def test_filters_by_platform_wsl(self):
+        result = resolve_order(platform="wsl")
+        keys = {s.key for s in result}
+        assert "firewall" not in keys
+        assert "ssh" not in keys
+        assert "timezone" not in keys
+        assert "gnome_terminal" not in keys
+        assert "system" in keys
+        assert "zsh" in keys
+
+    def test_filters_by_platform_linux(self):
+        result = resolve_order(platform="linux")
+        assert len(result) == 14
+
+    def test_no_platform_returns_all(self):
+        result = resolve_order(platform=None)
+        assert len(result) == 14
+
+    def test_platform_filtered_deps_not_pulled_in(self):
+        """Requesting firewall on WSL returns empty — firewall is excluded."""
+        result = resolve_order({"firewall"}, platform="wsl")
+        keys = {s.key for s in result}
+        assert "firewall" not in keys
+        # tailscale is a transitive dep but also WSL-compatible, so it stays
+        assert "tailscale" in keys
 
 
 class TestKeysForGroups:
