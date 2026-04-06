@@ -1,8 +1,13 @@
 name: Release Binaries
 
+# Manual fallback — use when release-please isn't managing the release.
+# Normally, builds are triggered by the Release Please workflow.
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v1.2.0)"
+        required: true
 
 permissions:
   contents: write
@@ -21,6 +26,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
 
       - uses: astral-sh/setup-uv@v5
         with:
@@ -41,6 +48,7 @@ jobs:
       - name: Upload binary to release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.tag }}
           files: dist/devlair-linux-${{ matrix.arch }}
 
       - name: Upload binary as artifact
@@ -67,4 +75,5 @@ jobs:
       - name: Upload checksums to release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.tag }}
           files: binaries/checksums.txt

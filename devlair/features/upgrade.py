@@ -189,7 +189,7 @@ def _self_update() -> None:
                 timeout=10,
             )
             resp.raise_for_status()
-            latest = resp.json()["tag_name"].lstrip("v")
+            latest = resp.json()["tag_name"].removeprefix("v")
         except Exception as exc:
             console.print(f"  [warning]Could not check for updates: {exc}[/warning]")
             return
