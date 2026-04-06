@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.2](https://github.com/ettoreaquino/devlair/compare/v1.4.1...v1.4.2) (2026-04-06)
+
+
+### Bug Fixes
+
+* **init:** make rclone opt-in and AWS CLI GPG non-fatal ([#26](https://github.com/ettoreaquino/devlair/issues/26)) ([5ba372a](https://github.com/ettoreaquino/devlair/commit/5ba372a4578693c4f46f68d0d570aa0845f89eb0))
+
 ## [1.4.1](https://github.com/ettoreaquino/devlair/compare/v1.4.0...v1.4.1) (2026-04-06)
 
 
