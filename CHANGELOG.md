@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/ettoreaquino/devlair/compare/v1.3.2...v1.4.0) (2026-04-06)
+
+
+### Features
+
+* **wsl:** opt-in modules, Docker prerequisite, and permission fixes ([#19](https://github.com/ettoreaquino/devlair/issues/19)) ([d0676d2](https://github.com/ettoreaquino/devlair/commit/d0676d20c378eb936cce989325e52b15b2ad618e))
+
 ## [1.3.2](https://github.com/ettoreaquino/devlair/compare/v1.3.1...v1.3.2) (2026-04-06)
 
 
