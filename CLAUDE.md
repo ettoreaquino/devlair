@@ -44,7 +44,18 @@ def check() -> list[CheckItem]:
     return [CheckItem(label="what", status="ok")]
 ```
 
-Module groups: **core** (system, timezone, zsh, shell), **coding** (devtools, github, tmux), **network** (ssh, firewall, tailscale), **cloud-sync** (rclone), **ai** (claude, claw), **desktop** (gnome_terminal).
+Module groups and dependencies are defined in `devlair/modules/__init__.py` via `MODULE_SPECS`:
+
+| Group | Modules | Key dependencies |
+|-------|---------|-----------------|
+| core | system, timezone, zsh, shell | shell → zsh |
+| network | tailscale, ssh, firewall | ssh → tailscale, firewall → ssh |
+| coding | tmux, devtools, github | — |
+| cloud-sync | rclone | — |
+| ai | claude, claw | claude → devtools, claw → devtools |
+| desktop | gnome_terminal | — |
+
+Use `devlair init --group core,network` to run only specific groups. Dependencies are auto-expanded.
 
 ## Conventions
 
