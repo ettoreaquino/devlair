@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/ettoreaquino/devlair/compare/v1.5.0...v1.6.0) (2026-04-07)
+
+
+### Features
+
+* **cli:** branded header, README overhaul, upgrade self-update ([#32](https://github.com/ettoreaquino/devlair/issues/32)) ([2897a95](https://github.com/ettoreaquino/devlair/commit/2897a951f129c271f7cae5d954e9281a598c0406))
+
 ## [1.5.0](https://github.com/ettoreaquino/devlair/compare/v1.4.2...v1.5.0) (2026-04-06)
 
 
