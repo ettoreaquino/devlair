@@ -24,7 +24,7 @@ def run_filesystem() -> None:
     if not runner.cmd_exists("claude"):
         console.print()
         console.print("  [warning]Claude CLI not found.[/warning]")
-        console.print("  Install it first: [detail]npm install -g @anthropic-ai/claude-code[/detail]")
+        console.print("  Install it first: [detail]curl -fsSL https://claude.ai/install.sh | bash[/detail]")
         console.print()
         raise typer.Exit(1)
 

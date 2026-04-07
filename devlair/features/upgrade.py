@@ -37,8 +37,8 @@ def run_upgrade(self_update: bool = False) -> None:
 
     # ── System packages ───────────────────────────────────────────────────────
     with console.status("[step]apt update...[/step]", spinner="dots", spinner_style=D_PURPLE):
-        runner.run("apt-get update -qq")
-        runner.run("apt-get upgrade -y -qq")
+        runner.run("apt-get update -qq", check=False)
+        runner.run("apt-get upgrade -y -qq", check=False)
         # Ensure WSL extras are present (may have been added in a newer devlair version)
         if os.environ.get("WSL_DISTRO_NAME"):
             runner.run("apt-get install -y -qq wslu", check=False)
