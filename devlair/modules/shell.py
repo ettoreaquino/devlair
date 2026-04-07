@@ -70,6 +70,17 @@ if [ -t 0 ]; then
   # row helper — prints │ content padded to inner width │
   _dl_row() { printf '%s│%s%-*s%s│%s\\n' "$_dl_p" "$_dl_r" "$_dl_IW" "$1" "$_dl_p" "$_dl_r"; }
 
+  # devlair logo (medium decoration, same width as banner)
+  _dl_g=$'\\e[38;2;98;114;164m'
+  # 25 = gradient(4) + space(2) + brand(13) + space(2) + gradient(4)
+  _dl_lpad=$(( (_dl_IW - 25) / 2 ))
+  _dl_rpad=$(( _dl_IW - 25 - _dl_lpad ))
+  printf '%s╭%s╮%s\\n' "$_dl_p" "$_dl_dashes" "$_dl_r"
+  printf '%s│%s%*s%s░▒▓█%s  %sd e v l a i r%s  %s█▓▒░%s%*s%s│%s\\n' \
+    "$_dl_p" "$_dl_r" "$_dl_lpad" "" "$_dl_g" "$_dl_r" \
+    "$_dl_b" "$_dl_r" "$_dl_g" "$_dl_r" "$_dl_rpad" "" "$_dl_p" "$_dl_r"
+  printf '%s╰%s╯%s\\n' "$_dl_p" "$_dl_dashes" "$_dl_r"
+
   # top border: ╭─ hostname ─────╮
   _dl_fill=$(( _dl_IW - ${#_dl_host} - 3 ))
   printf '%s╭─ %s%s%s %s╮%s\\n' "$_dl_p" "$_dl_b$_dl_r" "$_dl_host" "$_dl_p" "${_dl_dashes:0:_dl_fill}" "$_dl_r"
