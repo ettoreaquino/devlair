@@ -11,7 +11,9 @@ const COMMANDS = [
   { name: "upgrade", desc: "Upgrade system, tools, and devlair itself" },
 ] as const;
 
-function App({ command }: { command: string | null }) {
+type Command = "version" | null;
+
+function App({ command }: { command: Command }) {
   if (command === "version") {
     return <Text color={D_FG}>devlair {VERSION}</Text>;
   }
@@ -52,13 +54,12 @@ function App({ command }: { command: string | null }) {
 function main() {
   const args = process.argv.slice(2);
 
-  let command: string | null = null;
+  let command: Command = null;
   if (args.includes("--version") || args.includes("-V")) {
     command = "version";
   }
 
   const { unmount } = render(<App command={command} />);
-  // Ink renders then exits for static output
   unmount();
 }
 
