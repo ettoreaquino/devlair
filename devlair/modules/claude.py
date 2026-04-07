@@ -5,6 +5,7 @@ from pathlib import Path
 
 from devlair import runner
 from devlair.context import CheckItem, ModuleResult, SetupContext, update_json
+from devlair.features.audit import safe_log_install
 
 LABEL = "Claude Code"
 
@@ -246,10 +247,29 @@ def _ensure_telegram_plugin(username: str) -> str:
     return ", ".join(details) if details else "telegram plugin already installed"
 
 
+def _install_claude_code(ctx: SetupContext) -> str:
+    """Install Claude Code CLI via the official native installer."""
+    from devlair.console import console
+
+    console.print("    [muted]installing claude code...[/muted]")
+    script = runner.download_script("https://claude.ai/install.sh")
+    try:
+        runner.run_shell_as(ctx.username, f'bash "{script}"', quiet=True)
+    finally:
+        script.unlink(missing_ok=True)
+    safe_log_install(ctx.user_home, tool="claude", source="claude.ai")
+    return "claude code installed"
+
+
 def run(ctx: SetupContext) -> ModuleResult:
     claude_dir = ctx.user_home / ".claude"
     claude_dir.mkdir(parents=True, exist_ok=True)
     shutil.chown(claude_dir, ctx.username, ctx.username)
+
+    # Install Claude Code CLI if not present
+    install_detail = ""
+    if not runner.cmd_exists("claude"):
+        install_detail = _install_claude_code(ctx)
 
     settings_path = ctx.user_home / ".claude" / "settings.json"
     _merge_settings(settings_path)
@@ -268,10 +288,8 @@ def run(ctx: SetupContext) -> ModuleResult:
         except Exception as exc:
             plugin_detail = f"telegram plugin failed: {exc}"
 
-    detail = "settings.json merged, hooks installed, scripts deployed"
-    if plugin_detail:
-        detail += f", {plugin_detail}"
-    return ModuleResult(status="ok", detail=detail)
+    parts = [p for p in [install_detail, "settings merged, scripts deployed", plugin_detail] if p]
+    return ModuleResult(status="ok", detail=", ".join(parts))
 
 
 def check() -> list[CheckItem]:
