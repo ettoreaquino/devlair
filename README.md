@@ -6,11 +6,11 @@
   <img alt="devlair" src="assets/logo.svg" width="480">
 </picture>
 
-**One command to provision a fully configured Ubuntu development machine.**
+**One command to provision a fully configured Ubuntu or WSL development machine.**
 
 [![Release](https://img.shields.io/github/v/release/ettoreaquino/devlair?style=flat-square)](https://github.com/ettoreaquino/devlair/releases/latest)
 [![CI](https://img.shields.io/github/actions/workflow/status/ettoreaquino/devlair/release.yml?style=flat-square&label=build)](https://github.com/ettoreaquino/devlair/actions)
-[![Platform](https://img.shields.io/badge/platform-Ubuntu_24.04-E95420?style=flat-square&logo=ubuntu&logoColor=white)](https://ubuntu.com)
+[![Platform](https://img.shields.io/badge/platform-Ubuntu_%7C_WSL-E95420?style=flat-square&logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Arch](https://img.shields.io/badge/arch-x86__64_%7C_aarch64-blue?style=flat-square)](https://github.com/ettoreaquino/devlair/releases/latest)
 [![License](https://img.shields.io/github/license/ettoreaquino/devlair?style=flat-square)](LICENSE)
 
@@ -18,7 +18,7 @@
 
 ---
 
-devlair automates the setup of a fresh Ubuntu server or workstation — installing tools,
+devlair automates the setup of a fresh Ubuntu server, workstation, or WSL instance — installing tools,
 hardening security, configuring shell and terminal with the [Dracula](https://draculatheme.com) theme,
 and wiring up dev toolchains. Run it once on a fresh machine or re-run anytime to converge.
 
@@ -46,7 +46,7 @@ Run it once or a hundred times — devlair always converges to the desired state
 
 **Security-first**
 
-SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the box. Disable password auth with a single command when you're ready.
+SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the box on Linux. On WSL, network modules that require `systemctl` are auto-skipped. Disable password auth with a single command when you're ready.
 
 </td>
 <td width="33%" valign="top">
@@ -71,7 +71,7 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
 │               ╚═══════════════╝                │
 │  ░░▒▒▓▓██                            ██▓▓▒▒░░  │
 ╰────────────────────────────────────────────────╯
-  v1.0.0
+  vX.Y.Z
 
   Setup & Health
     init [--only MOD] [--skip MOD] [--group GRP] [--config FILE]  Set up this machine from scratch
@@ -106,6 +106,12 @@ devlair init
 
 # Run specific modules only
 devlair init --only ssh,tmux
+
+# Run module groups
+devlair init --group core,coding
+
+# Install opt-in modules
+devlair init --only claude,rclone
 
 # Skip specific modules
 devlair init --skip devtools,gnome_terminal
@@ -237,7 +243,7 @@ devlair hooks into Claude Code to track session usage and display a dashboard:
 
 ## What gets installed
 
-`devlair init` runs these modules in order:
+`devlair init` runs these modules in order. Some modules are **opt-in** and not included in a default run — use `devlair init --only <module>` or `--group` to enable them. Opt-in modules: `rclone`, `claude`, `claw`; `tailscale` is opt-in on WSL.
 
 <details>
 <summary><b>System</b> — OS packages and essentials</summary>
@@ -312,7 +318,6 @@ Installs (skipping any that already exist):
 | [Docker](https://www.docker.com/) | Containers + Compose |
 | [gh](https://cli.github.com/) | GitHub CLI |
 | [aws](https://aws.amazon.com/cli/) | AWS CLI v2 |
-| [rclone](https://rclone.org/) | Cloud storage sync |
 | [Bun](https://bun.sh/) | JavaScript runtime (required for Claude Code channels) |
 
 </details>
@@ -320,7 +325,7 @@ Installs (skipping any that already exist):
 <details>
 <summary><b>rclone bisync</b> — bidirectional cloud sync via systemd timer</summary>
 
-rclone is installed during init. Run `devlair sync --add` after setup to configure a sync:
+rclone is opt-in: install it with `devlair init --only rclone`. Then run `devlair sync --add` to configure a sync:
 - Prompts for a short sync name (e.g. `store`, `vault`) used as the systemd unit identifier
 - Walks through `rclone config` for OAuth (Google Drive, S3, and [70+ providers](https://rclone.org/overview/))
 - Creates a named systemd user timer (`rclone-<name>.timer`) that bisyncs every 5 minutes
@@ -401,13 +406,14 @@ Verifies every component without making changes — checks installed tools, conf
 devlair upgrade
 ```
 
-Upgrades system packages, Docker, GitHub CLI, AWS CLI, rclone, pyenv/Python, nvm/Node, Bun, and the devlair binary itself. Installs Bun automatically if it was not previously present. After version bumps, automatically re-applies module configurations (hooks, settings, shell aliases) so new config shapes take effect immediately. Reports rclone sync timer health (active state + last run) after upgrading. Use `--no-self` to skip the binary update.
+Checks for a new devlair binary first — if a new version is available, it downloads, replaces, and re-execs so the rest of the upgrade runs new code. Then upgrades system packages and any tools that were installed during init (Docker, GitHub CLI, AWS CLI, pyenv/Python, nvm/Node, Bun, rclone). After upgrading, automatically re-applies module configurations (hooks, settings, shell aliases) so new config shapes take effect immediately. Reports rclone sync timer health when configured. Use `--no-self` to skip the binary update.
 
 ## Requirements
 
-- **OS:** Ubuntu 24.04 LTS
+- **OS:** Ubuntu 24.04 LTS or WSL 2 (Ubuntu)
 - **Arch:** x86_64 or aarch64
 - **Privileges:** root or a user with `sudo`
+- **WSL extras:** Docker Desktop for Windows with WSL integration enabled (for Docker-dependent modules)
 
 ## Development
 
@@ -420,12 +426,7 @@ uv run pytest tests/unit/
 
 ### Releasing
 
-Tag and push — GitHub Actions builds binaries for both architectures and creates a release:
-
-```bash
-git tag v0.7.0
-git push origin v0.7.0
-```
+Releases are automated via [release-please](https://github.com/googleapis/release-please). Conventional Commits on `main` determine version bumps (`fix:` → patch, `feat:` → minor, `feat!:` → major). Release-please maintains a "Release PR" with the changelog; merging it triggers a GitHub Release and binary builds for both architectures. **Never tag manually.**
 
 ### Project structure
 
@@ -436,7 +437,7 @@ devlair/
   context.py            # shared types, user resolution, JSON config helpers
   console.py            # Rich console + Dracula color tokens
   modules/              # one file per init module (14 modules)
-  features/             # doctor, upgrade, disable-password, filesystem, claude, sync, claw
+  features/             # doctor, upgrade, disable-password, filesystem, claude, sync, claw, audit, profile
 assets/
   logo.svg              # brand mark (dark background)
   logo-light.svg        # brand mark (light background variant)

@@ -8,6 +8,7 @@ from typing import Optional
 
 import typer
 import typer.core
+from rich.padding import Padding
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
@@ -32,11 +33,16 @@ from devlair.modules import ModuleSpec
 _BRAND = "d e v l a i r"
 _INDENT = "  "
 
-# (inner_width, gradient_chars, show_inner_box)
-# Total visible width = inner_width + 2 (border chars) + 2 (indent)
-_LOGO_FULL = (48, "░░▒▒▓▓██", True)  # 52 cols, 7 rows
-_LOGO_MEDIUM = (38, "░▒▓█", False)  # 42 cols, 3 rows
-_LOGO_SHORT = (20, "", False)  # 24 cols, 3 rows
+# Decoration tiers: (inner_width, gradient_chars, show_inner_box, min_terminal_cols)
+# All tiers share the same inner_width so logo + panel stay width-matched.
+# The cascade degrades decoration density when the terminal is too narrow.
+_LOGO_SPECS = {
+    "full": (48, "░░▒▒▓▓██", True, 52),  # gradient rows + inner box (5 content rows)
+    "medium": (48, "░▒▓█", False, 52),  # gradient inline (1 content row)
+    "short": (48, "", False, 52),  # brand text only (1 content row)
+}
+_LOGO_CASCADE = {"full": ["full", "medium", "short"], "medium": ["medium", "short"], "short": ["short"]}
+_MIN_W_SHORT = 16  # absolute minimum for brand text + padding
 
 
 def _border(W: int, left: str, right: str) -> Text:
@@ -125,18 +131,30 @@ def _build_logo(W: int, grad: str, inner_box: bool) -> list[Text]:
     return lines
 
 
+def _resolve_logo(decoration: str = "full") -> tuple[int, str, bool]:
+    """Pick logo inner width W and decoration params for the current terminal.
+
+    Returns (W, gradient_chars, show_inner_box).
+    Cascades from the requested decoration to simpler tiers if the terminal
+    is too narrow, and shrinks the box width as a last resort.
+    """
+    term_cols = shutil.get_terminal_size().columns
+    for style in _LOGO_CASCADE.get(decoration, ["short"]):
+        W, grad, inner_box, min_cols = _LOGO_SPECS[style]
+        if term_cols >= min_cols:
+            return W, grad, inner_box
+    # Terminal too narrow — shrink to fit
+    W = max(term_cols - 4, _MIN_W_SHORT)
+    return W, "", False
+
+
 def _render_logo() -> None:
     """Print the devlair logo, adapting to terminal width."""
     if console.color_system is None:
         console.print("[bold]devlair[/bold]")
         return
 
-    width = shutil.get_terminal_size().columns
-    for spec in (_LOGO_FULL, _LOGO_MEDIUM, _LOGO_SHORT):
-        W, grad, inner_box = spec
-        if width >= W + 4:
-            break
-
+    W, grad, inner_box = _resolve_logo("full")
     for line in _build_logo(W, grad, inner_box):
         console.print(line)
 
@@ -264,7 +282,19 @@ def _require_root() -> str:
     return username
 
 
-def _print_header(command: str, subtitle: str) -> None:
+def _print_branded_header(command: str, subtitle: str, decoration: str = "medium") -> None:
+    """Print the devlair logo + command panel, width-matched."""
+    if console.color_system is None:
+        console.print(f"[bold]devlair {command}[/bold] — {subtitle}")
+        console.print()
+        return
+
+    W, grad, inner_box = _resolve_logo(decoration)
+
+    console.print()
+    for line in _build_logo(W, grad, inner_box):
+        console.print(line)
+
     title = Text()
     title.append("devlair", style=f"bold {D_PURPLE}")
     title.append(f"  {command}", style=f"bold {D_PINK}")
@@ -273,9 +303,9 @@ def _print_header(command: str, subtitle: str) -> None:
         title=title,
         border_style=D_PURPLE,
         padding=(0, 2),
+        width=W + 2,
     )
-    console.print()
-    console.print(panel)
+    console.print(Padding(panel, (0, 0, 0, len(_INDENT))))
     console.print()
 
 
@@ -339,7 +369,9 @@ def init(
 
     suffix = {"wsl": " (WSL)", "macos": " (macOS)"}.get(platform, "")
     profile_suffix = f"  profile: [bold]{profile_name}[/bold]" if profile_name else ""
-    _print_header("init", f"Configuring lair for [bold]{username}[/bold] on {_hostname()}{suffix}{profile_suffix}")
+    _print_branded_header(
+        "init", f"Configuring lair for [bold]{username}[/bold] on {_hostname()}{suffix}{profile_suffix}", "full"
+    )
 
     # Build the set of requested keys — CLI flags override profile
     want: set[str] | None = None
@@ -375,8 +407,9 @@ def init(
         console.print(f"  [{D_COMMENT}]Skipping on {platform}: {names}[/]")
         console.print()
 
-    # Docker pre-flight on WSL — only if a selected module needs it
-    docker_needed = any(s.key in ("devtools", "claw") for s in selected)
+    # Docker pre-flight on WSL — only if claw is selected (it requires running containers).
+    # devtools handles missing Docker gracefully (skips with a warning).
+    docker_needed = any(s.key == "claw" for s in selected)
     if platform == "wsl" and docker_needed and not runner.cmd_exists("docker"):
         console.print("  [error]Docker not found.[/error]")
         console.print("  On WSL, Docker must be provided by Docker Desktop for Windows.")
@@ -422,7 +455,7 @@ def doctor(
 
     if fix:
         _elevate_if_needed()
-    _print_header("doctor", "Checking your lair's health")
+    _print_branded_header("doctor", "Checking your lair's health", "medium")
     run_doctor(fix=fix)
 
 
@@ -436,7 +469,7 @@ def upgrade(
     from devlair.modules import REAPPLY_KEYS, resolve_order
 
     _elevate_if_needed()
-    _print_header("upgrade", "Upgrading your lair")
+    _print_branded_header("upgrade", "Upgrading your lair", "medium")
     run_upgrade(self_update=not skip_self)
 
     # Re-apply module configurations in dependency order
@@ -470,7 +503,7 @@ def disable_password() -> None:
     from devlair.features.disable_password import run_disable_password
 
     _elevate_if_needed()
-    _print_header("disable-password", "Hardening SSH authentication")
+    _print_branded_header("disable-password", "Hardening SSH authentication", "short")
     run_disable_password()
 
 
@@ -486,7 +519,7 @@ def sync(
 
     if add:
         _elevate_if_needed()
-    _print_header("sync", "Cloud folder sync")
+    _print_branded_header("sync", "Cloud folder sync", "short")
     run_sync(add=add, now=now, remove=remove, name=name or None)
 
 
@@ -495,7 +528,7 @@ def filesystem() -> None:
     """Configure your filesystem folder structure with AI guidance."""
     from devlair.features.filesystem import run_filesystem
 
-    _print_header("filesystem", "Designing your folder structure with Claude")
+    _print_branded_header("filesystem", "Designing your folder structure with Claude", "short")
     run_filesystem()
 
 
@@ -511,7 +544,7 @@ def claw(
     """Manage PicoCLAW AI agent with WhatsApp access."""
     from devlair.features.claw import run_claw
 
-    _print_header("claw", "PicoCLAW Agent")
+    _print_branded_header("claw", "PicoCLAW Agent", "short")
     run_claw(
         pair=pair,
         allow=allow or None,
@@ -540,6 +573,7 @@ def claude(
     """View Claude Code usage dashboard."""
     from devlair.features.claude import run_claude
 
+    _print_branded_header("claude", "Claude Code usage dashboard", "short")
     run_claude(toggle_1m=toggle_1m, plan=plan, channels=channels)
 
 
