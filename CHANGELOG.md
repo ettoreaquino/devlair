@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.1](https://github.com/ettoreaquino/devlair/compare/v1.6.0...v1.6.1) (2026-04-07)
+
+
+### Bug Fixes
+
+* **upgrade:** apt non-fatal + install Claude Code via native installer ([#35](https://github.com/ettoreaquino/devlair/issues/35)) ([5680993](https://github.com/ettoreaquino/devlair/commit/568099338efc76549967bcccbe7e716329c81091))
+
 ## [1.6.0](https://github.com/ettoreaquino/devlair/compare/v1.5.0...v1.6.0) (2026-04-07)
 
 
