@@ -83,11 +83,15 @@ For code issues, fix if straightforward. If a finding is a false positive, skip 
 
 ## Step 5: Post PR comments
 
-Post two separate structured comments to the PR using `gh pr comment <N>`:
+Post two formal PR reviews using the GitHub reviews API so findings appear in the Reviews section:
 
-### Comment 1: Code Review
-```markdown
-## Code Review -- PR #<N>
+### Review 1: Code Review
+
+```bash
+gh api repos/{owner}/{repo}/pulls/<N>/reviews \
+  -f event=COMMENT \
+  -f body="$(cat <<'REVIEW'
+## Code Review
 
 ### Code Reuse
 <findings or "No issues found.">
@@ -98,14 +102,20 @@ Post two separate structured comments to the PR using `gh pr comment <N>`:
 ### Efficiency
 <findings or "No issues found.">
 
-### Verdict: **<Ship it / Needs changes>** <check or x emoji>
+### Verdict: **<Ship it / Needs changes>**
 
-Generated with [Claude Code](https://claude.com/claude-code)
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+REVIEW
+)"
 ```
 
-### Comment 2: README Review
-```markdown
-## README Review -- PR #<N>
+### Review 2: README Review
+
+```bash
+gh api repos/{owner}/{repo}/pulls/<N>/reviews \
+  -f event=COMMENT \
+  -f body="$(cat <<'REVIEW'
+## README Review
 
 ### Structure
 <findings>
@@ -118,5 +128,9 @@ Generated with [Claude Code](https://claude.com/claude-code)
 
 ### Verdict: **<Current / N fixes applied>**
 
-Generated with [Claude Code](https://claude.com/claude-code)
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+REVIEW
+)"
 ```
+
+Use `{owner}/{repo}` from the PR URL or `gh repo view --json owner,name`.
