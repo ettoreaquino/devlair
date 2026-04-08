@@ -136,6 +136,31 @@ Version bumps are determined from Conventional Commits: `fix:` → patch, `feat:
 
 **Important:** Every PR must reference the issue it addresses using `Closes #N` in the PR body. This ensures GitHub automatically closes the issue on merge and maintains traceability between issues, PRs, and the project board.
 
+## PR review automation
+
+Every PR gets two automated reviews that post structured comments. This is enforced by a `PostToolUse` hook in `.claude/settings.json` that fires after `gh pr create` and triggers the `/review-pr` skill.
+
+**Review pipeline** (triggered automatically after PR creation):
+
+1. **Code Review** — three parallel agents analyze the diff:
+   - **Reuse** — flags new code that duplicates existing utilities or helpers
+   - **Quality** — catches redundant state, copy-paste, leaky abstractions, unnecessary nesting/comments
+   - **Efficiency** — spots redundant computations, missed concurrency, memory leaks, hot-path bloat
+
+2. **README Review** — checks for drift against the PR changes:
+   - Structure: logo, badges, demo, features, install, examples, collapsible sections
+   - Content accuracy: project structure, commands, versions, install instructions
+   - Quality signals: admonitions, responsive images, no stale badges
+
+3. **Fix and comment** — issues are fixed directly (commit + push). Two structured comments are posted to the PR: one for code review findings, one for README review findings.
+
+**Manual invocation:** Run `/review-pr` or `/review-pr #51` to review any PR on demand.
+
+**Skills used:**
+- `/review-pr` — full code + README review with PR comments (`.claude/skills/review-pr.md`)
+- `/pr` — PR creation with issue linking and board management (`.claude/settings.json`)
+- `/board` — project board visibility (`.claude/skills/board.md`)
+
 ## Project board
 
 All work is tracked on the **devlair roadmap** project (GitHub Projects #2). The board has three columns: **Todo**, **In Progress**, **Done**.
