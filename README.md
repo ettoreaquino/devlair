@@ -9,9 +9,8 @@
 **One command to provision a fully configured Ubuntu or WSL development machine.**
 
 [![Release](https://img.shields.io/github/v/release/ettoreaquino/devlair?style=flat-square)](https://github.com/ettoreaquino/devlair/releases/latest)
-[![CI](https://img.shields.io/github/actions/workflow/status/ettoreaquino/devlair/release.yml?style=flat-square&label=build)](https://github.com/ettoreaquino/devlair/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/ettoreaquino/devlair/lint.yml?style=flat-square&label=CI)](https://github.com/ettoreaquino/devlair/actions)
 [![Platform](https://img.shields.io/badge/platform-Ubuntu_%7C_WSL-E95420?style=flat-square&logo=ubuntu&logoColor=white)](https://ubuntu.com)
-[![Arch](https://img.shields.io/badge/arch-x86__64_%7C_aarch64-blue?style=flat-square)](https://github.com/ettoreaquino/devlair/releases/latest)
 [![License](https://img.shields.io/github/license/ettoreaquino/devlair?style=flat-square)](LICENSE)
 
 </div>
@@ -417,11 +416,29 @@ Checks for a new devlair binary first — if a new version is available, it down
 
 ## Development
 
+### v1 (Python — stable)
+
 ```bash
 git clone git@github.com:ettoreaquino/devlair.git
 cd devlair
 uv sync --group dev
 uv run pytest tests/unit/
+uv run ruff check devlair/ tests/
+```
+
+### v2 (TypeScript + Ink — alpha)
+
+> [!WARNING]
+> v2 is in early alpha. The TypeScript + Ink rewrite is under active development.
+> For the stable CLI, use the [v1.x releases](https://github.com/ettoreaquino/devlair/releases/latest).
+
+```bash
+cd cli
+bun install
+bun run dev          # run in development
+bun run typecheck    # tsc --noEmit
+bun run lint         # biome check
+bun run compile      # standalone binary → dist/devlair
 ```
 
 ### Releasing
@@ -431,13 +448,20 @@ Releases are automated via [release-please](https://github.com/googleapis/releas
 ### Project structure
 
 ```
-devlair/
+devlair/                # v1 Python CLI (stable)
   cli.py               # Typer CLI entrypoint
   runner.py             # subprocess helpers
   context.py            # shared types, user resolution, JSON config helpers
   console.py            # Rich console + Dracula color tokens
   modules/              # one file per init module (14 modules)
   features/             # doctor, upgrade, disable-password, filesystem, claude, sync, claw, audit, profile
+cli/                    # v2 TypeScript CLI (alpha)
+  src/
+    index.tsx           # Ink app entrypoint
+    commands/           # command implementations (planned)
+    components/         # Ink UI components (planned)
+    wizard/             # interactive wizard (planned)
+    lib/                # theme, types, runner, modules, platform detection
 assets/
   logo.svg              # brand mark (dark background)
   logo-light.svg        # brand mark (light background variant)
