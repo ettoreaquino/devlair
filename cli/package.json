@@ -3,9 +3,13 @@
   "version": "2.0.0-alpha.1",
   "description": "Dev machine provisioning CLI — interactive wizards, module groups, enterprise onboarding",
   "type": "module",
+  "private": true,
   "bin": {
     "devlair": "dist/cli.js"
   },
+  "files": [
+    "dist/cli.js"
+  ],
   "scripts": {
     "dev": "bun run src/index.tsx",
     "build": "bun build src/index.tsx --outfile dist/cli.js --target node --format esm",
