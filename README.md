@@ -459,7 +459,7 @@ cli/                    # v2 TypeScript CLI (alpha)
   src/
     index.tsx           # Ink app entrypoint
     commands/           # command implementations (planned)
-    components/         # Ink UI components (planned)
+    components/         # Ink UI components (Logo, Help)
     wizard/             # interactive wizard (planned)
     lib/                # theme, types, runner, modules, platform detection
 assets/
