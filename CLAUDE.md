@@ -2,6 +2,11 @@
 
 A CLI tool for provisioning and managing development machines. Currently Python (Typer + Rich), evolving to TypeScript + Ink in v2.
 
+## Hard rules
+
+- **Never approve PRs.** Claude may review and post comments (`event=COMMENT`) but must never submit approvals (`event=APPROVE`) or merge PRs. Only the human maintainer approves and merges.
+- **Never force-push to main.**
+
 ## Dev commands
 
 ```bash
@@ -128,9 +133,10 @@ Releases are automated via [release-please](https://github.com/googleapis/releas
 2. Open PR with `Closes #N` in the body to link the issue
 3. Add the PR to the **devlair roadmap** project board and set status to **In Progress**
 4. Get CI green (lint, test, commit-messages)
-5. Squash merge to main — branch auto-deletes, linked issue auto-closes
-6. Release-please auto-creates/updates a "Release PR" with version bump + CHANGELOG
-7. When ready to ship: merge the Release PR → auto-tags, creates GitHub Release, CI builds binaries
+5. **Human reviews and approves the PR** — Claude must never approve or merge PRs
+6. Squash merge to main — branch auto-deletes, linked issue auto-closes
+7. Release-please auto-creates/updates a "Release PR" with version bump + CHANGELOG
+8. When ready to ship: merge the Release PR → auto-tags, creates GitHub Release, CI builds binaries
 
 Version bumps are determined from Conventional Commits: `fix:` → patch, `feat:` → minor, `feat!:` / `BREAKING CHANGE` → major.
 
