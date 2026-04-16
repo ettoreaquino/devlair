@@ -26,3 +26,11 @@ export interface CheckItem {
   status: Status;
   detail?: string;
 }
+
+export type ModuleMode = "run" | "check";
+
+export const ModuleExitCode = {
+  Success: 0,
+  Failure: 1,
+  Skip: 2,
+} as const;
