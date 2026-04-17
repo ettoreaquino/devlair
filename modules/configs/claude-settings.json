@@ -1,0 +1,32 @@
+{
+  "model": "sonnet",
+  "effortLevel": "medium",
+  "channelsEnabled": true,
+  "allowedChannelPlugins": [
+    {"marketplace": "claude-plugins-official", "plugin": "telegram"}
+  ],
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -c '{pid:(env.PPID|tonumber? // 0),session_id,model,cwd,channels:(env.CLAUDE_CHANNELS // \"\"),started_at:(now|todate)}' > ~/.claude/devlair-active; tmux refresh-client -S 2>/dev/null; true"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -c '{session_id,transcript_path,cwd,ended_at:(now|todate)}' >> ~/.claude/devlair-sessions.jsonl; rm -f ~/.claude/devlair-active; tmux refresh-client -S 2>/dev/null; true"
+          }
+        ]
+      }
+    ]
+  }
+}

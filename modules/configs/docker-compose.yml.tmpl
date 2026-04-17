@@ -1,0 +1,92 @@
+name: claw
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: claw-postgres
+    restart: unless-stopped
+    networks:
+      - claw
+    environment:
+      - POSTGRES_DB=evolution
+      - POSTGRES_USER=evolution
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evolution"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  evolution:
+    image: atendai/evolution-api:latest
+    container_name: evolution
+    restart: unless-stopped
+    networks:
+      - claw
+    ports:
+      - "0.0.0.0:8080:8080"
+    environment:
+      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY}
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://evolution:${POSTGRES_PASSWORD}@postgres:5432/evolution
+      - DATABASE_SAVE_DATA_INSTANCE=true
+      - DATABASE_SAVE_DATA_NEW_MESSAGE=false
+      - DATABASE_SAVE_DATA_CONTACTS=false
+      - DATABASE_SAVE_DATA_CHATS=false
+      - CACHE_REDIS_ENABLED=false
+    volumes:
+      - evolution-data:/evolution/instances
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  picoclaw:
+    build: ./picoclaw
+    container_name: picoclaw
+    restart: unless-stopped
+    read_only: true
+    networks:
+      - claw
+    tmpfs:
+      - /tmp:size=16M
+    volumes:
+      - ./agent-data:/agent-data
+      - ./picoclaw.yml:/etc/picoclaw/config.yml:ro
+      - ./allowlist.json:/etc/picoclaw/allowlist.json:ro
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - EVOLUTION_API_URL=http://evolution:8080
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
+    env_file:
+      - .env
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    user: "65534:65534"
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: "0.5"
+    depends_on:
+      evolution:
+        condition: service_started
+
+networks:
+  claw:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  evolution-data:
