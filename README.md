@@ -52,7 +52,7 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
 
 **Composable**
 
-14 modules you can run individually with `--only` or skip with `--skip`. Each module is self-contained and does one thing well.
+13 modules you can run individually with `--only` or skip with `--skip`. Each module is self-contained and does one thing well.
 
 </td>
 </tr>
@@ -84,7 +84,6 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
 
   AI Agents & Channels
     claude [--plan TIER] [--1m on|off]  Usage dashboard & config
-    claw [--pair|--start|--stop]        PicoCLAW WhatsApp agent
 
   tmux Sessions
     t                                   Start/attach default 'dev' session
@@ -170,32 +169,6 @@ devlair claude --channels
 </details>
 
 <details>
-<summary><b>PicoCLAW (WhatsApp agent)</b></summary>
-
-```bash
-# Status dashboard
-devlair claw
-
-# Pair WhatsApp via QR code
-devlair claw --pair
-
-# Authorize a phone number
-devlair claw --allow +5511999999999
-
-# Revoke a phone number
-devlair claw --revoke +5511999999999
-
-# Start/stop the agent stack
-devlair claw --start
-devlair claw --stop
-
-# Tail agent logs
-devlair claw --logs
-```
-
-</details>
-
-<details>
 <summary><b>tmux sessions</b></summary>
 
 ```bash
@@ -242,7 +215,7 @@ devlair hooks into Claude Code to track session usage and display a dashboard:
 
 ## What gets installed
 
-`devlair init` runs these modules in order. Some modules are **opt-in** and not included in a default run — use `devlair init --only <module>` or `--group` to enable them. Opt-in modules: `rclone`, `claude`, `claw`; `tailscale` is opt-in on WSL.
+`devlair init` runs these modules in order. Some modules are **opt-in** and not included in a default run — use `devlair init --only <module>` or `--group` to enable them. Opt-in modules: `rclone`, `claude`; `tailscale` is opt-in on WSL.
 
 <details>
 <summary><b>System</b> — OS packages and essentials</summary>
@@ -378,19 +351,6 @@ Merges devlair-managed keys into `~/.claude/settings.json` (model, effort level,
 
 </details>
 
-<details>
-<summary><b>PicoCLAW</b> — WhatsApp AI agent via Evolution API</summary>
-
-Provisions a two-container stack: [Evolution API](https://github.com/EvolutionAPI/evolution-api) (WhatsApp gateway) and PicoCLAW (a lightweight webhook-to-Claude bridge built from source during provisioning). The agent receives WhatsApp messages, calls Claude, and replies — with per-sender rate limiting, conversation history, and a phone number allowlist.
-
-- `devlair claw` shows progressive status — walks you through setup step by step
-- `devlair claw --pair` connects WhatsApp via QR code
-- `devlair claw --allow +55…` manages the sender allowlist
-- `devlair doctor` checks container security (non-root, read-only rootfs, cap_drop ALL, no docker socket)
-- Login banner shows a compact `claw: ● up  N phones` line when provisioned
-
-</details>
-
 ## Health check
 
 ```bash
@@ -453,8 +413,8 @@ devlair/                # v1 Python CLI (stable)
   runner.py             # subprocess helpers
   context.py            # shared types, user resolution, JSON config helpers
   console.py            # Rich console + Dracula color tokens
-  modules/              # one file per init module (14 modules)
-  features/             # doctor, upgrade, disable-password, filesystem, claude, sync, claw, audit, profile
+  modules/              # one file per init module (13 modules)
+  features/             # doctor, upgrade, disable-password, filesystem, claude, sync, audit, profile
 cli/                    # v2 TypeScript CLI (alpha)
   src/
     index.tsx           # Ink app entrypoint

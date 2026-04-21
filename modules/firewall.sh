@@ -54,14 +54,6 @@ do_check() {
     json_check "fail2ban" "fail" "$f2b_status"
   fi
 
-  # Check Evolution API UFW rule (only if claw is configured)
-  if [[ -f "$USER_HOME/.devlair/claw/docker-compose.yml" ]]; then
-    if echo "$ufw_status" | grep -q "8080" && echo "$ufw_status" | grep -q "100.64.0.0/10"; then
-      json_check "evolution-api ufw rule" "ok" "present"
-    else
-      json_check "evolution-api ufw rule" "warn" "missing — run devlair init --only claw"
-    fi
-  fi
 }
 
 case "$MODE" in

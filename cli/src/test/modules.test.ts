@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { GROUPS, MODULE_SPECS, REAPPLY_KEYS, keysForGroups, resolveOrder, validateDag } from "../lib/modules.js";
 
 describe("MODULE_SPECS", () => {
-  test("has 14 modules", () => {
-    expect(MODULE_SPECS).toHaveLength(14);
+  test("has 13 modules", () => {
+    expect(MODULE_SPECS).toHaveLength(13);
   });
 
   test("all keys are unique", () => {
@@ -32,7 +32,7 @@ describe("REAPPLY_KEYS", () => {
   });
 
   test("includes known reapply modules", () => {
-    for (const key of ["zsh", "tmux", "devtools", "shell", "gnome_terminal", "claude", "claw"]) {
+    for (const key of ["zsh", "tmux", "devtools", "shell", "gnome_terminal", "claude"]) {
       expect(REAPPLY_KEYS.has(key)).toBe(true);
     }
   });
@@ -60,9 +60,9 @@ describe("keysForGroups", () => {
 });
 
 describe("resolveOrder", () => {
-  test("returns all 14 modules when no keys are specified", () => {
+  test("returns all 13 modules when no keys are specified", () => {
     const specs = resolveOrder();
-    expect(specs).toHaveLength(14);
+    expect(specs).toHaveLength(13);
   });
 
   test("preserves topological order", () => {
@@ -73,7 +73,6 @@ describe("resolveOrder", () => {
     expect(keys.indexOf("ssh")).toBeLessThan(keys.indexOf("firewall"));
     expect(keys.indexOf("zsh")).toBeLessThan(keys.indexOf("shell"));
     expect(keys.indexOf("devtools")).toBeLessThan(keys.indexOf("claude"));
-    expect(keys.indexOf("devtools")).toBeLessThan(keys.indexOf("claw"));
   });
 
   test("auto-expands dependencies", () => {
@@ -140,7 +139,6 @@ describe("resolveOrder", () => {
       "shell",
       "gnome_terminal",
       "claude",
-      "claw",
     ];
     const actualOrder = resolveOrder().map((s) => s.key);
     expect(actualOrder).toEqual(expectedOrder);

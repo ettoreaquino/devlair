@@ -120,18 +120,6 @@ chown_user() { chown "${USERNAME:?USERNAME not set}:${USERNAME}" "$1"; }
 # chown_user_r DIR -- recursive chown to the target user.
 chown_user_r() { chown -R "${USERNAME:?USERNAME not set}:${USERNAME}" "$1"; }
 
-# add_ufw_rule RULE COMMENT -- add a UFW rule idempotently.
-# Skips if a rule with the same comment already exists.
-# RULE is intentionally word-split (e.g. "allow from 10.0.0.0/8 to any port 80 proto tcp").
-add_ufw_rule() {
-  local rule=$1 comment=$2
-  if ! ufw status verbose 2>/dev/null | grep -qF "$comment"; then
-    local -a parts
-    read -ra parts <<< "$rule"
-    ufw "${parts[@]}" comment "$comment" >&2
-  fi
-}
-
 # update_json FILE PATCH_JSON -- shallow-merge a JSON patch into a file.
 # Creates the file with the patch content if it does not exist.
 update_json() {

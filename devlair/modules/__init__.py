@@ -3,7 +3,6 @@ from types import ModuleType
 
 from devlair.modules import (
     claude,
-    claw,
     devtools,
     firewall,
     github,
@@ -48,7 +47,6 @@ MODULE_SPECS: list[ModuleSpec] = [
     ModuleSpec("shell",          "Shell aliases",          shell,          "core",        deps=["zsh"], reapply=True),
     ModuleSpec("gnome_terminal", "Gnome Terminal Dracula", gnome_terminal, "desktop",     reapply=True,              platforms={"linux"}),
     ModuleSpec("claude",         "Claude Code",            claude,         "ai",          deps=["devtools"], reapply=True, default_on=set()),
-    ModuleSpec("claw",           "PicoCLAW Agent",         claw,           "ai",          deps=["devtools"], reapply=True, default_on=set()),
 ]
 # fmt: on
 

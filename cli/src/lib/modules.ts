@@ -51,7 +51,6 @@ export const MODULE_SPECS: readonly ModuleSpec[] = [
   spec("shell", "Shell aliases", "core", { deps: ["zsh"], reapply: true }),
   spec("gnome_terminal", "Gnome Terminal Dracula", "desktop", { reapply: true, platforms: ["linux"] }),
   spec("claude", "Claude Code", "ai", { deps: ["devtools"], reapply: true, defaultOn: [] }),
-  spec("claw", "PicoCLAW Agent", "ai", { deps: ["devtools"], reapply: true, defaultOn: [] }),
 ];
 
 export const REAPPLY_KEYS: ReadonlySet<string> = new Set(MODULE_SPECS.filter((s) => s.reapply).map((s) => s.key));
