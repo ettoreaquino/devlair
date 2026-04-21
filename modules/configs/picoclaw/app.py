@@ -125,21 +125,21 @@ class WebhookHandler(BaseHTTPRequestHandler):
             return
         number = jid.replace("@s.whatsapp.net", "")
         allowlist = load_allowlist()
-        if allowlist and f"+{number}" not in allowlist:
+        if not allowlist or f"+{number}" not in allowlist:
             log.info("Blocked message from %s (not in allowlist)", number)
             return
         msg = data.get("message", {})
         text = msg.get("conversation") or msg.get("extendedTextMessage", {}).get("text", "")
         if not text:
             return
-        log.info("Message from %s: %s", number, text[:80])
+        log.info("Message from ***%s (%d chars)", number[-4:], len(text))
         if is_rate_limited(number, self.__class__.config):
             log.warning("Rate limited: %s", number)
             return
         instance = body.get("instance", "picoclaw")
         reply = call_claude(text, number, self.__class__.config)
         send_reply(number, reply, instance)
-        log.info("Replied to %s (%d chars)", number, len(reply))
+        log.info("Replied to ***%s (%d chars)", number[-4:], len(reply))
 
     def log_message(self, format, *args):
         pass

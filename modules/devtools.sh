@@ -64,7 +64,7 @@ do_run() {
   else
     json_progress "installing nvm + Node LTS"
     local script
-    script=$(download_script "https://raw.githubusercontent.com/nvm-sh/nvm/HEAD/install.sh")
+    script=$(download_script "https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh")
     run_shell_as "$USERNAME" "export PROFILE=/dev/null && bash \"$script\"" >&2
     rm -f "$script"
     run_shell_as "$USERNAME" "

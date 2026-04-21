@@ -148,10 +148,11 @@ Every PR gets two automated reviews that post structured comments. This is enfor
 
 **Review pipeline** (triggered automatically after PR creation):
 
-1. **Code Review** — three parallel agents analyze the diff:
+1. **Code Review** — four parallel agents analyze the diff:
    - **Reuse** — flags new code that duplicates existing utilities or helpers
    - **Quality** — catches redundant state, copy-paste, leaky abstractions, unnecessary nesting/comments
    - **Efficiency** — spots redundant computations, missed concurrency, memory leaks, hot-path bloat
+   - **Security** — injection flaws, secret exposure, privilege escalation, supply-chain risks, container hardening gaps, network exposure
 
 2. **README Review** — checks for drift against the PR changes:
    - Structure: logo, badges, demo, features, install, examples, collapsible sections
@@ -163,7 +164,7 @@ Every PR gets two automated reviews that post structured comments. This is enfor
 **Manual invocation:** Run `/review-pr` or `/review-pr #51` to review any PR on demand.
 
 **Skills used:**
-- `/review-pr` — full code + README review with PR comments (`.claude/skills/review-pr.md`)
+- `/review-pr` — full code + security + README review with PR comments (`.claude/skills/review-pr.md`)
 - `/pr` — PR creation with issue linking and board management (`.claude/settings.json`)
 - `/board` — project board visibility (`.claude/skills/board.md`)
 
