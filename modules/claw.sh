@@ -23,7 +23,9 @@ _parse_env() {
   [[ -f "$file" ]] || return 0
   while IFS= read -r line; do
     line="${line%%#*}"
-    line="${line// /}"
+    # Strip leading/trailing whitespace only
+    line="${line#"${line%%[![:space:]]*}"}"
+    line="${line%"${line##*[![:space:]]}"}"
     [[ -z "$line" || "$line" != *"="* ]] && continue
     echo "$line"
   done < "$file"
@@ -143,9 +145,20 @@ do_check() {
       continue
     fi
 
+    # Extract all security fields in a single jq call
+    local user ro cap_drop docker_socket unexpected
+    read -r user ro cap_drop docker_socket unexpected < <(echo "$inspect_json" | jq -r '
+      .[0] as $c |
+      [
+        ($c.Config.User // ""),
+        (if $c.HostConfig.ReadonlyRootfs then "true" else "false" end),
+        (if ($c.HostConfig.CapDrop // []) | index("ALL") then "yes" else "no" end),
+        (if [($c.Mounts // [])[] | select(.Type=="bind") | .Source] | any(contains("/var/run/docker.sock")) then "yes" else "no" end),
+        ([($c.Mounts // [])[] | select(.Type=="bind") | .Destination] | map(select(. != "/agent-data" and . != "/etc/picoclaw/config.yml" and . != "/etc/picoclaw/allowlist.json")) | length)
+      ] | @tsv
+    ' 2>/dev/null)
+
     # Non-root user
-    local user
-    user=$(echo "$inspect_json" | jq -r '.[0].Config.User // ""' 2>/dev/null)
     if [[ -n "$user" && "$user" != "0" && "$user" != "root" ]]; then
       json_check "picoclaw non-root" "ok" "user=$user"
     else
@@ -153,8 +166,6 @@ do_check() {
     fi
 
     # Read-only rootfs
-    local ro
-    ro=$(echo "$inspect_json" | jq -r '.[0].HostConfig.ReadonlyRootfs // false' 2>/dev/null)
     if [[ "$ro" == "true" ]]; then
       json_check "picoclaw read-only rootfs" "ok" "enabled"
     else
@@ -162,8 +173,6 @@ do_check() {
     fi
 
     # cap_drop ALL
-    local cap_drop
-    cap_drop=$(echo "$inspect_json" | jq -r '.[0].HostConfig.CapDrop // [] | if index("ALL") then "yes" else "no" end' 2>/dev/null)
     if [[ "$cap_drop" == "yes" ]]; then
       json_check "picoclaw cap_drop ALL" "ok"
     else
@@ -171,8 +180,6 @@ do_check() {
     fi
 
     # No docker socket mount
-    local docker_socket
-    docker_socket=$(echo "$inspect_json" | jq -r '[.[0].Mounts // [] | .[] | select(.Type=="bind") | .Source] | if any(contains("/var/run/docker.sock")) then "yes" else "no" end' 2>/dev/null)
     if [[ "$docker_socket" == "no" ]]; then
       json_check "no docker socket mount" "ok" "clean"
     else
@@ -180,12 +187,6 @@ do_check() {
     fi
 
     # Only expected bind mounts
-    local unexpected
-    unexpected=$(echo "$inspect_json" | jq -r '
-      [.[0].Mounts // [] | .[] | select(.Type=="bind") | .Destination]
-      | map(select(. != "/agent-data" and . != "/etc/picoclaw/config.yml" and . != "/etc/picoclaw/allowlist.json"))
-      | length
-    ' 2>/dev/null)
     if [[ "$unexpected" == "0" ]]; then
       json_check "only expected bind mounts" "ok" "agent-data + config only"
     else

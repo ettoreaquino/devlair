@@ -109,7 +109,7 @@ download_script() {
   local tmp
   tmp=$(mktemp --suffix=.sh)
   chmod 644 "$tmp"
-  curl -fsSL "$url" -o "$tmp" 2>&2
+  curl -fsSL "$url" -o "$tmp" >&2
   printf '%s' "$tmp"
 }
 
@@ -122,10 +122,13 @@ chown_user_r() { chown -R "${USERNAME:?USERNAME not set}:${USERNAME}" "$1"; }
 
 # add_ufw_rule RULE COMMENT -- add a UFW rule idempotently.
 # Skips if a rule with the same comment already exists.
+# RULE is intentionally word-split (e.g. "allow from 10.0.0.0/8 to any port 80 proto tcp").
 add_ufw_rule() {
   local rule=$1 comment=$2
   if ! ufw status verbose 2>/dev/null | grep -qF "$comment"; then
-    eval ufw "$rule" comment "'$comment'" >&2
+    local -a parts
+    read -ra parts <<< "$rule"
+    ufw "${parts[@]}" comment "$comment" >&2
   fi
 }
 

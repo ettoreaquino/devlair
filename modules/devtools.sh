@@ -18,6 +18,8 @@ _AWS_CLI_GPG_KEY_URL="https://awscli.amazonaws.com/awscli-exe-linux-public-key.a
 
 do_run() {
   local -a installed=() skipped=()
+  local ARCH
+  ARCH=$(dpkg --print-architecture 2>/dev/null || echo "amd64")
 
   # ── uv ──────────────────────────────────────────────────────────────────────
   if cmd_exists uv; then
@@ -100,7 +102,7 @@ do_run() {
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
       | gpg --dearmor -o /etc/apt/keyrings/docker.gpg >&2
     chmod a+r /etc/apt/keyrings/docker.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+    echo "deb [arch=$ARCH signed-by=/etc/apt/keyrings/docker.gpg] \
       https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
       | tee /etc/apt/sources.list.d/docker.list > /dev/null
     apt-get update -qq >&2
@@ -127,7 +129,7 @@ do_run() {
     curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
       | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg 2>/dev/null
     chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] \
+    echo "deb [arch=$ARCH signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] \
       https://cli.github.com/packages stable main" \
       | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
     apt-get update -qq >&2
@@ -142,14 +144,14 @@ do_run() {
   else
     json_progress "installing aws cli"
     local arch aws_arch aws_base gpg_verified=false
-    arch=$(dpkg --print-architecture)
+    arch=$ARCH
     [[ "$arch" == "amd64" ]] && aws_arch="x86_64" || aws_arch="aarch64"
     aws_base="https://awscli.amazonaws.com/awscli-exe-linux-${aws_arch}"
 
-    curl -fsSL "${aws_base}.zip" -o /tmp/awscliv2.zip 2>&2
+    curl -fsSL "${aws_base}.zip" -o /tmp/awscliv2.zip >&2
     if cmd_exists gpg; then
-      curl -fsSL "${aws_base}.zip.sig" -o /tmp/awscliv2.zip.sig 2>&2
-      curl -fsSL "$_AWS_CLI_GPG_KEY_URL" -o /tmp/aws-cli-key.asc 2>&2
+      curl -fsSL "${aws_base}.zip.sig" -o /tmp/awscliv2.zip.sig >&2
+      curl -fsSL "$_AWS_CLI_GPG_KEY_URL" -o /tmp/aws-cli-key.asc >&2
       gpg --batch --import /tmp/aws-cli-key.asc >&2 2>&1 || true
       if gpg --batch --verify /tmp/awscliv2.zip.sig /tmp/awscliv2.zip >&2 2>&1; then
         gpg_verified=true

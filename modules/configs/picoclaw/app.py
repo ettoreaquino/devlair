@@ -27,6 +27,7 @@ MAX_HISTORY = 20
 MAX_SENDERS = 200
 _rate: dict[str, list[float]] = defaultdict(list)
 _conversations: dict[str, list[dict]] = defaultdict(list)
+_client: anthropic.Anthropic | None = None
 
 
 def load_config() -> dict:
@@ -66,8 +67,10 @@ def call_claude(text: str, sender: str, config: dict) -> str:
     if len(history) > MAX_HISTORY * 2:
         history[:] = history[-MAX_HISTORY:]
 
-    client = anthropic.Anthropic()
-    response = client.messages.create(
+    global _client
+    if _client is None:
+        _client = anthropic.Anthropic()
+    response = _client.messages.create(
         model=llm.get("model", "claude-sonnet-4-20250514"),
         max_tokens=llm.get("max_tokens", 4096),
         system=agent.get("system_prompt", "You are a helpful assistant on WhatsApp. Be concise."),

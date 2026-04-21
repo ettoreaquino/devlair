@@ -141,7 +141,7 @@ do_check() {
   # telegram plugin installed
   if cmd_exists claude; then
     local plugins
-    plugins=$(claude plugin list --json 2>/dev/null || echo "[]")
+    plugins=$(run_as "$USERNAME" claude plugin list --json 2>/dev/null || echo "[]")
     if echo "$plugins" | jq -e '.[] | select(.name=="telegram" and .marketplace=="claude-plugins-official")' >/dev/null 2>&1; then
       json_check "telegram plugin installed" "ok"
     else
