@@ -13,7 +13,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from devlair import __version__, runner
+from devlair import __version__
 from devlair.console import (
     D_COMMENT,
     D_CYAN,
@@ -182,7 +182,6 @@ HELP_SECTIONS = [
         "AI Agents & Channels",
         [
             ("claude [--plan TIER] [--1m on|off]", "Usage dashboard & config"),
-            ("claw [--pair|--start|--stop]", "PicoCLAW WhatsApp agent"),
         ],
     ),
     (
@@ -407,19 +406,6 @@ def init(
         console.print(f"  [{D_COMMENT}]Skipping on {platform}: {names}[/]")
         console.print()
 
-    # Docker pre-flight on WSL — only if claw is selected (it requires running containers).
-    # devtools handles missing Docker gracefully (skips with a warning).
-    docker_needed = any(s.key == "claw" for s in selected)
-    if platform == "wsl" and docker_needed and not runner.cmd_exists("docker"):
-        console.print("  [error]Docker not found.[/error]")
-        console.print("  On WSL, Docker must be provided by Docker Desktop for Windows.")
-        console.print(
-            "  Install it from: [accent]https://docs.docker.com/desktop/setup/install/windows-install/[/accent]"
-        )
-        console.print("  Then enable WSL integration in Docker Desktop → Settings → Resources → WSL Integration.")
-        console.print()
-        raise typer.Exit(1)
-
     total = len(selected)
     results: list[tuple[str, ModuleResult]] = []
 
@@ -530,29 +516,6 @@ def filesystem() -> None:
 
     _print_branded_header("filesystem", "Designing your folder structure with Claude", "short")
     run_filesystem()
-
-
-@app.command()
-def claw(
-    pair: bool = typer.Option(False, "--pair", help="Pair WhatsApp via QR code."),
-    allow: str = typer.Option("", "--allow", help="Add phone number to allowlist."),
-    revoke: str = typer.Option("", "--revoke", help="Remove phone from allowlist."),
-    logs: bool = typer.Option(False, "--logs", help="Tail agent logs."),
-    stop: bool = typer.Option(False, "--stop", help="Stop the agent."),
-    start: bool = typer.Option(False, "--start", help="Start the agent."),
-) -> None:
-    """Manage PicoCLAW AI agent with WhatsApp access."""
-    from devlair.features.claw import run_claw
-
-    _print_branded_header("claw", "PicoCLAW Agent", "short")
-    run_claw(
-        pair=pair,
-        allow=allow or None,
-        revoke=revoke or None,
-        logs=logs,
-        stop=stop,
-        start=start,
-    )
 
 
 @app.command()

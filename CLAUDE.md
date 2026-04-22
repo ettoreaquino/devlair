@@ -26,8 +26,8 @@ devlair/
   console.py       # Rich console + Dracula color tokens (D_PURPLE, D_PINK, etc.)
   context.py       # SetupContext dataclass, ModuleResult, CheckItem, JSON helpers
   runner.py        # subprocess helpers (run, run_as, apt_install, cmd_exists, verify_checksum)
-  modules/         # 14 init modules — each has LABEL, run(ctx), check()
-  features/        # doctor, upgrade, disable-password, filesystem, claude, sync, claw, audit
+  modules/         # 13 init modules — each has LABEL, run(ctx), check()
+  features/        # doctor, upgrade, disable-password, filesystem, claude, sync, audit
 assets/
   logo.svg         # brand mark (dark background)
   logo-light.svg   # brand mark (light background)
@@ -57,7 +57,7 @@ Module groups and dependencies are defined in `devlair/modules/__init__.py` via 
 | network | tailscale†, ssh*, firewall* | ssh → tailscale, firewall → ssh |
 | coding | tmux, devtools, github | — |
 | cloud-sync | rclone‡ | — |
-| ai | claude‡, claw‡ | claude → devtools, claw → devtools |
+| ai | claude‡ | claude → devtools |
 | desktop | gnome_terminal* | — |
 
 \* = Linux-only (auto-skipped on WSL). † = opt-in on WSL. ‡ = always opt-in (not run by default). Use `devlair init --group core,network` to run only specific groups. Dependencies are auto-expanded. Explicit `--only` or `--group` overrides opt-in defaults.
@@ -148,10 +148,11 @@ Every PR gets two automated reviews that post structured comments. This is enfor
 
 **Review pipeline** (triggered automatically after PR creation):
 
-1. **Code Review** — three parallel agents analyze the diff:
+1. **Code Review** — four parallel agents analyze the diff:
    - **Reuse** — flags new code that duplicates existing utilities or helpers
    - **Quality** — catches redundant state, copy-paste, leaky abstractions, unnecessary nesting/comments
    - **Efficiency** — spots redundant computations, missed concurrency, memory leaks, hot-path bloat
+   - **Security** — injection flaws, secret exposure, privilege escalation, supply-chain risks, container hardening gaps, network exposure
 
 2. **README Review** — checks for drift against the PR changes:
    - Structure: logo, badges, demo, features, install, examples, collapsible sections
@@ -163,7 +164,7 @@ Every PR gets two automated reviews that post structured comments. This is enfor
 **Manual invocation:** Run `/review-pr` or `/review-pr #51` to review any PR on demand.
 
 **Skills used:**
-- `/review-pr` — full code + README review with PR comments (`.claude/skills/review-pr.md`)
+- `/review-pr` — full code + security + README review with PR comments (`.claude/skills/review-pr.md`)
 - `/pr` — PR creation with issue linking and board management (`.claude/settings.json`)
 - `/board` — project board visibility (`.claude/skills/board.md`)
 

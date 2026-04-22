@@ -1,12 +1,12 @@
 ---
 name: review-pr
-description: Comprehensive code review and README review for a PR — posts structured comments with findings
+description: Comprehensive code, security, and README review for a PR — posts structured comments with findings
 user_invocable: true
 ---
 
 # PR Review
 
-Perform a comprehensive code review and README review for a pull request, then post structured findings as PR comments.
+Perform a comprehensive code review, security review, and README review for a pull request, then post structured findings as PR comments.
 
 ## Arguments
 
@@ -25,7 +25,7 @@ gh pr diff <N>
 
 ## Step 2: Code Review
 
-Launch three review agents in parallel, passing the full diff to each:
+Launch four review agents in parallel, passing the full diff to each:
 
 ### Agent 1: Code Reuse
 - Search for existing utilities and helpers that could replace newly written code
@@ -46,6 +46,56 @@ Launch three review agents in parallel, passing the full diff to each:
 - Hot-path bloat: blocking work on startup or per-request paths
 - Memory: unbounded structures, missing cleanup, listener leaks
 - Overly broad operations: reading entire files when portions suffice
+
+### Agent 4: Security
+Audit the diff for vulnerabilities across these categories:
+
+**Injection & execution**
+- Command injection: unquoted variables in shell commands, `eval`, backticks, string interpolation into `bash -c`, `subprocess.run(shell=True)`
+- SQL/NoSQL injection: user input in query strings
+- Path traversal: user-controlled file paths without canonicalization
+- Template injection: user input in format strings, heredocs, sed expressions
+
+**Secrets & credentials**
+- Hardcoded secrets, API keys, tokens, passwords in source code
+- Secrets logged, printed, or emitted in JSON events
+- `.env` files committed, world-readable, or missing from `.gitignore`
+- Secrets passed via command-line arguments (visible in `ps`)
+- Missing or weak secret generation (predictable, short, low entropy)
+
+**Privilege & access control**
+- Unnecessary root execution or missing privilege drops
+- Overly permissive file permissions (world-readable keys, 0644 on secrets)
+- `sudo` usage without proper input validation
+- Missing authentication or authorization checks
+- Allowlists that can be bypassed or are empty by default
+
+**Supply chain & integrity**
+- Download-then-execute without checksum or signature verification
+- Unpinned dependencies (`:latest` images, `HEAD` branches, `>=` versions)
+- Piping curl to shell (`curl | bash`)
+- Missing GPG/SHA verification where the project convention requires it
+
+**Network & exposure**
+- Services binding to `0.0.0.0` when they should bind to `127.0.0.1` or Tailscale
+- Ports exposed without firewall rules or access control
+- Missing TLS/encryption for sensitive data in transit
+- Webhook endpoints without authentication or HMAC validation
+
+**Container & runtime security**
+- Containers running as root
+- Docker socket mounted into containers
+- Missing `cap_drop: ALL`, `read_only: true`, `no-new-privileges`
+- Excessive resource limits or no limits set
+- Sensitive bind mounts or volume permissions
+
+**Data handling**
+- Sensitive data in logs (API keys, tokens, PII in error messages)
+- Missing rate limiting on endpoints processing external input
+- Unbounded input parsing (DoS via large payloads)
+- TOCTOU races in file operations (check-then-write without locks)
+
+For each finding report: file, line range, category, description, severity (critical/high/medium/low), and suggested fix.
 
 ## Step 3: README Review
 
@@ -97,6 +147,10 @@ Post two separate structured comments to the PR using `gh pr comment <N>`:
 
 ### Efficiency
 <findings or "No issues found.">
+
+### Security
+<findings table with columns: #, Category, Finding, File, Severity, Status>
+<or "No issues found.">
 
 ### Verdict: **<Ship it / Needs changes>** <check or x emoji>
 

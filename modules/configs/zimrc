@@ -1,0 +1,13 @@
+# Modules
+zmodule environment
+zmodule input
+zmodule termtitle
+zmodule zsh-users/zsh-completions --fpath src
+zmodule completion
+
+# Dracula theme
+zmodule dracula/zsh --source dracula.zsh-theme
+
+# Productivity
+zmodule zsh-users/zsh-autosuggestions
+zmodule zsh-users/zsh-syntax-highlighting

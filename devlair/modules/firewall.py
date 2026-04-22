@@ -68,16 +68,4 @@ def check() -> list[CheckItem]:
         ),
     ]
 
-    # Check Evolution API UFW rule (only if claw is configured)
-    claw_compose = Path.home() / ".devlair" / "claw" / "docker-compose.yml"
-    if claw_compose.exists():
-        evo_rule = "8080" in ufw_status and "100.64.0.0/10" in ufw_status
-        items.append(
-            CheckItem(
-                label="evolution-api ufw rule",
-                status="ok" if evo_rule else "warn",
-                detail="present" if evo_rule else "missing — run devlair init --only claw",
-            )
-        )
-
     return items

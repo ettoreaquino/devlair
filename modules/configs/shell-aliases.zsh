@@ -1,17 +1,9 @@
-import shutil
-from pathlib import Path
-
-from devlair.context import CheckItem, ModuleResult, SetupContext
-
-LABEL = "Shell aliases"
-
-ZSHRC_ALIASES = """
 # ── devlair aliases ───────────────────────────────────────────────────────────
 alias ll='ls -lah --color=auto'
 alias ..='cd ..'
 alias ...='cd ../..'
 alias ports='sudo ss -tulnp'
-alias dps='docker ps --format "table {{.Names}}\\t{{.Status}}\\t{{.Ports}}"'
+alias dps='docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"'
 alias update='sudo apt update && sudo apt upgrade -y'
 alias ts='tailscale status'
 alias t='tmux new-session -A -s dev'
@@ -56,9 +48,9 @@ export CLAUDE_CODE_DISABLE_1M_CONTEXT=1
 
 # ── login banner ──────────────────────────────────────────────────────────────
 if [ -t 0 ]; then
-  _dl_p=$'\\e[38;2;189;147;249m'
-  _dl_b=$'\\e[1m'
-  _dl_r=$'\\e[0m'
+  _dl_p=$'\e[38;2;189;147;249m'
+  _dl_b=$'\e[1m'
+  _dl_r=$'\e[0m'
   _dl_W=52
   _dl_IW=$(( _dl_W - 2 ))
   _dl_host=${HOST:-$(hostname)}
@@ -68,22 +60,22 @@ if [ -t 0 ]; then
   _dl_dashes=${(l:_dl_IW::─:)}
 
   # row helper — prints │ content padded to inner width │
-  _dl_row() { printf '%s│%s%-*s%s│%s\\n' "$_dl_p" "$_dl_r" "$_dl_IW" "$1" "$_dl_p" "$_dl_r"; }
+  _dl_row() { printf '%s│%s%-*s%s│%s\n' "$_dl_p" "$_dl_r" "$_dl_IW" "$1" "$_dl_p" "$_dl_r"; }
 
   # devlair logo (medium decoration, same width as banner)
-  _dl_g=$'\\e[38;2;98;114;164m'
+  _dl_g=$'\e[38;2;98;114;164m'
   # 25 = gradient(4) + space(2) + brand(13) + space(2) + gradient(4)
   _dl_lpad=$(( (_dl_IW - 25) / 2 ))
   _dl_rpad=$(( _dl_IW - 25 - _dl_lpad ))
-  printf '%s╭%s╮%s\\n' "$_dl_p" "$_dl_dashes" "$_dl_r"
-  printf '%s│%s%*s%s░▒▓█%s  %sd e v l a i r%s  %s█▓▒░%s%*s%s│%s\\n' \
+  printf '%s╭%s╮%s\n' "$_dl_p" "$_dl_dashes" "$_dl_r"
+  printf '%s│%s%*s%s░▒▓█%s  %sd e v l a i r%s  %s█▓▒░%s%*s%s│%s\n' \
     "$_dl_p" "$_dl_r" "$_dl_lpad" "" "$_dl_g" "$_dl_r" \
     "$_dl_b" "$_dl_r" "$_dl_g" "$_dl_r" "$_dl_rpad" "" "$_dl_p" "$_dl_r"
-  printf '%s╰%s╯%s\\n' "$_dl_p" "$_dl_dashes" "$_dl_r"
+  printf '%s╰%s╯%s\n' "$_dl_p" "$_dl_dashes" "$_dl_r"
 
   # top border: ╭─ hostname ─────╮
   _dl_fill=$(( _dl_IW - ${#_dl_host} - 3 ))
-  printf '%s╭─ %s%s%s %s╮%s\\n' "$_dl_p" "$_dl_b$_dl_r" "$_dl_host" "$_dl_p" "${_dl_dashes:0:_dl_fill}" "$_dl_r"
+  printf '%s╭─ %s%s%s %s╮%s\n' "$_dl_p" "$_dl_b$_dl_r" "$_dl_host" "$_dl_p" "${_dl_dashes:0:_dl_fill}" "$_dl_r"
 
   _dl_row "  ${_dl_ip}  disk ${_dl_disk}  mem ${_dl_mem}"
   _dl_row ""
@@ -121,14 +113,14 @@ if [ -t 0 ]; then
       _dl_lp=""
       while IFS= read -r _dl_line; do
         case "$_dl_line" in
-          Description=rclone\\ bisync\\ *)
+          Description=rclone\ bisync\ *)
             _dl_desc="${_dl_line#Description=rclone bisync }"
             _dl_lp="${_dl_desc#* -> }"
             ;;
         esac
       done < "$_dl_svc"
       [ -z "$_dl_lp" ] && continue
-      _dl_lp="${_dl_lp/#$HOME/\\~}"
+      _dl_lp="${_dl_lp/#$HOME/\~}"
       if [ ${#_dl_lp} -gt 28 ]; then _dl_lp="${_dl_lp:0:27}…"; fi
       if [ ${#_dl_sname} -gt 10 ]; then _dl_sname="${_dl_sname:0:9}…"; fi
       _dl_left="    ${_dl_lp}"
@@ -146,7 +138,7 @@ if [ -t 0 ]; then
     if [ "$_dl_ch_count" -gt 0 ]; then
       _dl_row ""
       _dl_row "  channels:"
-      while IFS=$'\\t' read -r _dl_ch_name _dl_ch_state; do
+      while IFS=$'\t' read -r _dl_ch_name _dl_ch_state; do
         [ -z "$_dl_ch_name" ] && continue
         _dl_ch_dot="○"
         if [ -d "$_dl_ch_state" ]; then
@@ -165,61 +157,5 @@ if [ -t 0 ]; then
   fi
 
   # bottom border
-  printf '%s╰%s╯%s\\n' "$_dl_p" "$_dl_dashes" "$_dl_r"
+  printf '%s╰%s╯%s\n' "$_dl_p" "$_dl_dashes" "$_dl_r"
 fi
-"""
-
-MARKER = "# ── devlair aliases ─"
-
-
-def _clean_zshrc(text: str) -> str:
-    """Remove lines injected by third-party installers (nvm, uv, pyenv) outside the devlair block."""
-    clean_lines = []
-    skip_patterns = [
-        '. "$HOME/.local/bin/env"',
-        "export NVM_DIR=",
-        '\\. "$NVM_DIR/nvm.sh"',
-        '\\. "$NVM_DIR/bash_completion"',
-        "# This loads nvm",
-        "export BUN_INSTALL=",
-        '[ -s "$BUN_INSTALL/bin/bun" ]',
-        "# bun",
-    ]
-    in_devlair_block = False
-    for line in text.splitlines(keepends=True):
-        if MARKER in line:
-            in_devlair_block = True
-        if in_devlair_block:
-            clean_lines.append(line)
-            continue
-        if any(p in line for p in skip_patterns):
-            continue
-        clean_lines.append(line)
-    return "".join(clean_lines)
-
-
-def run(ctx: SetupContext) -> ModuleResult:
-    zshrc = ctx.user_home / ".zshrc"
-
-    existing = zshrc.read_text() if zshrc.exists() else ""
-
-    if MARKER in existing:
-        # Clean any third-party pollution and refresh the aliases block
-        header = existing[: existing.index(MARKER)]
-        header = _clean_zshrc(header)
-        zshrc.write_text(header + ZSHRC_ALIASES.lstrip("\n"))
-        shutil.chown(zshrc, ctx.username, ctx.username)
-        return ModuleResult(status="ok", detail="aliases refreshed in .zshrc")
-
-    # Clean any junk before appending
-    cleaned = _clean_zshrc(existing)
-    zshrc.write_text(cleaned + ZSHRC_ALIASES)
-    shutil.chown(zshrc, ctx.username, ctx.username)
-
-    return ModuleResult(status="ok", detail="aliases added to .zshrc")
-
-
-def check() -> list[CheckItem]:
-    zshrc = Path.home() / ".zshrc"
-    has_aliases = zshrc.exists() and MARKER in zshrc.read_text()
-    return [CheckItem(label="shell aliases", status="ok" if has_aliases else "warn")]

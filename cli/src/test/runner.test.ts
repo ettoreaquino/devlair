@@ -1,12 +1,13 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type RunResult, runModule } from "../lib/runner.js";
 import type { ModuleContext, ModuleEvent, ModuleMode } from "../lib/types.js";
 
 const LIB_PATH = join(import.meta.dir, "../../../modules/_lib.sh");
+const MODULES_DIR = join(import.meta.dir, "../../../modules");
 
 function ctx(overrides: Partial<ModuleContext> = {}): ModuleContext {
   return {
@@ -299,4 +300,88 @@ json_install "awscli" "aws.amazon.com" true`);
     });
     expect(out.stdout).toBe("user=bob\nhome=/home/bob\nmissing=\n");
   });
+
+  test("ctx_get_config reads nested config keys", () => {
+    const scriptPath = join(tmpDir, "ctx-config.sh");
+    writeFileSync(
+      scriptPath,
+      `#!/usr/bin/env bash\nsource "${LIB_PATH}"\nread_context\necho "tz=$(ctx_get_config timezone)"\necho "missing=$(ctx_get_config nope)"\n`,
+      { mode: 0o755 },
+    );
+    const out = spawnSync("bash", [scriptPath], {
+      encoding: "utf8",
+      input: JSON.stringify({ username: "bob", userHome: "/home/bob", config: { timezone: "America/New_York" } }),
+    });
+    expect(out.stdout).toBe("tz=America/New_York\nmissing=\n");
+  });
+
+  test("cmd_exists returns 0 for existing commands, 1 for missing", () => {
+    const scriptPath = join(tmpDir, "cmd-exists.sh");
+    writeFileSync(
+      scriptPath,
+      `#!/usr/bin/env bash\nsource "${LIB_PATH}"\ncmd_exists bash && echo "yes" || echo "no"\ncmd_exists __nonexistent_cmd_xyz__ && echo "yes" || echo "no"\n`,
+      { mode: 0o755 },
+    );
+    const out = spawnSync("bash", [scriptPath], { encoding: "utf8", input: "{}" });
+    expect(out.stdout).toBe("yes\nno\n");
+  });
+
+  test("update_json creates file if missing", () => {
+    const jsonFile = join(tmpDir, "new-settings.json");
+    const scriptPath = join(tmpDir, "update-json-create.sh");
+    writeFileSync(
+      scriptPath,
+      `#!/usr/bin/env bash\nsource "${LIB_PATH}"\nupdate_json "${jsonFile}" '{"model":"sonnet","effort":"medium"}'\ncat "${jsonFile}"\n`,
+      { mode: 0o755 },
+    );
+    const out = spawnSync("bash", [scriptPath], { encoding: "utf8", input: "{}" });
+    const parsed = JSON.parse(out.stdout.trim());
+    expect(parsed.model).toBe("sonnet");
+    expect(parsed.effort).toBe("medium");
+  });
+
+  test("update_json merges into existing file", () => {
+    const jsonFile = join(tmpDir, "existing-settings.json");
+    writeFileSync(jsonFile, JSON.stringify({ model: "opus", custom: true }));
+    const scriptPath = join(tmpDir, "update-json-merge.sh");
+    writeFileSync(
+      scriptPath,
+      `#!/usr/bin/env bash\nsource "${LIB_PATH}"\nupdate_json "${jsonFile}" '{"model":"sonnet","effort":"medium"}'\ncat "${jsonFile}"\n`,
+      { mode: 0o755 },
+    );
+    const out = spawnSync("bash", [scriptPath], { encoding: "utf8", input: "{}" });
+    const parsed = JSON.parse(out.stdout.trim());
+    expect(parsed.model).toBe("sonnet");
+    expect(parsed.effort).toBe("medium");
+    expect(parsed.custom).toBe(true);
+  });
+});
+
+describe("module smoke tests", () => {
+  // Each module should parse valid context and exit cleanly in check mode.
+  // We cannot actually run the modules (they need root, apt, etc.) but we
+  // verify that they source _lib.sh correctly and produce valid JSON on stdout.
+  const moduleFiles = readdirSync(MODULES_DIR)
+    .filter((f) => f.endsWith(".sh") && f !== "_lib.sh")
+    .sort();
+
+  for (const file of moduleFiles) {
+    test(`${file} produces valid JSON Lines in check mode`, async () => {
+      const scriptPath = join(MODULES_DIR, file);
+      const context = ctx({ username: "tester", userHome: "/tmp/devlair-test" });
+      const { events, result } = await collect(scriptPath, context, "check");
+
+      // Should not have timed out
+      expect(result.timedOut).toBe(false);
+
+      // Exit 0 (ok) or 2 (skip) are acceptable; 1 (fail) only if expected
+      expect([0, 2]).toContain(result.exitCode);
+
+      // All events should be valid ModuleEvent objects
+      for (const event of events) {
+        expect(event).toHaveProperty("type");
+        expect(["progress", "result", "check", "install"]).toContain(event.type);
+      }
+    });
+  }
 });
