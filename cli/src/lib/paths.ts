@@ -38,9 +38,14 @@ export function modulesDir(): string {
  */
 export function moduleScriptPath(key: string): string {
   const filename = `${key.replace(/_/g, "-")}.sh`;
-  const path = join(modulesDir(), filename);
-  if (!existsSync(path)) {
-    throw new Error(`Module script not found: ${path}`);
+  const dir = modulesDir();
+  const resolved = resolve(dir, filename);
+  // Defense-in-depth: prevent path traversal if a crafted key contains ../
+  if (!resolved.startsWith(`${dir}/`)) {
+    throw new Error(`Module key resolves outside modules directory: ${key}`);
   }
-  return path;
+  if (!existsSync(resolved)) {
+    throw new Error(`Module script not found: ${resolved}`);
+  }
+  return resolved;
 }

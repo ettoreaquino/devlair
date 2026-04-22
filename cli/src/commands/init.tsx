@@ -103,17 +103,21 @@ function PlatformSkipped({ names }: { names: string }) {
 export function InitView({ flags }: { flags: InitFlags }) {
   const { exit } = useApp();
 
-  const platform = detectPlatform();
-  const wslVersion = detectWslVersion(platform);
-  const profile = flags.config ? loadProfile(flags.config) : undefined;
-  const config = profile?.config ?? {};
-  const context = buildModuleContext(platform, wslVersion, config);
+  // Compute platform, context, and selection exactly once (lazy init).
+  // These involve filesystem reads and process spawning — must not re-run on every render.
+  const [initState] = useState(() => {
+    const platform = detectPlatform();
+    const wslVersion = detectWslVersion(platform);
+    const profile = flags.config ? loadProfile(flags.config) : undefined;
+    const config = profile?.config ?? {};
+    const context = buildModuleContext(platform, wslVersion, config);
+    const { selected, optional, platformSkipped } = selectModules(flags, platform);
+    const skippedNames = platformSkipped.map((s) => s.key).join(", ");
+    return { platform, context, selected, optional, platformSkipped, skippedNames, profile };
+  });
 
-  const { selected, optional, platformSkipped } = selectModules(flags, platform);
+  const { platform, context, selected, optional, skippedNames, profile } = initState;
 
-  // Capture stable values in refs so the effect dep array stays honest
-  const contextRef = useRef(context);
-  const selectedRef = useRef(selected);
   const exitRef = useRef(exit);
 
   const [modules, setModules] = useState<ModuleRun[]>(() =>
@@ -128,13 +132,13 @@ export function InitView({ flags }: { flags: InitFlags }) {
   const [phase, setPhase] = useState<Phase>("running");
 
   useEffect(() => {
-    let cancelled = false;
-    const specs = selectedRef.current;
-    const ctx = contextRef.current;
+    const abortController = new AbortController();
+    const specs = selected;
+    const ctx = context;
 
     async function run() {
       for (let i = 0; i < specs.length; i++) {
-        if (cancelled) break;
+        if (abortController.signal.aborted) break;
         const spec = specs[i];
 
         // Mark as running
@@ -145,7 +149,7 @@ export function InitView({ flags }: { flags: InitFlags }) {
 
         try {
           const scriptPath = moduleScriptPath(spec.key);
-          const iter = runModule(scriptPath, ctx, "run");
+          const iter = runModule(scriptPath, ctx, "run", { signal: abortController.signal });
 
           while (true) {
             const { value, done } = await iter.next();
@@ -178,11 +182,9 @@ export function InitView({ flags }: { flags: InitFlags }) {
 
     run();
     return () => {
-      cancelled = true;
+      abortController.abort();
     };
-  }, []);
-
-  const skippedNames = platformSkipped.map((s) => s.key).join(", ");
+  }, [selected, context]);
 
   return (
     <Box flexDirection="column">

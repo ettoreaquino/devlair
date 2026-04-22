@@ -9,9 +9,10 @@ import { spawnSync } from "node:child_process";
 export function elevateIfNeeded(): void {
   if (process.getuid?.() === 0) return;
 
-  // Re-exec with sudo -E to preserve environment (TERM, COLORTERM for
-  // Ink color detection, ANTHROPIC_API_KEY for AI modules, etc.)
-  const result = spawnSync("sudo", ["-E", "--", ...process.argv], {
+  // Preserve only the env vars we need — blanket -E would forward secrets
+  // like AWS_SECRET_ACCESS_KEY to every child module running as root.
+  const preserve = ["TERM", "COLORTERM", "LANG", "LC_ALL", "ANTHROPIC_API_KEY"].join(",");
+  const result = spawnSync("sudo", [`--preserve-env=${preserve}`, "--", ...process.argv], {
     stdio: "inherit",
   });
 
