@@ -32,11 +32,13 @@ function findAutoExpanded(selectedKeys: Set<string>): string[] {
 }
 
 export function ModuleSelect({ groups, platform, onConfirm, onBack, onCancel }: ModuleSelectProps) {
-  // Build the list of modules for the selected groups
-  const rows: ModuleRow[] = MODULE_SPECS.filter((s) => groups.has(s.group)).map((s) => ({
-    spec: s,
-    platformOk: s.platforms.has(platform),
-  }));
+  // Build the list of modules for the selected groups (once — groups/platform are stable)
+  const [rows] = useState<ModuleRow[]>(() =>
+    MODULE_SPECS.filter((s) => groups.has(s.group)).map((s) => ({
+      spec: s,
+      platformOk: s.platforms.has(platform),
+    })),
+  );
 
   const [cursor, setCursor] = useState(0);
   const [selected, setSelected] = useState<Set<string>>(() => {
@@ -82,9 +84,6 @@ export function ModuleSelect({ groups, platform, onConfirm, onBack, onCancel }: 
     }
   });
 
-  // Group the rows visually by group
-  let lastGroup: Group | null = null;
-
   return (
     <Box flexDirection="column">
       <Box marginBottom={1}>
@@ -95,8 +94,7 @@ export function ModuleSelect({ groups, platform, onConfirm, onBack, onCancel }: 
       </Box>
 
       {rows.map((row, i) => {
-        const showGroupHeader = row.spec.group !== lastGroup;
-        lastGroup = row.spec.group;
+        const showGroupHeader = i === 0 || row.spec.group !== rows[i - 1].spec.group;
 
         const isCursor = i === cursor;
         const isSelected = selected.has(row.spec.key);

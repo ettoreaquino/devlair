@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 import { hostname } from "node:os";
 import { useApp } from "ink";
 import { Box, Text } from "ink";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import YAML from "yaml";
 
 import { Logo } from "../components/Logo.js";
@@ -116,16 +116,26 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
   const { exit } = useApp();
   const exitRef = useRef(exit);
 
-  const [modules, setModules] = useState<ModuleRun[]>(() =>
-    specs.map((s) => ({
-      key: s.key,
-      label: s.label,
-      status: "pending" as const,
-      detail: "",
-      progressMsg: "",
-    })),
-  );
+  // Derive a stable identity key from specs so state resets when the spec list changes
+  // (e.g. wizard transitions from [] to the real selection).
+  const specsKey = useMemo(() => specs.map((s) => s.key).join(","), [specs]);
+
+  const [modules, setModules] = useState<ModuleRun[]>([]);
   const [done, setDone] = useState(false);
+
+  // Re-initialize module state whenever specs change
+  useEffect(() => {
+    setModules(
+      specs.map((s) => ({
+        key: s.key,
+        label: s.label,
+        status: "pending" as const,
+        detail: "",
+        progressMsg: "",
+      })),
+    );
+    setDone(false);
+  }, [specsKey]);
 
   useEffect(() => {
     if (!autoStart || specs.length === 0) return;

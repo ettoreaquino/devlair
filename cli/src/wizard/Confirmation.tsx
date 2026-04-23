@@ -4,8 +4,7 @@
  */
 
 import { Box, Text, useInput } from "ink";
-import type { Group } from "../lib/modules.js";
-import type { ModuleSpec } from "../lib/modules.js";
+import type { Group, ModuleSpec } from "../lib/modules.js";
 import { D_COMMENT, D_CYAN, D_GREEN, D_PINK, D_PURPLE } from "../lib/theme.js";
 
 export interface ConfirmationProps {
