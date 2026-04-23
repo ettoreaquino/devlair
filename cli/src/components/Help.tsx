@@ -31,9 +31,7 @@ const HELP_SECTIONS: HelpSection[] = [
   },
   {
     title: "AI Agents & Channels",
-    entries: [
-      { cmd: "claude [--plan TIER] [--1m on|off]", desc: "Usage dashboard & config" },
-    ],
+    entries: [{ cmd: "claude [--plan TIER] [--1m on|off]", desc: "Usage dashboard & config" }],
   },
   {
     title: "tmux Sessions",
