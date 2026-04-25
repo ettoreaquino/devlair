@@ -73,7 +73,7 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
   vX.Y.Z
 
   Setup & Health
-    init [--only MOD] [--skip MOD] [--group GRP] [--config FILE]  Set up this machine from scratch
+    init [--only MOD] [--skip MOD] [--group GRP] [--config FILE]  Interactive wizard (or non-interactive with flags)
     doctor [--fix]                      Check system health & fix drift
     upgrade [--no-self]                 Upgrade tools & re-apply configs
     disable-password                    Lock SSH to key-only auth
@@ -99,7 +99,7 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
 ## Usage examples
 
 ```bash
-# Full setup from scratch
+# Interactive wizard — walks you through group and module selection
 devlair init
 
 # Run specific modules only
@@ -418,9 +418,9 @@ devlair/                # v1 Python CLI (stable)
 cli/                    # v2 TypeScript CLI (alpha)
   src/
     index.tsx           # Ink app entrypoint
-    commands/           # command implementations (planned)
+    commands/           # command implementations (init)
     components/         # Ink UI components (Logo, Help)
-    wizard/             # interactive wizard (planned)
+    wizard/             # interactive wizard (GroupSelect, ModuleSelect, Confirmation)
     lib/                # theme, types, runner, modules, platform detection
 assets/
   logo.svg              # brand mark (dark background)
