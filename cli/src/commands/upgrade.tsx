@@ -6,7 +6,7 @@
  * 3. Re-apply: re-run REAPPLY_KEYS modules to refresh configs.
  */
 
-import { chmodSync, writeFileSync } from "node:fs";
+import { chmodSync, renameSync, writeFileSync } from "node:fs";
 import { hostname } from "node:os";
 import { join } from "node:path";
 import { useApp } from "ink";
@@ -150,7 +150,6 @@ async function checkSelfUpdate(currentVersion: string): Promise<SelfUpdateResult
     chmodSync(tmpPath, 0o755);
 
     // Atomic replace
-    const { renameSync } = await import("node:fs");
     renameSync(tmpPath, installPath);
     chmodSync(installPath, 0o755);
 
