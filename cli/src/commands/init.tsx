@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 import { hostname } from "node:os";
 import { useApp } from "ink";
 import { Box, Text } from "ink";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import YAML from "yaml";
 
 import { Logo } from "../components/Logo.js";
@@ -116,14 +116,11 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
   const { exit } = useApp();
   const exitRef = useRef(exit);
 
-  // Derive a stable identity key from specs so state resets when the spec list changes
-  // (e.g. wizard transitions from [] to the real selection).
-  const specsKey = useMemo(() => specs.map((s) => s.key).join(","), [specs]);
-
   const [modules, setModules] = useState<ModuleRun[]>([]);
   const [done, setDone] = useState(false);
 
   // Re-initialize module state whenever specs change
+  // (wizard transitions from [] to the real selection).
   useEffect(() => {
     setModules(
       specs.map((s) => ({
@@ -135,7 +132,7 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
       })),
     );
     setDone(false);
-  }, [specsKey]);
+  }, [specs]);
 
   useEffect(() => {
     if (!autoStart || specs.length === 0) return;
