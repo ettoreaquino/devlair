@@ -1,10 +1,18 @@
-/** CLI flag parsing for the init command. */
+/** CLI flag parsing for init, doctor, and upgrade commands. */
 
 export interface InitFlags {
   only: Set<string> | null;
   skip: Set<string>;
   group: Set<string> | null;
   config: string | null;
+}
+
+export interface DoctorFlags {
+  fix: boolean;
+}
+
+export interface UpgradeFlags {
+  noSelf: boolean;
 }
 
 const SET_FLAGS = new Set(["--only", "--skip", "--group"]);
@@ -40,4 +48,14 @@ export function parseInitFlags(args: readonly string[]): InitFlags {
   }
 
   return flags;
+}
+
+/** Parse doctor-specific flags from argv. */
+export function parseDoctorFlags(args: readonly string[]): DoctorFlags {
+  return { fix: args.includes("--fix") };
+}
+
+/** Parse upgrade-specific flags from argv. */
+export function parseUpgradeFlags(args: readonly string[]): UpgradeFlags {
+  return { noSelf: args.includes("--no-self") };
 }
