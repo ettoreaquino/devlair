@@ -418,7 +418,7 @@ devlair/                # v1 Python CLI (stable)
 cli/                    # v2 TypeScript CLI (alpha)
   src/
     index.tsx           # Ink app entrypoint
-    commands/           # command implementations (init)
+    commands/           # command implementations (init, doctor, upgrade)
     components/         # Ink UI components (Logo, Help)
     wizard/             # interactive wizard (GroupSelect, ModuleSelect, Confirmation)
     lib/                # theme, types, runner, modules, platform detection

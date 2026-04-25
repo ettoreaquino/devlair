@@ -97,7 +97,46 @@ Audit the diff for vulnerabilities across these categories:
 
 For each finding report: file, line range, category, description, severity (critical/high/medium/low), and suggested fix.
 
-## Step 3: README Review
+## Step 3: Test Plan Verification
+
+Parse the PR body for a `## Test plan` section. If it contains a checklist (`- [ ]` items), verify each item:
+
+### Verification strategy
+
+For each test plan item, determine the verification method:
+
+1. **Automated checks** — items like "tests pass", "lint passes", "typecheck passes":
+   - Run the actual commands (`bun test`, `bun run lint`, `bun run typecheck`, `pytest`, etc.)
+   - Check the box if the command succeeds
+
+2. **Code-verifiable checks** — items describing behavior ("X launches wizard", "Y shows table", "Z cannot be deselected"):
+   - Read the relevant source files
+   - Trace the code path to confirm the behavior is implemented
+   - Check the box if the code confirms the behavior
+   - If the code does NOT confirm it, leave unchecked and note what's wrong
+
+3. **Manual-only checks** — items requiring visual inspection or real environment ("renders correctly", "works on WSL"):
+   - Leave unchecked
+   - Add a note: `<!-- needs-manual: brief reason -->`
+
+### Actions
+
+1. Run all automated checks first (tests, lint, typecheck) in parallel
+2. For each code-verifiable item, read the relevant files and trace the logic
+3. Update the PR description with checked/unchecked boxes:
+   ```bash
+   gh pr edit <N> --body "<updated body with checked boxes>"
+   ```
+4. If any item fails verification, do NOT check it — add a comment explaining why
+
+### Important
+
+- Never check a box you cannot verify
+- Always run actual test commands rather than assuming they pass
+- For code-verifiable items, cite the specific file:line that confirms the behavior
+- Group manual-only items together in the test plan comment (Step 6)
+
+## Step 4: README Review
 
 Read `README.md` and check against the PR diff:
 
@@ -126,14 +165,14 @@ Read `README.md` and check against the PR diff:
 - No badge walls, no stale CI links
 - Table of Contents if README exceeds 4 screenfuls
 
-## Step 4: Fix issues
+## Step 5: Fix issues
 
 Fix any drift or inaccuracies found in the README directly (commit + push to the PR branch).
 For code issues, fix if straightforward. If a finding is a false positive, skip it.
 
-## Step 5: Post PR comments
+## Step 6: Post PR comments
 
-Post two separate structured comments to the PR using `gh pr comment <N>`:
+Post three separate structured comments to the PR using `gh pr comment <N>`:
 
 ### Comment 1: Code Review
 ```markdown
@@ -157,7 +196,26 @@ Post two separate structured comments to the PR using `gh pr comment <N>`:
 Generated with [Claude Code](https://claude.com/claude-code)
 ```
 
-### Comment 2: README Review
+### Comment 2: Test Plan Verification
+```markdown
+## Test Plan Verification -- PR #<N>
+
+| # | Item | Method | Result | Notes |
+|---|------|--------|--------|-------|
+| 1 | <item text> | <automated/code-verified/manual> | <pass/fail/needs-manual> | <brief note or file:line cite> |
+| ... | ... | ... | ... | ... |
+
+### Summary
+- **Automated:** N/N passed
+- **Code-verified:** N/N confirmed
+- **Needs manual testing:** N items
+
+<If any items failed, explain what went wrong and what needs to be fixed.>
+
+Generated with [Claude Code](https://claude.com/claude-code)
+```
+
+### Comment 3: README Review
 ```markdown
 ## README Review -- PR #<N>
 
