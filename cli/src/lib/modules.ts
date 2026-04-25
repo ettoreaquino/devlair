@@ -84,8 +84,8 @@ validateDag();
  * Dependencies are auto-expanded when keys is provided.
  * Modules incompatible with `platform` are excluded when specified.
  */
-export function resolveOrder(keys?: Set<string>, platform?: Platform): ModuleSpec[] {
-  let filter: Set<string> | undefined = keys;
+export function resolveOrder(keys?: ReadonlySet<string>, platform?: Platform): ModuleSpec[] {
+  let filter: ReadonlySet<string> | undefined = keys;
   if (filter !== undefined) {
     const expanded = new Set<string>();
     const expand = (k: string) => {
