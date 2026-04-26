@@ -1,5 +1,37 @@
 # Changelog
 
+## [1.7.0](https://github.com/ettoreaquino/devlair/compare/v1.6.1...v1.7.0) (2026-04-26)
+
+
+### Features
+
+* **cli:** add doctor and upgrade commands ([c4f0a11](https://github.com/ettoreaquino/devlair/commit/c4f0a11ddeec1ac8688692cc3b41a80cffe0e515))
+* **cli:** add doctor and upgrade commands ([6e95e52](https://github.com/ettoreaquino/devlair/commit/6e95e52d70e7543f97ff7385510c33378d3b0c92)), closes [#44](https://github.com/ettoreaquino/devlair/issues/44)
+* **cli:** add interactive wizard for init command ([3c124d2](https://github.com/ettoreaquino/devlair/commit/3c124d2751f73b7147bead0a207bbd4a92bb509a))
+* **cli:** JSON module protocol and TypeScript runner ([#54](https://github.com/ettoreaquino/devlair/issues/54)) ([e13d1b4](https://github.com/ettoreaquino/devlair/commit/e13d1b404182f5472b8bcb927bf596a3468340e0))
+* **cli:** port logo + help screen to Ink components ([#51](https://github.com/ettoreaquino/devlair/issues/51)) ([2457417](https://github.com/ettoreaquino/devlair/commit/2457417eeee2fd1badac6dac7d1adff88a6d62f6))
+* **cli:** scaffold TypeScript + Ink + Bun project for v2 ([#49](https://github.com/ettoreaquino/devlair/issues/49)) ([e36ceb7](https://github.com/ettoreaquino/devlair/commit/e36ceb7b6bff423fc040c352fe720ae925406b7a))
+* **modules:** extract all 14 Python modules to shell scripts ([b36754a](https://github.com/ettoreaquino/devlair/commit/b36754a6e9db1fe239f30f5a3c98d29cd5f4394c)), closes [#40](https://github.com/ettoreaquino/devlair/issues/40)
+* **skills:** add test plan verification to review-pr skill ([4043a50](https://github.com/ettoreaquino/devlair/commit/4043a504e576170332037ce9a57d576a3d3f28d5))
+
+
+### Bug Fixes
+
+* **cli:** consolidate fs imports and update README project structure ([46768e0](https://github.com/ettoreaquino/devlair/commit/46768e0574ca7442a61be408669b4a273d012b6f))
+* **docs:** renumber release process steps after insertion ([5b712f3](https://github.com/ettoreaquino/devlair/commit/5b712f36e8e8161b66b8606b907420aa6bb9b02a))
+* **modules:** address code review findings ([405a675](https://github.com/ettoreaquino/devlair/commit/405a67538cb7189657d8563404f9cdb4698c1003))
+* **release:** exclude cli/ from v1 Python package scope ([a83e45c](https://github.com/ettoreaquino/devlair/commit/a83e45c2c42098521fef849ba881d24931c0f64a)), closes [#64](https://github.com/ettoreaquino/devlair/issues/64)
+* **release:** exclude cli/ from v1 Python release scope ([315cce3](https://github.com/ettoreaquino/devlair/commit/315cce3619cb50695c041eff490c28bedf496c9a))
+* **security:** address security review findings ([ae543e0](https://github.com/ettoreaquino/devlair/commit/ae543e0447370adb2e09a19ec94244ae0b701e57))
+* **skills:** /pr assigns issue and PR to the developer running it ([908c8ef](https://github.com/ettoreaquino/devlair/commit/908c8ef1c64d1749409829fff25b17f63f824ff6))
+* **skills:** /pr assigns issue and PR to the developer running it ([7df19c0](https://github.com/ettoreaquino/devlair/commit/7df19c0ad73e0416b5751bdb6708742fab4853eb)), closes [#61](https://github.com/ettoreaquino/devlair/issues/61)
+* **wizard:** reinitialize module state when specs change and clean up render logic ([6a66c6b](https://github.com/ettoreaquino/devlair/commit/6a66c6bcdbf6eb0e3218b4d804dc8d676721c498))
+
+
+### Documentation
+
+* **sdlc:** enforce human-only PR approval and merge ([6156a8d](https://github.com/ettoreaquino/devlair/commit/6156a8dc93132198de0d60e6901322c9009bcc50))
+
 ## [1.6.1](https://github.com/ettoreaquino/devlair/compare/v1.6.0...v1.6.1) (2026-04-07)
 
 
