@@ -7,6 +7,8 @@ allowed-tools: Bash, Read, Grep, Glob
 
 You are creating a pull request that follows the devlair SDLC practices. Every PR must have a linked issue, be assigned, and be tracked on the project board.
 
+**Assignment rule:** the linked issue AND the PR must be assigned to the developer running this command. Always pass `--assignee @me` (gh resolves it to the authenticated user) — never hardcode a username. This applies whether the issue is newly created or already existed.
+
 ### Argument parsing
 
 Parse `$ARGUMENTS` for:
@@ -27,13 +29,14 @@ Run these in parallel:
 ### Step 2: Ensure an issue exists
 
 If an issue number was provided in `$ARGUMENTS`:
-1. Verify it exists: `gh issue view <number>`.
+1. Verify it exists: `gh issue view <number> --json number,assignees`.
 2. If it doesn't exist, stop and report the error.
+3. If the current user is not already among `assignees`, attach them: `gh issue edit <number> --add-assignee @me`. Never remove existing assignees.
 
 If no issue number was provided:
 1. Analyze the commits and diff to understand the scope of work.
 2. Draft an issue title and body describing the work.
-3. Create it: `gh issue create --title "..." --body "..." --assignee ettoreaquino`.
+3. Create it: `gh issue create --title "..." --body "..." --assignee @me`.
 4. Add the issue to the project board as **In Progress**:
    ```
    gh project item-add 2 --owner ettoreaquino --url <issue-url>
@@ -70,7 +73,7 @@ If no issue number was provided:
 
    🤖 Generated with [Claude Code](https://claude.com/claude-code)
    EOF
-   )" --assignee ettoreaquino
+   )" --assignee @me
    ```
 
 ### Step 5: Add PR to project board
