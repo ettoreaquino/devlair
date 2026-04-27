@@ -30,6 +30,9 @@ devlair init
 
 That's it. The installer downloads a prebuilt binary for your architecture and places it in `/usr/local/bin`. `devlair init` takes care of the rest.
 
+> [!NOTE]
+> **Preview the v2 alpha** with `curl ... | sudo bash -s -- --pre`. The v2 rewrite drops `sync`, `filesystem`, and `claw` — pin to v1 if you depend on them. See [v2 (TypeScript + Ink — alpha)](#v2-typescript--ink--alpha).
+
 ## Why devlair
 
 <table>
@@ -391,6 +394,24 @@ uv run ruff check devlair/ tests/
 > [!WARNING]
 > v2 is in early alpha. The TypeScript + Ink rewrite is under active development.
 > For the stable CLI, use the [v1.x releases](https://github.com/ettoreaquino/devlair/releases/latest).
+
+**Try the alpha:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | sudo bash -s -- --pre
+```
+
+This downloads the latest `devlair-cli-v*` prerelease asset and installs it as `/usr/local/bin/devlair`, replacing v1. To roll back, re-run the installer without `--pre`.
+
+**Removed in v2** (vs. v1):
+
+| Command | Replacement |
+|---------|-------------|
+| `devlair sync` | Pin to v1 or run `rclone bisync` directly |
+| `devlair filesystem` | Removed — not ported |
+| `devlair claw` | Removed — not ported |
+
+**Develop locally:**
 
 ```bash
 cd cli
