@@ -144,28 +144,34 @@ Version bumps are determined from Conventional Commits: `fix:` → patch, `feat:
 
 ## PR review automation
 
-Every PR gets two automated reviews that post structured comments. This is enforced by a `PostToolUse` hook in `.claude/settings.json` that fires after `gh pr create` and triggers the `/review-pr` skill.
+Every PR runs through a fan-out review pipeline that posts three structured comments. A `PostToolUse` hook in `.claude/settings.json` fires after `gh pr create` and tells the main session to invoke the `/review-pr` skill. The skill is a thin orchestrator that spawns five custom subagents (defined in `.claude/agents/`) **in a single tool-use block so they run in parallel** — this gives each reviewer its own context window, focused tool allowlist, and per-reviewer model.
 
-**Review pipeline** (triggered automatically after PR creation):
+**Subagents** (`.claude/agents/`):
 
-1. **Code Review** — four parallel agents analyze the diff:
-   - **Reuse** — flags new code that duplicates existing utilities or helpers
-   - **Quality** — catches redundant state, copy-paste, leaky abstractions, unnecessary nesting/comments
-   - **Efficiency** — spots redundant computations, missed concurrency, memory leaks, hot-path bloat
-   - **Security** — injection flaws, secret exposure, privilege escalation, supply-chain risks, container hardening gaps, network exposure
+- `pr-reuse-reviewer` (sonnet) — flags new code that duplicates existing utilities or helpers
+- `pr-quality-reviewer` (sonnet) — redundant state, copy-paste, leaky abstractions, useless comments
+- `pr-efficiency-reviewer` (haiku) — redundant work, missed concurrency, hot-path bloat, memory leaks
+- `pr-security-reviewer` (sonnet) — injection, secrets, privilege, supply-chain, network, container, data
+- `pr-readme-reviewer` (haiku) — README drift; returns suggested patches that the orchestrator applies
 
-2. **README Review** — checks for drift against the PR changes:
-   - Structure: logo, badges, demo, features, install, examples, collapsible sections
-   - Content accuracy: project structure, commands, versions, install instructions
-   - Quality signals: admonitions, responsive images, no stale badges
+Each subagent returns a compact JSON object (`{findings, verdict}`), keeping the main context small.
 
-3. **Fix and comment** — issues are fixed directly (commit + push). Two structured comments are posted to the PR: one for code review findings, one for README review findings.
+**Pipeline steps** (in `/review-pr`):
 
-**Manual invocation:** Run `/review-pr` or `/review-pr #51` to review any PR on demand.
+1. Gather PR context (`gh pr view`, `gh pr diff`).
+2. Fan out the five subagents in parallel.
+3. Run test-plan verification inline in the working tree (`bun test`, `pytest`, `bun run lint`, `bun run typecheck`); update PR body checkboxes.
+4. Apply README patches returned by `pr-readme-reviewer` (commit + push to the PR branch). Code-review findings are fixed inline only when unambiguous; everything else surfaces as comment items.
+5. Post three PR comments: Code Review, Test Plan Verification, README Review.
 
-**Skills used:**
-- `/review-pr` — full code + security + README review with PR comments (`.claude/skills/review-pr.md`)
-- `/pr` — PR creation with issue linking and board management (`.claude/settings.json`)
+**Manual invocation:** Run `/review-pr` (auto-detects current branch's PR) or `/review-pr #66` for a specific PR.
+
+**Hard rules:** never `gh pr review --approve`, only `gh pr comment`; never force-push to main.
+
+**Files:**
+- `/review-pr` — orchestrator skill (`.claude/skills/review-pr.md`)
+- Subagents — `.claude/agents/pr-*-reviewer.md`
+- `/pr` — PR creation with issue linking and board management (`.claude/commands/pr.md`)
 - `/board` — project board visibility (`.claude/skills/board.md`)
 
 ## Project board
