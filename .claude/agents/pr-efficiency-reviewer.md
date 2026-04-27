@@ -1,7 +1,7 @@
 ---
 name: pr-efficiency-reviewer
 description: Reviews a PR diff for efficiency issues — redundant work, missed concurrency, hot-path bloat, memory leaks. Returns compact JSON only.
-tools: Read, Grep, Bash
+tools: Read, Grep, Glob
 model: haiku
 ---
 
@@ -18,10 +18,6 @@ Read the PR diff and flag inefficiencies a maintainer would want fixed. Be conse
 - **Hot-path bloat**: blocking work on CLI startup or per-module init paths that should be lazy.
 - **Memory**: unbounded lists/dicts, missing cleanup, listener leaks, large file fully loaded when streaming would do.
 - **Overly broad operations**: reading entire files when a portion suffices, full repo scans when a glob would suffice.
-
-## Bash usage
-
-Use Bash sparingly — `wc -l`, `grep -c`, or `time bun run ...` if you genuinely need to measure something. Don't run the test suite or anything destructive.
 
 ## What NOT to flag
 
