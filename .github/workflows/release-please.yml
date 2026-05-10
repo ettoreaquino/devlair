@@ -12,8 +12,8 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     outputs:
-      release_created: ${{ steps.rp.outputs['.--release_created'] }}
-      tag_name: ${{ steps.rp.outputs['.--tag_name'] }}
+      release_created: ${{ steps.rp.outputs['devlair--release_created'] }}
+      tag_name: ${{ steps.rp.outputs['devlair--tag_name'] }}
       cli_release_created: ${{ steps.rp.outputs['cli--release_created'] }}
       cli_tag_name: ${{ steps.rp.outputs['cli--tag_name'] }}
     steps:
