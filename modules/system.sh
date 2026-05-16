@@ -14,10 +14,19 @@ PLATFORM=$(ctx_get platform)
 MODE=${1:-run}
 
 ESSENTIALS=(
-  openssh-server ufw fail2ban curl wget git vim htop tmux unzip
-  net-tools avahi-daemon build-essential ca-certificates gnupg jq
+  curl wget git vim htop tmux unzip
+  net-tools build-essential ca-certificates gnupg jq
   tree rsync zsh bat fzf locales
 )
+
+# Linux-only essentials. These packages either ship systemd-managed
+# postinst scripts (openssh-server, fail2ban) or require kernel features
+# (ufw needs netfilter, avahi-daemon is mDNS) that don't apply under
+# WSL's systemd-less default. Installing them on WSL leaves dpkg in a
+# broken state, poisoning every later apt-get install. The dedicated
+# ssh and firewall modules — both platforms={"linux"} — cover these on
+# bare Linux already.
+LINUX_ESSENTIALS=( openssh-server ufw fail2ban avahi-daemon )
 
 do_run() {
   json_progress "updating package lists"
@@ -25,6 +34,10 @@ do_run() {
   json_progress "upgrading packages"
   apt-get upgrade -y -qq >&2
   apt_install "${ESSENTIALS[@]}"
+
+  if [[ "$PLATFORM" == "linux" ]]; then
+    apt_install "${LINUX_ESSENTIALS[@]}"
+  fi
 
   # WSL extras: wslu provides wslview for opening URLs in the Windows browser
   if [[ "$PLATFORM" == "wsl" ]]; then
