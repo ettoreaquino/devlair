@@ -144,25 +144,53 @@ jobs:
           name: devlair-cli-linux-${{ matrix.arch }}
           path: cli/dist/devlair-cli-linux-${{ matrix.arch }}
 
-  checksums-cli:
-    needs: [release-please, build-cli]
+  package-cli-modules:
+    needs: release-please
     if: needs.release-please.outputs.cli_release_created == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: Download all binaries
+      - uses: actions/checkout@v4
+
+      - name: Package modules
+        run: tar -czf modules.tar.gz modules
+
+      - name: Upload tarball to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.release-please.outputs.cli_tag_name }}
+          files: modules.tar.gz
+
+      - name: Upload tarball as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: modules-tarball
+          path: modules.tar.gz
+
+  checksums-cli:
+    needs: [release-please, build-cli, package-cli-modules]
+    if: needs.release-please.outputs.cli_release_created == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download binaries
         uses: actions/download-artifact@v4
         with:
-          path: binaries
+          path: assets
           pattern: devlair-cli-linux-*
           merge-multiple: true
 
+      - name: Download modules tarball
+        uses: actions/download-artifact@v4
+        with:
+          path: assets
+          name: modules-tarball
+
       - name: Generate checksums
         run: |
-          cd binaries
-          sha256sum devlair-cli-linux-* | tee checksums.txt
+          cd assets
+          sha256sum devlair-cli-linux-* modules.tar.gz | tee checksums.txt
 
       - name: Upload checksums to release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.release-please.outputs.cli_tag_name }}
-          files: binaries/checksums.txt
+          files: assets/checksums.txt

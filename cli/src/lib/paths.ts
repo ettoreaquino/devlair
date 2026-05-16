@@ -5,31 +5,34 @@ import { join, resolve } from "node:path";
 
 let _modulesDir: string | undefined;
 
+const INSTALL_MODULES_DIR = "/usr/local/share/devlair/modules";
+
 /**
  * Return the absolute path to the modules/ directory.
  *
- * In development: cli/src/lib/paths.ts → ../../../modules/
- * In compiled binary: dist/cli.js → ../modules/
+ * Production: install.sh extracts modules.tar.gz to /usr/local/share/devlair/modules/.
+ * Development: cli/src/lib/paths.ts → ../../../modules/ in the repo.
+ *
+ * The compiled-binary path can't be derived from process.argv[0] (which is the
+ * literal string "bun" in bun-compiled binaries) or from import.meta.dir (which
+ * points into the internal /$bunfs/... virtual FS), so we pin the install path
+ * instead and fall back to the dev layout.
  */
 export function modulesDir(): string {
   if (_modulesDir) return _modulesDir;
 
-  // Try relative to this source file first (development layout)
+  if (existsSync(join(INSTALL_MODULES_DIR, "_lib.sh"))) {
+    _modulesDir = INSTALL_MODULES_DIR;
+    return _modulesDir;
+  }
+
   const devPath = resolve(import.meta.dir, "../../../modules");
   if (existsSync(join(devPath, "_lib.sh"))) {
     _modulesDir = devPath;
     return _modulesDir;
   }
 
-  // Try relative to the binary (compiled layout: dist/devlair → ../modules/)
-  const binDir = resolve(process.argv[0], "..");
-  const binPath = resolve(binDir, "../modules");
-  if (existsSync(join(binPath, "_lib.sh"))) {
-    _modulesDir = binPath;
-    return _modulesDir;
-  }
-
-  throw new Error(`Cannot find modules/ directory (tried ${devPath} and ${binPath})`);
+  throw new Error(`Cannot find modules/ directory (tried ${INSTALL_MODULES_DIR} and ${devPath})`);
 }
 
 /**

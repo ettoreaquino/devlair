@@ -13,6 +13,7 @@ set -euo pipefail
 REPO="ettoreaquino/devlair"
 BIN="devlair"
 INSTALL_DIR="/usr/local/bin"
+SHARE_DIR="/usr/local/share/devlair"
 CHANNEL="stable"
 
 # ── Parse flags ───────────────────────────────────────────────────────────────
@@ -78,7 +79,6 @@ curl -fsSL "${BASE_URL}/checksums.txt" -o "$TMP_CHECKSUMS"
 # ── Verify SHA-256 checksum ──────────────────────────────────────────────────
 EXPECTED=$(grep " ${ASSET}\$" "$TMP_CHECKSUMS" | awk '{print $1}')
 ACTUAL=$(sha256sum "$TMP" | awk '{print $1}')
-rm -f "$TMP_CHECKSUMS"
 
 if [[ -z "$EXPECTED" ]]; then
   echo "WARNING: No checksum found for ${ASSET} — skipping verification."
@@ -101,6 +101,54 @@ else
   sudo mv "$TMP" "${INSTALL_DIR}/${BIN}"
 fi
 chmod 755 "${INSTALL_DIR}/${BIN}" 2>/dev/null || sudo chmod 755 "${INSTALL_DIR}/${BIN}"
+
+# ── Pre-release: fetch modules tarball ────────────────────────────────────────
+# v2 shell modules live outside the compiled binary and ship as a separate
+# tarball. v1 (stable) is self-contained and does not need this step.
+if [[ "$CHANNEL" == "pre" ]]; then
+  TMP_MODULES=$(mktemp)
+  echo "Fetching modules tarball..."
+  curl -fsSL "${BASE_URL}/modules.tar.gz" -o "$TMP_MODULES"
+
+  EXPECTED_MODULES=$(grep " modules.tar.gz\$" "$TMP_CHECKSUMS" | awk '{print $1}')
+  ACTUAL_MODULES=$(sha256sum "$TMP_MODULES" | awk '{print $1}')
+
+  if [[ -z "$EXPECTED_MODULES" ]]; then
+    echo "WARNING: No checksum found for modules.tar.gz — skipping verification."
+  elif [[ "$ACTUAL_MODULES" != "$EXPECTED_MODULES" ]]; then
+    echo "ERROR: Checksum mismatch for modules.tar.gz!" >&2
+    echo "  Expected: ${EXPECTED_MODULES}" >&2
+    echo "  Got:      ${ACTUAL_MODULES}" >&2
+    rm -f "$TMP_MODULES"
+    exit 1
+  else
+    echo "✓ modules.tar.gz SHA-256 verified"
+  fi
+
+  # Replace the modules dir atomically: extract to a staging path, then swap.
+  STAGE_DIR=$(mktemp -d)
+  tar -xzf "$TMP_MODULES" -C "$STAGE_DIR"
+  rm -f "$TMP_MODULES"
+
+  if [[ -w "$(dirname "$SHARE_DIR")" ]]; then
+    rm -rf "${SHARE_DIR}.old" 2>/dev/null || true
+    [[ -d "$SHARE_DIR" ]] && mv "$SHARE_DIR" "${SHARE_DIR}.old"
+    mkdir -p "$SHARE_DIR"
+    mv "$STAGE_DIR/modules" "${SHARE_DIR}/modules"
+    rm -rf "${SHARE_DIR}.old" "$STAGE_DIR"
+  else
+    sudo rm -rf "${SHARE_DIR}.old" 2>/dev/null || true
+    [[ -d "$SHARE_DIR" ]] && sudo mv "$SHARE_DIR" "${SHARE_DIR}.old"
+    sudo mkdir -p "$SHARE_DIR"
+    sudo mv "$STAGE_DIR/modules" "${SHARE_DIR}/modules"
+    sudo rm -rf "${SHARE_DIR}.old"
+    rm -rf "$STAGE_DIR"
+  fi
+
+  echo "✓ modules installed to ${SHARE_DIR}/modules"
+fi
+
+rm -f "$TMP_CHECKSUMS"
 
 echo ""
 echo "✓ devlair ${LATEST} installed to ${INSTALL_DIR}/${BIN}"
