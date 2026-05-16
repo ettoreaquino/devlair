@@ -113,8 +113,13 @@ if [[ "$CHANNEL" == "pre" ]]; then
   EXPECTED_MODULES=$(grep " modules.tar.gz\$" "$TMP_CHECKSUMS" | awk '{print $1}')
   ACTUAL_MODULES=$(sha256sum "$TMP_MODULES" | awk '{print $1}')
 
+  # Modules ship a fresh tree on every release — a missing checksum entry
+  # means CI is misconfigured, not a soft warning. Hard-fail rather than
+  # extract an unverified archive and execute its scripts as root.
   if [[ -z "$EXPECTED_MODULES" ]]; then
-    echo "WARNING: No checksum found for modules.tar.gz — skipping verification."
+    echo "ERROR: No checksum entry for modules.tar.gz in checksums.txt — aborting." >&2
+    rm -f "$TMP_MODULES"
+    exit 1
   elif [[ "$ACTUAL_MODULES" != "$EXPECTED_MODULES" ]]; then
     echo "ERROR: Checksum mismatch for modules.tar.gz!" >&2
     echo "  Expected: ${EXPECTED_MODULES}" >&2
@@ -126,24 +131,25 @@ if [[ "$CHANNEL" == "pre" ]]; then
   fi
 
   # Replace the modules dir atomically: extract to a staging path, then swap.
+  # --no-same-owner / --no-same-permissions ignore uid/gid/mode bits from the
+  # archive so a future tampered tarball can't plant setuid bits or odd owners
+  # under sudo; chmod immediately after pins a known-safe mode regardless of
+  # the installer's umask.
   STAGE_DIR=$(mktemp -d)
-  tar -xzf "$TMP_MODULES" -C "$STAGE_DIR"
+  tar -xzf "$TMP_MODULES" -C "$STAGE_DIR" --no-same-owner --no-same-permissions
+  chmod -R u=rwX,go=rX "$STAGE_DIR/modules"
   rm -f "$TMP_MODULES"
 
-  if [[ -w "$(dirname "$SHARE_DIR")" ]]; then
-    rm -rf "${SHARE_DIR}.old" 2>/dev/null || true
-    [[ -d "$SHARE_DIR" ]] && mv "$SHARE_DIR" "${SHARE_DIR}.old"
-    mkdir -p "$SHARE_DIR"
-    mv "$STAGE_DIR/modules" "${SHARE_DIR}/modules"
-    rm -rf "${SHARE_DIR}.old" "$STAGE_DIR"
-  else
-    sudo rm -rf "${SHARE_DIR}.old" 2>/dev/null || true
-    [[ -d "$SHARE_DIR" ]] && sudo mv "$SHARE_DIR" "${SHARE_DIR}.old"
-    sudo mkdir -p "$SHARE_DIR"
-    sudo mv "$STAGE_DIR/modules" "${SHARE_DIR}/modules"
-    sudo rm -rf "${SHARE_DIR}.old"
-    rm -rf "$STAGE_DIR"
-  fi
+  MAYBE_SUDO=""
+  [[ ! -w "$(dirname "$SHARE_DIR")" ]] && MAYBE_SUDO="sudo"
+
+  $MAYBE_SUDO rm -rf "${SHARE_DIR}.old" 2>/dev/null || true
+  [[ -d "$SHARE_DIR" ]] && $MAYBE_SUDO mv "$SHARE_DIR" "${SHARE_DIR}.old"
+  $MAYBE_SUDO mkdir -m 755 -p "$SHARE_DIR"
+  $MAYBE_SUDO mv "$STAGE_DIR/modules" "${SHARE_DIR}/modules"
+  $MAYBE_SUDO chmod 755 "${SHARE_DIR}/modules"
+  $MAYBE_SUDO rm -rf "${SHARE_DIR}.old"
+  rm -rf "$STAGE_DIR"
 
   echo "✓ modules installed to ${SHARE_DIR}/modules"
 fi
