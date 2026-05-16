@@ -410,6 +410,14 @@ This downloads the latest `devlair-cli-v*` prerelease asset and installs it as `
 | `devlair sync` | Pin to v1 or run `rclone bisync` directly |
 | `devlair filesystem` | Removed — not ported |
 | `devlair claw` | Removed — not ported |
+| `devlair claude` usage dashboard | Pin to v1 for the dashboard. v2 `devlair claude` prints a short status panel only (plan + model); `--plan`, `--1m on\|off`, and `--channels` still work for configuration. |
+
+**Ported in v2:**
+
+| Command | Notes |
+|---------|-------|
+| `devlair disable-password [--yes]` | Linux-only, auto-elevates via sudo. `--yes` skips the interactive confirmation. |
+| `devlair claude [--plan TIER\|--1m on\|off\|--channels]` | Configures the local Claude Code install. No dashboard (see above). |
 
 **Develop locally:**
 
@@ -439,10 +447,11 @@ devlair/                # v1 Python CLI (stable)
 cli/                    # v2 TypeScript CLI (alpha)
   src/
     index.tsx           # Ink app entrypoint
-    commands/           # command implementations (init, doctor, upgrade)
+    commands/           # init, doctor, upgrade, claude, disable-password
     components/         # Ink UI components (Logo, Help)
     wizard/             # interactive wizard (GroupSelect, ModuleSelect, Confirmation)
-    lib/                # theme, types, runner, modules, platform detection
+    lib/                # theme, types, runner, modules, platform detection,
+                        # args, selection, profiles, jsonConfig, elevate
 assets/
   logo.svg              # brand mark (dark background)
   logo-light.svg        # brand mark (light background variant)

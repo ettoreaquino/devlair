@@ -1,4 +1,4 @@
-/** CLI flag parsing for init, doctor, and upgrade commands. */
+/** CLI flag parsing for all devlair v2 subcommands. */
 
 export interface InitFlags {
   only: Set<string> | null;
@@ -58,4 +58,54 @@ export function parseDoctorFlags(args: readonly string[]): DoctorFlags {
 /** Parse upgrade-specific flags from argv. */
 export function parseUpgradeFlags(args: readonly string[]): UpgradeFlags {
   return { noSelf: args.includes("--no-self") };
+}
+
+export const VALID_CLAUDE_PLANS = ["pro", "max5x", "max20x"] as const;
+export type ClaudePlan = (typeof VALID_CLAUDE_PLANS)[number];
+export type ToggleValue = "on" | "off";
+
+export interface ClaudeFlags {
+  plan: ClaudePlan | null;
+  toggle1m: ToggleValue | null;
+  channels: boolean;
+  error: string | null;
+}
+
+/** Parse claude-specific flags from argv (after the "claude" command). */
+export function parseClaudeFlags(args: readonly string[]): ClaudeFlags {
+  const flags: ClaudeFlags = { plan: null, toggle1m: null, channels: false, error: null };
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === "--channels") {
+      flags.channels = true;
+    } else if (arg === "--plan") {
+      const value = args[++i];
+      if (!value || value.startsWith("--")) {
+        flags.error = "Missing value for --plan";
+        continue;
+      }
+      if (!(VALID_CLAUDE_PLANS as readonly string[]).includes(value)) {
+        flags.error = `Unknown plan '${value}' — use one of: ${VALID_CLAUDE_PLANS.join(", ")}`;
+        continue;
+      }
+      flags.plan = value as ClaudePlan;
+    } else if (arg === "--1m") {
+      const value = args[++i];
+      if (value !== "on" && value !== "off") {
+        flags.error = `--1m requires 'on' or 'off' (got ${value ?? "nothing"})`;
+        continue;
+      }
+      flags.toggle1m = value;
+    }
+  }
+  return flags;
+}
+
+export interface DisablePasswordFlags {
+  /** Skip the interactive confirmation (CI / scripts). */
+  yes: boolean;
+}
+
+export function parseDisablePasswordFlags(args: readonly string[]): DisablePasswordFlags {
+  return { yes: args.includes("--yes") || args.includes("-y") };
 }
