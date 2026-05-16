@@ -1,14 +1,20 @@
 #!/usr/bin/env bun
 import { Text, render } from "ink";
 import pkg from "../package.json" with { type: "json" };
+import { ClaudeView } from "./commands/claude.js";
+import { DisablePasswordView } from "./commands/disable-password.js";
 import { DoctorView } from "./commands/doctor.js";
 import { InitView } from "./commands/init.js";
 import { UpgradeView } from "./commands/upgrade.js";
 import { Help } from "./components/Help.js";
 import {
+  type ClaudeFlags,
+  type DisablePasswordFlags,
   type DoctorFlags,
   type InitFlags,
   type UpgradeFlags,
+  parseClaudeFlags,
+  parseDisablePasswordFlags,
   parseDoctorFlags,
   parseInitFlags,
   parseUpgradeFlags,
@@ -23,7 +29,9 @@ type Command =
   | { type: "help" }
   | { type: "init"; flags: InitFlags }
   | { type: "doctor"; flags: DoctorFlags }
-  | { type: "upgrade"; flags: UpgradeFlags };
+  | { type: "upgrade"; flags: UpgradeFlags }
+  | { type: "claude"; flags: ClaudeFlags }
+  | { type: "disable-password"; flags: DisablePasswordFlags };
 
 function parseCommand(args: string[]): Command {
   if (args.includes("--version") || args.includes("-V")) {
@@ -38,6 +46,12 @@ function parseCommand(args: string[]): Command {
   }
   if (firstArg === "upgrade") {
     return { type: "upgrade", flags: parseUpgradeFlags(args.slice(1)) };
+  }
+  if (firstArg === "claude") {
+    return { type: "claude", flags: parseClaudeFlags(args.slice(1)) };
+  }
+  if (firstArg === "disable-password") {
+    return { type: "disable-password", flags: parseDisablePasswordFlags(args.slice(1)) };
   }
   return { type: "help" };
 }
@@ -55,19 +69,30 @@ function App({ command }: { command: Command }) {
   if (command.type === "upgrade") {
     return <UpgradeView flags={command.flags} version={VERSION} />;
   }
+  if (command.type === "claude") {
+    return <ClaudeView flags={command.flags} />;
+  }
+  if (command.type === "disable-password") {
+    return <DisablePasswordView flags={command.flags} />;
+  }
   return <Help version={VERSION} />;
 }
+
+const ELEVATED_COMMANDS = new Set(["init", "doctor", "upgrade", "disable-password"]);
 
 async function main() {
   const command = parseCommand(process.argv.slice(2));
 
-  if (command.type === "init" || command.type === "doctor" || command.type === "upgrade") {
+  if (ELEVATED_COMMANDS.has(command.type)) {
     elevateIfNeeded();
-    const { waitUntilExit } = render(<App command={command} />);
-    await waitUntilExit();
-  } else {
+  }
+
+  if (command.type === "help" || command.type === "version") {
     const { unmount } = render(<App command={command} />);
     unmount();
+  } else {
+    const { waitUntilExit } = render(<App command={command} />);
+    await waitUntilExit();
   }
 }
 

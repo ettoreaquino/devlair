@@ -19,19 +19,14 @@ const HELP_SECTIONS: HelpSection[] = [
       { cmd: "init [--only MOD] [--skip MOD] [--group GRP] [--config FILE]", desc: "Set up this machine from scratch" },
       { cmd: "doctor [--fix]", desc: "Check system health & fix drift" },
       { cmd: "upgrade [--no-self]", desc: "Upgrade tools & re-apply configs" },
-      { cmd: "disable-password", desc: "Lock SSH to key-only auth" },
-    ],
-  },
-  {
-    title: "Cloud & Filesystem",
-    entries: [
-      { cmd: "sync [--add|--remove|--now]", desc: "Manage rclone folder syncs" },
-      { cmd: "filesystem", desc: "AI-guided folder structure design" },
+      { cmd: "disable-password [--yes]", desc: "Lock SSH to key-only auth" },
     ],
   },
   {
     title: "AI Agents & Channels",
-    entries: [{ cmd: "claude [--plan TIER] [--1m on|off]", desc: "Usage dashboard & config" }],
+    entries: [
+      { cmd: "claude [--plan TIER] [--1m on|off] [--channels]", desc: "Status & config (dashboard moved to v1)" },
+    ],
   },
   {
     title: "tmux Sessions",
