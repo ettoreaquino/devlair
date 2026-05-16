@@ -20,7 +20,7 @@ const MODULE_KEY_SET = new Set<string>(MODULE_KEYS);
 const GROUP_SET = new Set<string>(GROUPS);
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
-const GITHUB_SHORTHAND_RE = /^([\w.-]+)\/([\w.-]+)(?:@([\w./-]+))?:(.+)$/;
+const GITHUB_SHORTHAND_RE = /^([\w.-]+)\/([\w.-]+)(?:@([\w./-]+))?:([\w./-]+)$/;
 
 export class ProfileError extends Error {
   constructor(message: string) {
@@ -123,12 +123,18 @@ export interface SourceClassification {
 
 /** Classify a --config argument as a local file, HTTPS URL, or GitHub shorthand. */
 export function classifySource(source: string): SourceClassification {
-  if (source.startsWith("http://") || source.startsWith("https://")) {
+  if (source.startsWith("http://")) {
+    throw new ProfileError(`Refusing to load profile over plaintext http:// — use https:// (${source})`);
+  }
+  if (source.startsWith("https://")) {
     return { kind: "url", url: source };
   }
   const match = GITHUB_SHORTHAND_RE.exec(source);
   if (match) {
     const [, org, repo, ref, path] = match;
+    if (path.split("/").some((seg) => seg === "..")) {
+      throw new ProfileError(`GitHub shorthand path may not contain '..' segments: ${source}`);
+    }
     const url = `https://raw.githubusercontent.com/${org}/${repo}/${ref ?? "HEAD"}/${path}`;
     return { kind: "github", url };
   }

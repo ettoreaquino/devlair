@@ -11,7 +11,7 @@ export function elevateIfNeeded(): void {
 
   // Preserve only the env vars we need — blanket -E would forward secrets
   // like AWS_SECRET_ACCESS_KEY to every child module running as root.
-  const preserve = ["TERM", "COLORTERM", "LANG", "LC_ALL", "ANTHROPIC_API_KEY"].join(",");
+  const preserve = ["TERM", "COLORTERM", "LANG", "LC_ALL"].join(",");
   const result = spawnSync("sudo", [`--preserve-env=${preserve}`, "--", ...process.argv], {
     stdio: "inherit",
   });

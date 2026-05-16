@@ -9,10 +9,10 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { closeSync, constants as fsConstants, openSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Box, Text, useApp, useInput } from "ink";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { DisablePasswordFlags } from "../lib/args.js";
 import { resolveInvokingUser } from "../lib/context.js";
 import { detectPlatform } from "../lib/platform.js";
@@ -43,7 +43,13 @@ function countAuthorizedKeys(path: string): number {
 function preflight(): Preflight {
   const [username, userHome] = resolveInvokingUser();
   const authKeysPath = join(userHome, ".ssh", "authorized_keys");
-  if (!existsSync(authKeysPath) || statSync(authKeysPath).size === 0) {
+  let size = 0;
+  try {
+    size = statSync(authKeysPath).size;
+  } catch {
+    size = 0;
+  }
+  if (size === 0) {
     return {
       ok: false,
       authKeysPath,
@@ -60,19 +66,36 @@ interface ApplyResult {
 }
 
 function applyHardening(): ApplyResult {
-  if (!existsSync(SSHD_CONF)) {
-    return {
-      ok: false,
-      error: `${SSHD_CONF} not found. Run 'sudo devlair init --only ssh' first.`,
-    };
+  // Open with O_NOFOLLOW so a swapped-in symlink (e.g. → /etc/sudoers) fails
+  // with ELOOP instead of redirecting our root-privileged write.
+  let fd: number;
+  try {
+    fd = openSync(SSHD_CONF, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "ENOENT") {
+      return { ok: false, error: `${SSHD_CONF} not found. Run 'sudo devlair init --only ssh' first.` };
+    }
+    if (code === "ELOOP") {
+      return { ok: false, error: `${SSHD_CONF} is a symlink — refusing to write. Inspect the file manually.` };
+    }
+    return { ok: false, error: `Cannot read ${SSHD_CONF}: ${(err as Error).message}` };
   }
+  const current = readFileSync(fd, "utf8");
+  closeSync(fd);
 
-  const current = readFileSync(SSHD_CONF, "utf8");
-  let updated = current.replace("PasswordAuthentication yes", "PasswordAuthentication no");
-  if (!updated.includes("PasswordAuthentication no")) {
+  let updated = current.replace(/^[ \t]*PasswordAuthentication[ \t]+.*$/gm, "PasswordAuthentication no");
+  if (!/^[ \t]*PasswordAuthentication[ \t]+no\b/m.test(updated)) {
     updated += "\nPasswordAuthentication no\n";
   }
-  writeFileSync(SSHD_CONF, updated, "utf8");
+
+  try {
+    const writeFd = openSync(SSHD_CONF, fsConstants.O_WRONLY | fsConstants.O_TRUNC | fsConstants.O_NOFOLLOW);
+    writeFileSync(writeFd, updated, "utf8");
+    closeSync(writeFd);
+  } catch (err) {
+    return { ok: false, error: `Cannot write ${SSHD_CONF}: ${(err as Error).message}` };
+  }
 
   const restart = spawnSync("systemctl", ["restart", "ssh"], { stdio: "ignore" });
   if (restart.status !== 0) {
@@ -95,7 +118,14 @@ export function DisablePasswordView({ flags }: DisablePasswordViewProps) {
   const [result, setResult] = useState<ApplyResult | null>(null);
   const aborted = phase === "done" && result === null;
 
-  // Bail conditions: non-linux platform, preflight failure.
+  const runApply = useCallback(() => {
+    const res = applyHardening();
+    setResult(res);
+    if (!res.ok) process.exitCode = 1;
+    setPhase("done");
+    setTimeout(() => exit(), 0);
+  }, [exit]);
+
   useEffect(() => {
     if (platform !== "linux" || (check && !check.ok)) {
       process.exitCode = 1;
@@ -103,24 +133,14 @@ export function DisablePasswordView({ flags }: DisablePasswordViewProps) {
     }
   }, [platform, check, exit]);
 
-  // Auto-apply when --yes was passed.
   useEffect(() => {
-    if (!flags.yes || !check?.ok || phase !== "confirm") return;
-    const res = applyHardening();
-    setResult(res);
-    if (!res.ok) process.exitCode = 1;
-    setPhase("done");
-    setTimeout(() => exit(), 0);
-  }, [flags.yes, check, phase, exit]);
+    if (flags.yes && check?.ok && phase === "confirm") runApply();
+  }, [flags.yes, check, phase, runApply]);
 
   useInput(
     (input, key) => {
       if (key.return || input === "y" || input === "Y") {
-        const res = applyHardening();
-        setResult(res);
-        if (!res.ok) process.exitCode = 1;
-        setPhase("done");
-        setTimeout(() => exit(), 0);
+        runApply();
       } else if (key.escape || input === "n" || input === "N" || input === "q") {
         setPhase("done");
         setTimeout(() => exit(), 0);

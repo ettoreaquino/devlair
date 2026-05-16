@@ -1,4 +1,4 @@
-/** CLI flag parsing for init, doctor, and upgrade commands. */
+/** CLI flag parsing for all devlair v2 subcommands. */
 
 export interface InitFlags {
   only: Set<string> | null;

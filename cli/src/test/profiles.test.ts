@@ -114,8 +114,12 @@ describe("classifySource", () => {
     expect(c.url).toBe("https://example.com/p.yaml");
   });
 
-  test("http URL", () => {
-    expect(classifySource("http://example.com/p.yaml").kind).toBe("url");
+  test("rejects plaintext http URL", () => {
+    expect(() => classifySource("http://example.com/p.yaml")).toThrow(ProfileError);
+  });
+
+  test("rejects GitHub shorthand with .. segments", () => {
+    expect(() => classifySource("acme/profiles:../etc/passwd")).toThrow(ProfileError);
   });
 
   test("GitHub shorthand with default ref", () => {
