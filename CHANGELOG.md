@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.8.0](https://github.com/ettoreaquino/devlair/compare/v1.7.1...v1.8.0) (2026-05-16)
+
+
+### Features
+
+* **cli:** port disable-password and claude commands (no dashboard) ([6dc75d8](https://github.com/ettoreaquino/devlair/commit/6dc75d8150a37b92c5622a6fa42fb28e7d1ca27f))
+* **review:** add pr-fix-applier and replace pr-readme-reviewer with updater ([40a7bfb](https://github.com/ettoreaquino/devlair/commit/40a7bfbae16dfc9ab46171b3edfb65f907ccdc88))
+* **review:** add pr-fix-applier and replace pr-readme-reviewer with updater ([a6225e4](https://github.com/ettoreaquino/devlair/commit/a6225e4545ffe3a0418f445fe8e8506a62883825)), closes [#77](https://github.com/ettoreaquino/devlair/issues/77)
+
+
+### Bug Fixes
+
+* **release-please:** address PR review findings on fix/release-please-v1-exclude-meta ([b0e2ae2](https://github.com/ettoreaquino/devlair/commit/b0e2ae2bd1525fe01fb5d323107e82a4a542a437))
+* **release-please:** exclude .claude and meta files from v1 scope ([d6b31a4](https://github.com/ettoreaquino/devlair/commit/d6b31a4770770d5cd35da6db39f230b802ddceca))
+* **release-please:** exclude meta paths from v1 scope ([f899354](https://github.com/ettoreaquino/devlair/commit/f899354105eae476ca09a5e98005c147221e2ff1))
+* **v2:** address PR review findings on claude + disable-password ([30ab526](https://github.com/ettoreaquino/devlair/commit/30ab5265b3dc1948ab55f3463fcb38194876ce71))
+
 ## [1.7.1](https://github.com/ettoreaquino/devlair/compare/v1.7.0...v1.7.1) (2026-05-12)
 
 
