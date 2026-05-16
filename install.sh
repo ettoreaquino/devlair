@@ -153,18 +153,18 @@ if [[ "$CHANNEL" == "pre" ]]; then
 
   echo "✓ modules installed to ${SHARE_DIR}/modules"
 
-  # ── Pre-release: repair pre-existing broken dpkg state ────────────────────
+  # ── Pre-release: repair WSL-specific broken dpkg state (Debian-like) ──────
   # Ubuntu 24.04 WSL ships with openssh-server half-configured: its postinst
   # calls `systemctl restart ssh`, but systemd isn't running by default on
   # WSL, so the postinst exits 1 and dpkg leaves the package broken. After
   # that, every `apt-get install` fails with a misleading trailing
   # `E: Sub-process /usr/bin/dpkg returned an error code (1)` regardless of
   # what package is being installed — poisoning devlair's apt-using modules.
-  # devlair's ssh module is WSL-skipped, so removing openssh-server is safe.
-  # `dpkg --configure -a` clears any other half-configured package as a
-  # general no-op on a clean system.
-  if command -v apt-get >/dev/null 2>&1; then
-    if dpkg -l openssh-server 2>/dev/null | awk '/^.[^i]/ {found=1} END {exit !found}'; then
+  # Scoped to WSL so we don't purge a legitimately-running openssh-server
+  # on a bare Linux server (which would lock out remote operators).
+  if grep -qi microsoft /proc/version 2>/dev/null && command -v dpkg-query >/dev/null 2>&1; then
+    ssh_status=$(dpkg-query -W -f='${Status}' openssh-server 2>/dev/null || true)
+    if [[ -n "$ssh_status" && "$ssh_status" != "install ok installed" ]]; then
       echo "Repairing pre-existing openssh-server half-config..."
       $MAYBE_SUDO apt-get purge -y -qq openssh-server >/dev/null 2>&1 || true
     fi
