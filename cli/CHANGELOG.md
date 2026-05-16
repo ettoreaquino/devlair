@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.2.0-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.1.0-alpha.1...devlair-cli-v2.2.0-alpha.1) (2026-05-16)
+
+
+### Features
+
+* **cli:** port disable-password and claude commands (no dashboard) ([6dc75d8](https://github.com/ettoreaquino/devlair/commit/6dc75d8150a37b92c5622a6fa42fb28e7d1ca27f))
+* **cli:** port disable-password and claude commands (no dashboard) ([3f70e4a](https://github.com/ettoreaquino/devlair/commit/3f70e4ad0d1a09ad9a3b052211678fe073c9022d)), closes [#45](https://github.com/ettoreaquino/devlair/issues/45)
+* **cli:** TS profile system with Zod validation and remote fetch ([ec45687](https://github.com/ettoreaquino/devlair/commit/ec45687b30f1678d411a163dbc102fa9da2329a6)), closes [#46](https://github.com/ettoreaquino/devlair/issues/46)
+
+
+### Bug Fixes
+
+* **v2:** address PR review findings on claude + disable-password ([30ab526](https://github.com/ettoreaquino/devlair/commit/30ab5265b3dc1948ab55f3463fcb38194876ce71))
+
 ## [2.1.0-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.0.0-alpha.1...devlair-cli-v2.1.0-alpha.1) (2026-05-10)
 
 
