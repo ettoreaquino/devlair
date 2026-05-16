@@ -137,6 +137,18 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
             const { value, done: iterDone } = await iter.next();
             if (iterDone) {
               finalStatus = value.status;
+              // A module that exits non-zero without emitting a `result` event
+              // (e.g. a missing runtime dep aborting _lib.sh early) leaves the
+              // UI showing a bare ✗. Fall back to the last non-empty stderr
+              // line so the user sees what actually happened.
+              if (!finalDetail && finalStatus !== "ok") {
+                const lastErr = value.stderr
+                  .split("\n")
+                  .map((s) => s.trim())
+                  .filter(Boolean)
+                  .pop();
+                if (lastErr) finalDetail = lastErr;
+              }
               break;
             }
             if (value.type === "progress") {
