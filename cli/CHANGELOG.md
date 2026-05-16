@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.3-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.2.2-alpha.1...devlair-cli-v2.2.3-alpha.1) (2026-05-16)
+
+
+### Bug Fixes
+
+* **v2:** bootstrap jq + surface stderr in init UI ([4abd41e](https://github.com/ettoreaquino/devlair/commit/4abd41e4e0aa3960e81f7c1ffb594c9824f896fe))
+* **v2:** bootstrap jq + surface stderr so init failures aren't silent ([fbcc5d8](https://github.com/ettoreaquino/devlair/commit/fbcc5d86106532e11fd46e005ed15e52e1de1ff0))
+
 ## [2.2.2-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.2.1-alpha.1...devlair-cli-v2.2.2-alpha.1) (2026-05-16)
 
 
