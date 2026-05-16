@@ -8,7 +8,7 @@
       "include-component-in-tag": false,
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": true,
-      "exclude-paths": ["cli"],
+      "exclude-paths": ["cli", ".claude", ".github", "CLAUDE.md", "README.md", "hooks"],
       "extra-files": [
         "devlair/__init__.py"
       ]
