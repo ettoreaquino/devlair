@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.2-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.2.1-alpha.1...devlair-cli-v2.2.2-alpha.1) (2026-05-16)
+
+
+### Bug Fixes
+
+* **v2/install:** ship modules tarball alongside binary ([75d6415](https://github.com/ettoreaquino/devlair/commit/75d641524700acfd7db640c2eb5cc7f2e3da917a))
+* **v2/install:** ship modules tarball alongside binary ([d6ef9f4](https://github.com/ettoreaquino/devlair/commit/d6ef9f4d9af3a85d7089007934e03016a87547e4)), closes [#84](https://github.com/ettoreaquino/devlair/issues/84)
+
 ## [2.2.1-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.2.0-alpha.1...devlair-cli-v2.2.1-alpha.1) (2026-05-16)
 
 
