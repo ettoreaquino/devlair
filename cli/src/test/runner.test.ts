@@ -6,8 +6,8 @@ import { join } from "node:path";
 import { type RunResult, runModule } from "../lib/runner.js";
 import type { ModuleContext, ModuleEvent, ModuleMode } from "../lib/types.js";
 
-const LIB_PATH = join(import.meta.dir, "../../../modules/_lib.sh");
-const MODULES_DIR = join(import.meta.dir, "../../../modules");
+const LIB_PATH = join(import.meta.dir, "../../modules/_lib.sh");
+const MODULES_DIR = join(import.meta.dir, "../../modules");
 
 function ctx(overrides: Partial<ModuleContext> = {}): ModuleContext {
   return {

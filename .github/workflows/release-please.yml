@@ -152,7 +152,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Package modules
-        run: tar -czf modules.tar.gz modules
+        # -C cli so the archive root stays "modules/" (matches install.sh's
+        # extract layout: STAGE_DIR/modules → /usr/local/share/devlair/modules).
+        run: tar -czf modules.tar.gz -C cli modules
 
       - name: Upload tarball to release
         uses: softprops/action-gh-release@v2

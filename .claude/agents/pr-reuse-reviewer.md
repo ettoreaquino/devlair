@@ -15,7 +15,7 @@ Read the PR diff the orchestrator gives you, then search the rest of the repo fo
 
 - Python: `devlair/`, especially `devlair/runner.py`, `devlair/console.py`, `devlair/context.py`, `devlair/features/`
 - TypeScript v2: `cli/src/lib/`, `cli/src/components/`, `cli/src/wizard/`
-- Shell: `install.sh`, `cli/src/lib/modules/` shell scripts
+- Shell: `install.sh`, `cli/modules/` shell scripts
 
 Use `Grep` aggressively — search for the function names, signatures, and patterns the diff introduces. If an inline regex/parse/path helper is added, see if a util already does it.
 

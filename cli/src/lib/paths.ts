@@ -11,7 +11,7 @@ const INSTALL_MODULES_DIR = "/usr/local/share/devlair/modules";
  * Return the absolute path to the modules/ directory.
  *
  * Production: install.sh extracts modules.tar.gz to /usr/local/share/devlair/modules/.
- * Development: cli/src/lib/paths.ts → ../../../modules/ in the repo.
+ * Development: cli/src/lib/paths.ts → ../../modules/ in the repo (cli/modules/).
  *
  * The compiled-binary path can't be derived from process.argv[0] (which is the
  * literal string "bun" in bun-compiled binaries) or from import.meta.dir (which
@@ -26,7 +26,7 @@ export function modulesDir(): string {
     return _modulesDir;
   }
 
-  const devPath = resolve(import.meta.dir, "../../../modules");
+  const devPath = resolve(import.meta.dir, "../../modules");
   if (existsSync(join(devPath, "_lib.sh"))) {
     _modulesDir = devPath;
     return _modulesDir;
