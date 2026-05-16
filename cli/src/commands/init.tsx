@@ -6,12 +6,10 @@
  * group select -> module select -> confirmation -> execution.
  */
 
-import { readFileSync } from "node:fs";
 import { hostname } from "node:os";
 import { useApp } from "ink";
 import { Box, Text } from "ink";
 import { useEffect, useRef, useState } from "react";
-import YAML from "yaml";
 
 import { Logo } from "../components/Logo.js";
 import { type ModuleRun, Progress } from "../components/Progress.js";
@@ -21,34 +19,16 @@ import { buildModuleContext } from "../lib/context.js";
 import type { Group, ModuleSpec } from "../lib/modules.js";
 import { moduleScriptPath } from "../lib/paths.js";
 import { detectPlatform, detectWslVersion } from "../lib/platform.js";
+import { type Profile, ProfileError, loadProfile, resolveProfileKeys } from "../lib/profiles.js";
 import { runModule } from "../lib/runner.js";
 import { selectModules } from "../lib/selection.js";
-import { D_COMMENT, D_FG, D_PINK, D_PURPLE } from "../lib/theme.js";
+import { D_COMMENT, D_FG, D_PINK, D_PURPLE, D_RED } from "../lib/theme.js";
 import type { ModuleContext, Status } from "../lib/types.js";
 import { Confirmation } from "../wizard/Confirmation.js";
 import { GroupSelect } from "../wizard/GroupSelect.js";
 import { ModuleSelect } from "../wizard/ModuleSelect.js";
 
 type Phase = "wizard-groups" | "wizard-modules" | "wizard-confirm" | "running" | "done";
-
-interface ProfileData {
-  name?: string;
-  config?: Record<string, unknown>;
-}
-
-function loadProfile(path: string): ProfileData {
-  try {
-    const raw = readFileSync(path, "utf8");
-    const data = YAML.parse(raw) as Record<string, unknown>;
-    return {
-      name: typeof data.name === "string" ? data.name : undefined,
-      config: typeof data.config === "object" && data.config !== null ? (data.config as Record<string, unknown>) : {},
-    };
-  } catch (err) {
-    process.stderr.write(`Profile error: ${err instanceof Error ? err.message : err}\n`);
-    process.exit(1);
-  }
-}
 
 function InitHeader({
   username,
@@ -190,19 +170,78 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
 
 // ── Non-interactive init (flags provided) ──────────────────────────────────
 
-function NonInteractiveInit({ flags }: { flags: InitFlags }) {
-  const [initState] = useState(() => {
-    const platform = detectPlatform();
-    const wslVersion = detectWslVersion(platform);
-    const profile = flags.config ? loadProfile(flags.config) : undefined;
-    const config = profile?.config ?? {};
-    const context = buildModuleContext(platform, wslVersion, config);
-    const { selected, optional, platformSkipped } = selectModules(flags, platform);
-    const skippedNames = platformSkipped.map((s) => s.key).join(", ");
-    return { platform, context, selected, optional, platformSkipped, skippedNames, profile };
-  });
+interface InitState {
+  platform: ReturnType<typeof detectPlatform>;
+  context: ModuleContext;
+  selected: ModuleSpec[];
+  optional: ModuleSpec[];
+  skippedNames: string;
+  profile: Profile | null;
+}
 
-  const { platform, context, selected, optional, skippedNames, profile } = initState;
+function buildInitState(flags: InitFlags, profile: Profile | null): InitState {
+  const platform = detectPlatform();
+  const wslVersion = detectWslVersion(platform);
+  const config = (profile?.config ?? {}) as Record<string, unknown>;
+  const context = buildModuleContext(platform, wslVersion, config);
+  const profileSelection = profile ? resolveProfileKeys(profile) : undefined;
+  const { selected, optional, platformSkipped } = selectModules(flags, platform, profileSelection);
+  return {
+    platform,
+    context,
+    selected,
+    optional,
+    skippedNames: platformSkipped.map((s) => s.key).join(", "),
+    profile,
+  };
+}
+
+function NonInteractiveInit({ flags }: { flags: InitFlags }) {
+  const { exit } = useApp();
+  const [initState, setInitState] = useState<InitState | null>(() =>
+    flags.config ? null : buildInitState(flags, null),
+  );
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initState !== null || error !== null) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const profile = flags.config ? await loadProfile(flags.config) : null;
+        if (!cancelled) setInitState(buildInitState(flags, profile));
+      } catch (err) {
+        if (cancelled) return;
+        const msg = err instanceof ProfileError ? err.message : err instanceof Error ? err.message : String(err);
+        setError(msg);
+        process.exitCode = 1;
+        setTimeout(() => exit(), 0);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [flags, initState, error, exit]);
+
+  if (error !== null) {
+    return (
+      <Box flexDirection="column">
+        <Text color={D_RED}>{`  Profile error: ${error}`}</Text>
+      </Box>
+    );
+  }
+  if (initState === null) {
+    return (
+      <Box flexDirection="column">
+        <Text color={D_COMMENT}>{"  Loading profile..."}</Text>
+      </Box>
+    );
+  }
+  return <NonInteractiveInitView state={initState} />;
+}
+
+function NonInteractiveInitView({ state }: { state: InitState }) {
+  const { platform, context, selected, optional, skippedNames, profile } = state;
   const { modules, done } = useModuleExecution(selected, context, true);
 
   return (
