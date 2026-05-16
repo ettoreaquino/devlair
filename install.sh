@@ -152,6 +152,22 @@ if [[ "$CHANNEL" == "pre" ]]; then
   rm -rf "$STAGE_DIR"
 
   echo "✓ modules installed to ${SHARE_DIR}/modules"
+
+  # ── Pre-release: bootstrap runtime deps ────────────────────────────────────
+  # modules/_lib.sh hard-requires jq for context parsing; on a fresh Ubuntu
+  # the binary installs cleanly but every `devlair init` step exits 1 before
+  # emitting any output. Install jq up-front so the first wizard run works.
+  if ! command -v jq >/dev/null 2>&1; then
+    if command -v apt-get >/dev/null 2>&1; then
+      echo "Installing runtime dep: jq..."
+      $MAYBE_SUDO apt-get update -qq >/dev/null
+      $MAYBE_SUDO apt-get install -y -qq jq >/dev/null
+      echo "✓ jq installed"
+    else
+      echo "WARNING: jq is required by devlair modules but apt-get is not available." >&2
+      echo "Install jq manually before running 'devlair init'." >&2
+    fi
+  fi
 fi
 
 rm -f "$TMP_CHECKSUMS"
