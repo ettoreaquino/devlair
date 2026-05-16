@@ -52,7 +52,11 @@ do_run() {
 }
 
 do_check() {
-  for pair in "git:git" "curl:curl" "tmux:tmux" "zsh:zsh" "ufw:ufw" "fail2ban:fail2ban-client"; do
+  local checks=( "git:git" "curl:curl" "tmux:tmux" "zsh:zsh" )
+  if [[ "$PLATFORM" == "linux" ]]; then
+    checks+=( "ufw:ufw" "fail2ban:fail2ban-client" )
+  fi
+  for pair in "${checks[@]}"; do
     label="${pair%%:*}"
     cmd="${pair##*:}"
     if cmd_exists "$cmd"; then
