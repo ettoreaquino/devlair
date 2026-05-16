@@ -63,11 +63,25 @@ If `pushed: false`, surface why (gate failures or no findings worth applying) in
 
 Skip this step only when `pr-fix-applier` returned `pushed: false` **and** its `failed` list is non-empty — i.e. a gate failure left the tree in an indeterminate state. `pushed: false` alone (no findings to apply, or all findings declined) is not a reason to skip; the tree is clean and the updater should still run.
 
+**Compute `scope` here, not inside the updater**, using the PR's file list from Step 1:
+
+- `scope = "v2"` if any path matches `cli/src/**` **and** no path matches `devlair/**`.
+- `scope = "v1"` if any path matches `devlair/**` **and** no path matches `cli/src/**`.
+- `scope = "none"` otherwise (meta-only changes like `.claude/`, `CLAUDE.md`, or PRs that straddle both surfaces — those need a human, not an auto-edit).
+
+If `scope == "none"`, you can either skip Step 5 entirely or invoke the updater for symmetry — it will short-circuit and return `committed: false`.
+
 Invoke `pr-readme-updater` as a single Agent call. Pass:
 
 - The PR number, branch name, and head SHA (after Step 4's push, if any).
-- The PR's file list from Step 1 (the updater uses this to decide v1-vs-v2 scope deterministically — never by scanning the diff text).
-- The branch diff: re-fetch via `gh pr diff <N>` **only when** `pr-fix-applier` pushed new commits in Step 4. Otherwise reuse the diff captured in Step 1 — the tree has not changed.
+- The PR's file list from Step 1.
+- The deterministic `scope` literal you just computed (`"v1"`, `"v2"`, or `"none"`).
+- The branch diff. **If `pr-fix-applier` pushed new commits in Step 4**, do **not** simply re-fetch via `gh pr diff <N>` — that diff includes the applier's own commits, daisy-chaining a trust boundary. Instead, compute the original-PR diff that excludes the applier's commits:
+  ```bash
+  git fetch origin main
+  git diff origin/main...<head-before-applier-push>
+  ```
+  where `<head-before-applier-push>` is the head SHA you captured *before* invoking the applier in Step 4. If `pr-fix-applier` did not push, just reuse the diff captured in Step 1 — the tree has not changed.
 
 `pr-readme-updater` returns JSON with `committed`, `changes`, and `noted_code_drift`. Before rendering Step 6, drop any `noted_code_drift` item whose `file` already appears in `pr-fix-applier.applied` — those drifts have been resolved and would mislead the reader.
 
