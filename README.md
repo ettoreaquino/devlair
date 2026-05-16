@@ -401,7 +401,7 @@ uv run ruff check devlair/ tests/
 curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | sudo bash -s -- --pre
 ```
 
-This downloads the latest `devlair-cli-v*` prerelease asset and installs it as `/usr/local/bin/devlair`, replacing v1. To roll back, re-run the installer without `--pre`.
+This downloads the latest `devlair-cli-v*` prerelease asset and installs it as `/usr/local/bin/devlair`, replacing v1. The companion `modules.tar.gz` (shell scripts invoked by the wizard) is verified against the same `checksums.txt` and extracted to `/usr/local/share/devlair/modules/`. To roll back, re-run the installer without `--pre`.
 
 **Removed in v2** (vs. v1):
 

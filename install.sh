@@ -13,6 +13,7 @@ set -euo pipefail
 REPO="ettoreaquino/devlair"
 BIN="devlair"
 INSTALL_DIR="/usr/local/bin"
+SHARE_DIR="/usr/local/share/devlair"
 CHANNEL="stable"
 
 # ── Parse flags ───────────────────────────────────────────────────────────────
@@ -78,7 +79,6 @@ curl -fsSL "${BASE_URL}/checksums.txt" -o "$TMP_CHECKSUMS"
 # ── Verify SHA-256 checksum ──────────────────────────────────────────────────
 EXPECTED=$(grep " ${ASSET}\$" "$TMP_CHECKSUMS" | awk '{print $1}')
 ACTUAL=$(sha256sum "$TMP" | awk '{print $1}')
-rm -f "$TMP_CHECKSUMS"
 
 if [[ -z "$EXPECTED" ]]; then
   echo "WARNING: No checksum found for ${ASSET} — skipping verification."
@@ -101,6 +101,60 @@ else
   sudo mv "$TMP" "${INSTALL_DIR}/${BIN}"
 fi
 chmod 755 "${INSTALL_DIR}/${BIN}" 2>/dev/null || sudo chmod 755 "${INSTALL_DIR}/${BIN}"
+
+# ── Pre-release: fetch modules tarball ────────────────────────────────────────
+# v2 shell modules live outside the compiled binary and ship as a separate
+# tarball. v1 (stable) is self-contained and does not need this step.
+if [[ "$CHANNEL" == "pre" ]]; then
+  TMP_MODULES=$(mktemp)
+  echo "Fetching modules tarball..."
+  curl -fsSL "${BASE_URL}/modules.tar.gz" -o "$TMP_MODULES"
+
+  EXPECTED_MODULES=$(grep " modules.tar.gz\$" "$TMP_CHECKSUMS" | awk '{print $1}')
+  ACTUAL_MODULES=$(sha256sum "$TMP_MODULES" | awk '{print $1}')
+
+  # Modules ship a fresh tree on every release — a missing checksum entry
+  # means CI is misconfigured, not a soft warning. Hard-fail rather than
+  # extract an unverified archive and execute its scripts as root.
+  if [[ -z "$EXPECTED_MODULES" ]]; then
+    echo "ERROR: No checksum entry for modules.tar.gz in checksums.txt — aborting." >&2
+    rm -f "$TMP_MODULES"
+    exit 1
+  elif [[ "$ACTUAL_MODULES" != "$EXPECTED_MODULES" ]]; then
+    echo "ERROR: Checksum mismatch for modules.tar.gz!" >&2
+    echo "  Expected: ${EXPECTED_MODULES}" >&2
+    echo "  Got:      ${ACTUAL_MODULES}" >&2
+    rm -f "$TMP_MODULES"
+    exit 1
+  else
+    echo "✓ modules.tar.gz SHA-256 verified"
+  fi
+
+  # Replace the modules dir atomically: extract to a staging path, then swap.
+  # --no-same-owner / --no-same-permissions ignore uid/gid/mode bits from the
+  # archive so a future tampered tarball can't plant setuid bits or odd owners
+  # under sudo; chmod immediately after pins a known-safe mode regardless of
+  # the installer's umask.
+  STAGE_DIR=$(mktemp -d)
+  tar -xzf "$TMP_MODULES" -C "$STAGE_DIR" --no-same-owner --no-same-permissions
+  chmod -R u=rwX,go=rX "$STAGE_DIR/modules"
+  rm -f "$TMP_MODULES"
+
+  MAYBE_SUDO=""
+  [[ ! -w "$(dirname "$SHARE_DIR")" ]] && MAYBE_SUDO="sudo"
+
+  $MAYBE_SUDO rm -rf "${SHARE_DIR}.old" 2>/dev/null || true
+  [[ -d "$SHARE_DIR" ]] && $MAYBE_SUDO mv "$SHARE_DIR" "${SHARE_DIR}.old"
+  $MAYBE_SUDO mkdir -m 755 -p "$SHARE_DIR"
+  $MAYBE_SUDO mv "$STAGE_DIR/modules" "${SHARE_DIR}/modules"
+  $MAYBE_SUDO chmod 755 "${SHARE_DIR}/modules"
+  $MAYBE_SUDO rm -rf "${SHARE_DIR}.old"
+  rm -rf "$STAGE_DIR"
+
+  echo "✓ modules installed to ${SHARE_DIR}/modules"
+fi
+
+rm -f "$TMP_CHECKSUMS"
 
 echo ""
 echo "✓ devlair ${LATEST} installed to ${INSTALL_DIR}/${BIN}"
