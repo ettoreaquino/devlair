@@ -12,7 +12,11 @@ export function elevateIfNeeded(): void {
   // Preserve only the env vars we need — blanket -E would forward secrets
   // like AWS_SECRET_ACCESS_KEY to every child module running as root.
   const preserve = ["TERM", "COLORTERM", "LANG", "LC_ALL"].join(",");
-  const result = spawnSync("sudo", [`--preserve-env=${preserve}`, "--", ...process.argv], {
+  // In a bun-compiled binary, process.argv[0] is the literal "bun" and
+  // argv[1] is a /$bunfs/... internal path — neither resolves under sudo.
+  // Re-exec the real binary (process.execPath) with the user-facing args only.
+  const userArgs = process.argv.slice(2);
+  const result = spawnSync("sudo", [`--preserve-env=${preserve}`, "--", process.execPath, ...userArgs], {
     stdio: "inherit",
   });
 
