@@ -1,7 +1,6 @@
 ---
-name: review-pr
 description: Orchestrates a multi-subagent PR review (four parallel code reviewers, then fix-applier, then README updater) and posts a single structured comment crediting each reviewer.
-user_invocable: true
+allowed-tools: Bash, Read, Write, Edit, Grep, Glob
 ---
 
 # PR Review
@@ -10,7 +9,7 @@ Fan out the PR review across four custom code-review subagents, run gates inline
 
 ## Arguments
 
-Parse `<args>` for a PR number (e.g. `#66` or `66`). If none given, detect via `gh pr view --json number`.
+Parse the slash-command arguments for a PR number (e.g. `/review-pr 66` or `/review-pr #66`). If none given, detect the PR for the current branch via `gh pr view --json number`.
 
 ## Step 1: Gather PR context
 

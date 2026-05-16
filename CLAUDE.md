@@ -144,7 +144,7 @@ Version bumps are determined from Conventional Commits: `fix:` → patch, `feat:
 
 ## PR review automation
 
-Every PR runs through a fan-out review pipeline that ends with a single structured comment. A `PostToolUse` hook in `.claude/settings.json` fires after `gh pr create` and tells the main session to invoke the `/review-pr` skill. The skill is a thin orchestrator that spawns four code reviewers in parallel, then runs two post-review agents sequentially.
+Every PR runs through a fan-out review pipeline that ends with a single structured comment. A `PostToolUse` hook in `.claude/settings.json` fires after `gh pr create` and tells the main session to invoke the `/review-pr` slash command (defined in `.claude/commands/review-pr.md`). The command is a thin orchestrator that spawns four code reviewers in parallel, then runs two post-review agents sequentially. You can also invoke it manually: `/review-pr 78`.
 
 **Code reviewers** — fan out in a single tool-use block so they run in parallel; each gets its own context window, focused tool allowlist, and per-reviewer model:
 
@@ -174,7 +174,7 @@ Each subagent returns a compact JSON object, keeping the main context small.
 **Hard rules:** never `gh pr review --approve`, only `gh pr comment`; never force-push to main. `pr-fix-applier` and `pr-readme-updater` inherit both rules and additionally must never widen the diff into files the PR did not touch.
 
 **Files:**
-- `/review-pr` — orchestrator skill (`.claude/skills/review-pr.md`)
+- `/review-pr` — orchestrator slash command (`.claude/commands/review-pr.md`)
 - Reviewers — `.claude/agents/pr-{reuse,quality,efficiency,security}-reviewer.md`
 - Post-review agents — `.claude/agents/pr-fix-applier.md`, `.claude/agents/pr-readme-updater.md`
 - `/pr` — PR creation with issue linking and board management (`.claude/commands/pr.md`)
