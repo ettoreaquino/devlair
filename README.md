@@ -452,6 +452,8 @@ cli/                    # v2 TypeScript CLI (alpha)
     wizard/             # interactive wizard (GroupSelect, ModuleSelect, Confirmation)
     lib/                # theme, types, runner, modules, platform detection,
                         # args, selection, profiles, jsonConfig, elevate
+  modules/              # shell modules executed by the v2 binary
+                        # (packaged into modules.tar.gz on release)
 assets/
   logo.svg              # brand mark (dark background)
   logo-light.svg        # brand mark (light background variant)

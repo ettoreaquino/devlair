@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { runModule } from "../lib/runner.js";
 import type { ModuleContext, ModuleEvent, Status } from "../lib/types.js";
 
-const LIB_PATH = join(import.meta.dir, "../../../modules/_lib.sh");
+const LIB_PATH = join(import.meta.dir, "../../modules/_lib.sh");
 
 let tmpDir: string;
 
