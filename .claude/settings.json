@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "jq -r '.tool_input.command // \"\"' | head -1 | grep -qE '^gh pr create\\b' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"A pull request was just created. You MUST now run the /review-pr skill to perform both a code review and a README review, then post structured findings as PR comments. Use the PR number from the gh pr create output.\"}}' || true",
+            "command": "jq -r '.tool_input.command // \"\"' | head -1 | grep -qE '(^|[[:space:]]|&&[[:space:]]*|;[[:space:]]*|\\|[[:space:]]*)gh[[:space:]]+pr[[:space:]]+create\\b' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"A pull request was just created. You MUST now run the /review-pr skill to perform both a code review and a README review, then post structured findings as PR comments. Use the PR number from the gh pr create output.\"}}' || true",
             "timeout": 5,
             "statusMessage": "Checking for PR review..."
           }
