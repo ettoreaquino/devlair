@@ -223,7 +223,7 @@ devlair hooks into Claude Code to track session usage and display a dashboard:
 <details>
 <summary><b>System</b> — OS packages and essentials</summary>
 
-Runs `apt update && upgrade` and installs core packages: `git`, `curl`, `vim`, `htop`, `tmux`, `zsh`, `bat`, `fzf`, `build-essential`, `ufw`, `fail2ban`, and more.
+Runs `apt update && upgrade` and installs core packages: `git`, `curl`, `vim`, `htop`, `tmux`, `zsh`, `bat`, `fzf`, `build-essential`, and more. On bare Linux it also installs `openssh-server`, `ufw`, `fail2ban`, and `avahi-daemon`; these are skipped on WSL because they ship systemd-managed postinst scripts that don't work under WSL's systemd-less default (the dedicated `ssh` and `firewall` modules are also Linux-only).
 
 </details>
 
