@@ -144,33 +144,39 @@ Version bumps are determined from Conventional Commits: `fix:` → patch, `feat:
 
 ## PR review automation
 
-Every PR runs through a fan-out review pipeline that posts three structured comments. A `PostToolUse` hook in `.claude/settings.json` fires after `gh pr create` and tells the main session to invoke the `/review-pr` skill. The skill is a thin orchestrator that spawns five custom subagents (defined in `.claude/agents/`) **in a single tool-use block so they run in parallel** — this gives each reviewer its own context window, focused tool allowlist, and per-reviewer model.
+Every PR runs through a fan-out review pipeline that ends with a single structured comment. A `PostToolUse` hook in `.claude/settings.json` fires after `gh pr create` and tells the main session to invoke the `/review-pr` skill. The skill is a thin orchestrator that spawns four code reviewers in parallel, then runs two post-review agents sequentially.
 
-**Subagents** (`.claude/agents/`):
+**Code reviewers** — fan out in a single tool-use block so they run in parallel; each gets its own context window, focused tool allowlist, and per-reviewer model:
 
 - `pr-reuse-reviewer` (sonnet) — flags new code that duplicates existing utilities or helpers
 - `pr-quality-reviewer` (sonnet) — redundant state, copy-paste, leaky abstractions, useless comments
 - `pr-efficiency-reviewer` (haiku) — redundant work, missed concurrency, hot-path bloat, memory leaks
 - `pr-security-reviewer` (sonnet) — injection, secrets, privilege, supply-chain, network, container, data
-- `pr-readme-reviewer` (haiku) — README drift; returns suggested patches that the orchestrator applies
 
-Each subagent returns a compact JSON object (`{findings, verdict}`), keeping the main context small.
+**Post-review agents** — strictly sequential (the README sync must see the post-fix tree):
+
+- `pr-fix-applier` (sonnet) — applies the unambiguous findings, runs gates, commits, pushes. Reports `applied`/`declined`/`failed` for the final comment.
+- `pr-readme-updater` (sonnet) — syncs `README.md` against the post-fix working tree. Edits directly, commits as a separate `docs(readme):` commit, pushes. No code gates (README is markdown).
+
+Each subagent returns a compact JSON object, keeping the main context small.
 
 **Pipeline steps** (in `/review-pr`):
 
 1. Gather PR context (`gh pr view`, `gh pr diff`).
-2. Fan out the five subagents in parallel.
+2. Fan out the four code reviewers in parallel.
 3. Run test-plan verification inline in the working tree (`bun test`, `pytest`, `bun run lint`, `bun run typecheck`); update PR body checkboxes.
-4. Apply README patches returned by `pr-readme-reviewer` (commit + push to the PR branch). Code-review findings are fixed inline only when unambiguous; everything else surfaces as comment items.
-5. Post three PR comments: Code Review, Test Plan Verification, README Review.
+4. Invoke `pr-fix-applier` with the reviewer JSON. It edits, gates, commits, and pushes. If a gate fails, it reverts that edit and surfaces the failure.
+5. Invoke `pr-readme-updater` with the post-fix branch diff. It edits `README.md` only within its declared scope (v2 section + relevant command-index rows for v2 PRs, the inverse for v1 PRs) and commits separately.
+6. Post one PR comment: Code Review + Auto-applied fixes (crediting each reviewer) + README sync + Test plan verification.
 
 **Manual invocation:** Run `/review-pr` (auto-detects current branch's PR) or `/review-pr #66` for a specific PR.
 
-**Hard rules:** never `gh pr review --approve`, only `gh pr comment`; never force-push to main.
+**Hard rules:** never `gh pr review --approve`, only `gh pr comment`; never force-push to main. `pr-fix-applier` and `pr-readme-updater` inherit both rules and additionally must never widen the diff into files the PR did not touch.
 
 **Files:**
 - `/review-pr` — orchestrator skill (`.claude/skills/review-pr.md`)
-- Subagents — `.claude/agents/pr-*-reviewer.md`
+- Reviewers — `.claude/agents/pr-{reuse,quality,efficiency,security}-reviewer.md`
+- Post-review agents — `.claude/agents/pr-fix-applier.md`, `.claude/agents/pr-readme-updater.md`
 - `/pr` — PR creation with issue linking and board management (`.claude/commands/pr.md`)
 - `/board` — project board visibility (`.claude/skills/board.md`)
 
