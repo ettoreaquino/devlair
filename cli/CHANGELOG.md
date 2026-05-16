@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.1-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.2.0-alpha.1...devlair-cli-v2.2.1-alpha.1) (2026-05-16)
+
+
+### Bug Fixes
+
+* **cli:** re-exec with execPath under sudo so bun-compiled binary elevates ([1986963](https://github.com/ettoreaquino/devlair/commit/1986963a23ae1b88457b619c4b9eb37a7b336545)), closes [#81](https://github.com/ettoreaquino/devlair/issues/81)
+* **cli:** re-exec with execPath under sudo to fix WSL elevation ([1455ffd](https://github.com/ettoreaquino/devlair/commit/1455ffd4ee431c553874efb515f8d31e793a3ed5))
+
 ## [2.2.0-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.1.0-alpha.1...devlair-cli-v2.2.0-alpha.1) (2026-05-16)
 
 
