@@ -54,6 +54,7 @@ After all applied edits, run the gates that apply to the changed files. Run inde
 |---|---|
 | `cli/` | `bun run typecheck`, `bun run lint`, `bun test` |
 | `devlair/` or `tests/` | `uv run ruff check devlair/ tests/`, `uv run pytest tests/unit/` |
+| `.claude/` only (markdown) | No code gates apply — run `git diff --check` for whitespace only |
 | Anything else | At minimum `git diff --check` for whitespace errors |
 
 If **any** gate fails:

@@ -61,7 +61,7 @@ If `pushed: false`, surface why (gate failures or no findings worth applying) in
 
 ## Step 5: Update the README (`pr-readme-updater`)
 
-Skip this step only when `pr-fix-applier` returned `pushed: false` **and** its `failed` list is non-empty — i.e. gates failed and the tree is in an indeterminate state. In every other case (clean tree with no fixes needed, or successful fix push), run the updater.
+Skip this step only when `pr-fix-applier` returned `pushed: false` **and** its `failed` list is non-empty — i.e. a gate failure left the tree in an indeterminate state. `pushed: false` alone (no findings to apply, or all findings declined) is not a reason to skip; the tree is clean and the updater should still run.
 
 Invoke `pr-readme-updater` as a single Agent call. Pass:
 
