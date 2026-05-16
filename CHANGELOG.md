@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.1](https://github.com/ettoreaquino/devlair/compare/v1.7.0...v1.7.1) (2026-05-12)
+
+
+### Bug Fixes
+
+* **ci:** use correct release-please output key for v1 builds ([fe9a19b](https://github.com/ettoreaquino/devlair/commit/fe9a19b79dd0f9a3b733c278fd815d8891d84b7e)), closes [#70](https://github.com/ettoreaquino/devlair/issues/70)
+
 ## [1.7.0](https://github.com/ettoreaquino/devlair/compare/v1.6.1...v1.7.0) (2026-05-09)
 
 
