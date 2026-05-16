@@ -62,14 +62,15 @@ If `pushed: false`, surface why (gate failures or no findings worth applying) in
 
 ## Step 5: Update the README (`pr-readme-updater`)
 
-Only run this step if `pr-fix-applier` returned `pushed: true` **or** there were zero applied fixes (i.e. the working tree already matches what merges).
+Skip this step only when `pr-fix-applier` returned `pushed: false` **and** its `failed` list is non-empty — i.e. gates failed and the tree is in an indeterminate state. In every other case (clean tree with no fixes needed, or successful fix push), run the updater.
 
 Invoke `pr-readme-updater` as a single Agent call. Pass:
 
 - The PR number, branch name, and head SHA (after Step 4's push, if any).
-- The full branch diff vs `main` (re-fetch via `gh pr diff <N>` so the agent sees the post-fix state).
+- The PR's file list from Step 1 (the updater uses this to decide v1-vs-v2 scope deterministically — never by scanning the diff text).
+- The branch diff: re-fetch via `gh pr diff <N>` **only when** `pr-fix-applier` pushed new commits in Step 4. Otherwise reuse the diff captured in Step 1 — the tree has not changed.
 
-`pr-readme-updater` returns JSON with `committed`, `changes`, and `noted_code_drift`. Keep this object for Step 6.
+`pr-readme-updater` returns JSON with `committed`, `changes`, and `noted_code_drift`. Before rendering Step 6, drop any `noted_code_drift` item whose `file` already appears in `pr-fix-applier.applied` — those drifts have been resolved and would mislead the reader.
 
 ## Step 6: Post one comment
 
@@ -92,9 +93,11 @@ Comment body shape:
 <bullets, or "No issues found.">
 
 #### Security
-| # | Category | Finding | File | Severity | Auto-fix |
-|---|----------|---------|------|----------|----------|
-<one row per finding; "Auto-fix" column says "applied", "declined (<reason>)", or "failed (<error>)">
+| # | Category | Finding | File | Severity |
+|---|----------|---------|------|----------|
+<one row per finding>
+
+(Auto-fix disposition for every reviewer is rendered once in the **Auto-applied fixes** subsection below — do not duplicate it here.)
 
 **Verdict:** <Ship it ✅ / Needs changes ❌>
 
