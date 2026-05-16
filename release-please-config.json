@@ -8,7 +8,7 @@
       "include-component-in-tag": false,
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": true,
-      "exclude-paths": ["cli"],
+      "exclude-paths": ["cli", ".claude", ".github", "CLAUDE.md", "README.md"],
       "extra-files": [
         "devlair/__init__.py"
       ]
@@ -19,7 +19,8 @@
       "include-component-in-tag": true,
       "tag-separator": "-",
       "prerelease": true,
-      "prerelease-type": "alpha"
+      "prerelease-type": "alpha",
+      "exclude-paths": [".claude", ".github", "CLAUDE.md", "README.md"]
     }
   }
 }
