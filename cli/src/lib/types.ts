@@ -14,7 +14,8 @@ export type ModuleEvent =
   | { type: "progress"; message: string; percent?: number }
   | { type: "result"; status: Status; detail: string }
   | { type: "check"; label: string; status: Status; detail?: string }
-  | { type: "install"; tool: string; source: string; verified: boolean };
+  | { type: "install"; tool: string; source: string; verified: boolean }
+  | { type: "auth_url"; url: string; message: string };
 
 export interface ModuleResult {
   status: Status;

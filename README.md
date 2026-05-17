@@ -448,7 +448,7 @@ cli/                    # v2 TypeScript CLI (alpha)
   src/
     index.tsx           # Ink app entrypoint
     commands/           # init, doctor, upgrade, claude, disable-password
-    components/         # Ink UI components (Logo, Help)
+    components/         # Ink UI components (Logo, Help, Progress, Summary)
     wizard/             # interactive wizard (GroupSelect, ModuleSelect, Confirmation)
     lib/                # theme, types, runner, modules, platform detection,
                         # args, selection, profiles, jsonConfig, elevate

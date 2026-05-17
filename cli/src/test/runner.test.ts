@@ -140,6 +140,23 @@ exit 0`,
     });
   });
 
+  test("parses auth_url events", async () => {
+    const script = writeScript(
+      "auth.sh",
+      `source "${LIB_PATH}"
+read_context
+json_auth_url "https://login.tailscale.com/a/xyz" "Open in browser"
+json_result "ok" "connected"
+exit 0`,
+    );
+    const { events } = await collect(script);
+    expect(events).toContainEqual({
+      type: "auth_url",
+      url: "https://login.tailscale.com/a/xyz",
+      message: "Open in browser",
+    });
+  });
+
   test("drops malformed JSON lines without failing", async () => {
     const script = writeScript(
       "noisy.sh",
@@ -285,6 +302,15 @@ json_install "awscli" "aws.amazon.com" true`);
       .map((l) => JSON.parse(l));
     expect(lines[0]).toEqual({ type: "install", tool: "uv", source: "astral.sh", verified: false });
     expect(lines[1]).toEqual({ type: "install", tool: "awscli", source: "aws.amazon.com", verified: true });
+  });
+
+  test("json_auth_url emits url + message", () => {
+    const { stdout } = runLibScript(`json_auth_url "https://login.tailscale.com/a/abc123" "Open in browser"`);
+    expect(JSON.parse(stdout.trim())).toEqual({
+      type: "auth_url",
+      url: "https://login.tailscale.com/a/abc123",
+      message: "Open in browser",
+    });
   });
 
   test("ctx_get reads top-level keys from context", () => {

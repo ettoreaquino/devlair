@@ -54,6 +54,8 @@ function isModuleEvent(value: unknown): value is ModuleEvent {
       );
     case "install":
       return typeof v.tool === "string" && typeof v.source === "string" && typeof v.verified === "boolean";
+    case "auth_url":
+      return typeof v.url === "string" && typeof v.message === "string";
     default:
       return false;
   }

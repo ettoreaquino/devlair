@@ -2,7 +2,7 @@
 
 import { Box, Text } from "ink";
 import Spinner from "ink-spinner";
-import { D_COMMENT, D_GREEN, D_ORANGE, D_PINK, D_PURPLE, D_RED } from "../lib/theme.js";
+import { D_COMMENT, D_CYAN, D_GREEN, D_ORANGE, D_PINK, D_PURPLE, D_RED } from "../lib/theme.js";
 import type { Status } from "../lib/types.js";
 
 export type ModuleRunStatus = Status | "pending" | "running";
@@ -13,6 +13,17 @@ export interface ModuleRun {
   status: ModuleRunStatus;
   detail: string;
   progressMsg: string;
+  authUrl?: { url: string; message: string };
+}
+
+function AuthPanel({ url, message }: { url: string; message: string }) {
+  return (
+    <Box flexDirection="column" marginLeft={4} marginY={1} paddingX={2} borderStyle="round" borderColor={D_PURPLE}>
+      <Text color={D_PINK}>{message}</Text>
+      <Text color={D_CYAN}>{url}</Text>
+      <Text color={D_COMMENT}>Waiting for authentication…</Text>
+    </Box>
+  );
 }
 
 const STATUS_ICON: Record<string, { char: string; color: string }> = {
@@ -27,16 +38,19 @@ function ModuleLine({ mod, index, total }: { mod: ModuleRun; index: number; tota
 
   if (mod.status === "running") {
     return (
-      <Box>
-        <Text>{"  "}</Text>
-        <Text color={D_COMMENT}>{counter}</Text>
-        <Text> </Text>
-        <Text color={D_PINK}>{mod.label}</Text>
-        <Text> </Text>
-        <Text color={D_PURPLE}>
-          <Spinner type="dots" />
-        </Text>
-        {mod.progressMsg ? <Text color={D_COMMENT}> {mod.progressMsg}</Text> : null}
+      <Box flexDirection="column">
+        <Box>
+          <Text>{"  "}</Text>
+          <Text color={D_COMMENT}>{counter}</Text>
+          <Text> </Text>
+          <Text color={D_PINK}>{mod.label}</Text>
+          <Text> </Text>
+          <Text color={D_PURPLE}>
+            <Spinner type="dots" />
+          </Text>
+          {mod.progressMsg ? <Text color={D_COMMENT}> {mod.progressMsg}</Text> : null}
+        </Box>
+        {mod.authUrl ? <AuthPanel url={mod.authUrl.url} message={mod.authUrl.message} /> : null}
       </Box>
     );
   }
