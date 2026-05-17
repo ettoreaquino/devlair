@@ -16,9 +16,15 @@ INSTALL_DIR="/usr/local/bin"
 SHARE_DIR="/usr/local/share/devlair"
 CHANNEL="stable"
 
+# Computed after we know INSTALL_DIR — reused for binary install, modules
+# install, and any apt-get fallbacks below so the sudo decision is made once.
+MAYBE_SUDO=""
+[[ ! -w "$INSTALL_DIR" ]] && MAYBE_SUDO="sudo"
+
 # ── Dracula-styled output ─────────────────────────────────────────────────────
-# Match cli/src/lib/theme.ts (and devlair/console.py). Auto-disable on non-TTY
-# or when NO_COLOR is set so piped/CI output stays clean.
+# Keep in sync with Dracula palette (cli/src/lib/theme.ts) — drift produces
+# off-brand output. Auto-disable on non-TTY or when NO_COLOR is set so
+# piped/CI output stays clean.
 if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
   C_PURPLE=$'\033[38;2;189;147;249m'
   C_PINK=$'\033[38;2;255;121;198m'
@@ -38,6 +44,37 @@ ok()      { printf "  %s✓%s %s\n" "$C_GREEN" "$C_RESET" "$1"; }
 warn()    { printf "  %s!%s %s\n" "$C_ORANGE" "$C_RESET" "$1"; }
 err()     { printf "  %s✗%s %s\n" "$C_RED" "$C_RESET" "$1" >&2; }
 meta()    { printf "    %s%s%s\n" "$C_COMMENT" "$1" "$C_RESET"; }
+
+# verify_checksum <file> <asset_name> <checksums_file> <hard_fail_on_missing>
+# Compares sha256 of <file> against the entry for <asset_name> in <checksums_file>.
+# When <hard_fail_on_missing> is "1", a missing entry aborts; otherwise it warns
+# and continues. Mismatches always abort. Removes <file> on failure.
+verify_checksum() {
+  local file="$1" asset="$2" sums="$3" hard_fail="$4"
+  local expected actual
+  expected=$(grep " ${asset}\$" "$sums" | awk '{print $1}')
+  actual=$(sha256sum "$file" | awk '{print $1}')
+
+  if [[ -z "$expected" ]]; then
+    if [[ "$hard_fail" == "1" ]]; then
+      err "no checksum entry for ${asset} in checksums.txt — aborting"
+      rm -f "$file"
+      exit 1
+    fi
+    warn "no checksum found for ${asset} — skipping verification"
+    return 0
+  fi
+
+  if [[ "$actual" != "$expected" ]]; then
+    err "checksum mismatch for ${asset}!"
+    meta "expected: ${expected}"
+    meta "got:      ${actual}"
+    rm -f "$file"
+    exit 1
+  fi
+
+  ok "SHA-256 verified"
+}
 
 # ── Parse flags ───────────────────────────────────────────────────────────────
 for arg in "$@"; do
@@ -105,31 +142,16 @@ curl -fsSL "${BASE_URL}/checksums.txt" -o "$TMP_CHECKSUMS"
 ok "downloaded ${ASSET}"
 
 # ── Verify SHA-256 checksum ──────────────────────────────────────────────────
-EXPECTED=$(grep " ${ASSET}\$" "$TMP_CHECKSUMS" | awk '{print $1}')
-ACTUAL=$(sha256sum "$TMP" | awk '{print $1}')
-
-if [[ -z "$EXPECTED" ]]; then
-  warn "no checksum found for ${ASSET} — skipping verification"
-elif [[ "$ACTUAL" != "$EXPECTED" ]]; then
-  err "checksum mismatch!"
-  meta "expected: ${EXPECTED}"
-  meta "got:      ${ACTUAL}"
-  rm -f "$TMP"
-  exit 1
-else
-  ok "SHA-256 verified"
-fi
+# Stable channel: soft-warn on missing entry (pre-existing behavior; tracked
+# separately). Mismatches still hard-fail inside verify_checksum.
+verify_checksum "$TMP" "$ASSET" "$TMP_CHECKSUMS" 0
 
 chmod 755 "$TMP"
 
 # ── Install (sudo if needed) ──────────────────────────────────────────────────
 section "Installing binary"
-if [[ -w "$INSTALL_DIR" ]]; then
-  mv "$TMP" "${INSTALL_DIR}/${BIN}"
-else
-  sudo mv "$TMP" "${INSTALL_DIR}/${BIN}"
-fi
-chmod 755 "${INSTALL_DIR}/${BIN}" 2>/dev/null || sudo chmod 755 "${INSTALL_DIR}/${BIN}"
+$MAYBE_SUDO mv "$TMP" "${INSTALL_DIR}/${BIN}"
+$MAYBE_SUDO chmod 755 "${INSTALL_DIR}/${BIN}"
 ok "${INSTALL_DIR}/${BIN}"
 
 # ── Pre-release: fetch modules tarball ────────────────────────────────────────
@@ -140,25 +162,10 @@ if [[ "$CHANNEL" == "pre" ]]; then
   TMP_MODULES=$(mktemp)
   curl -fsSL "${BASE_URL}/modules.tar.gz" -o "$TMP_MODULES"
 
-  EXPECTED_MODULES=$(grep " modules.tar.gz\$" "$TMP_CHECKSUMS" | awk '{print $1}')
-  ACTUAL_MODULES=$(sha256sum "$TMP_MODULES" | awk '{print $1}')
-
   # Modules ship a fresh tree on every release — a missing checksum entry
   # means CI is misconfigured, not a soft warning. Hard-fail rather than
   # extract an unverified archive and execute its scripts as root.
-  if [[ -z "$EXPECTED_MODULES" ]]; then
-    err "no checksum entry for modules.tar.gz in checksums.txt — aborting"
-    rm -f "$TMP_MODULES"
-    exit 1
-  elif [[ "$ACTUAL_MODULES" != "$EXPECTED_MODULES" ]]; then
-    err "checksum mismatch for modules.tar.gz!"
-    meta "expected: ${EXPECTED_MODULES}"
-    meta "got:      ${ACTUAL_MODULES}"
-    rm -f "$TMP_MODULES"
-    exit 1
-  else
-    ok "SHA-256 verified"
-  fi
+  verify_checksum "$TMP_MODULES" "modules.tar.gz" "$TMP_CHECKSUMS" 1
 
   # Replace the modules dir atomically: extract to a staging path, then swap.
   # --no-same-owner / --no-same-permissions ignore uid/gid/mode bits from the
@@ -169,9 +176,6 @@ if [[ "$CHANNEL" == "pre" ]]; then
   tar -xzf "$TMP_MODULES" -C "$STAGE_DIR" --no-same-owner --no-same-permissions
   chmod -R u=rwX,go=rX "$STAGE_DIR/modules"
   rm -f "$TMP_MODULES"
-
-  MAYBE_SUDO=""
-  [[ ! -w "$(dirname "$SHARE_DIR")" ]] && MAYBE_SUDO="sudo"
 
   $MAYBE_SUDO rm -rf "${SHARE_DIR}.old" 2>/dev/null || true
   [[ -d "$SHARE_DIR" ]] && $MAYBE_SUDO mv "$SHARE_DIR" "${SHARE_DIR}.old"
