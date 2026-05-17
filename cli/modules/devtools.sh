@@ -47,12 +47,14 @@ do_run() {
     run_shell_as "$USERNAME" "bash \"$script\"" >&2
     rm -f "$script"
     json_progress "installing Python via pyenv"
+    # Pinning to a stable major.minor avoids 404s when `pyenv latest 3`
+    # resolves to a version python-build's recipe can no longer fetch.
     run_shell_as "$USERNAME" "
       export PYENV_ROOT=\"$USER_HOME/.pyenv\"
       export PATH=\"\$PYENV_ROOT/bin:\$PATH\"
       eval \"\$(pyenv init -)\"
-      pyenv install -s 3
-      pyenv global \"\$(pyenv latest 3)\"
+      pyenv install -s 3.12
+      pyenv global 3.12
     " >&2
     json_install "pyenv" "pyenv.run" false
     installed+=(pyenv)
