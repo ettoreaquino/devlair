@@ -16,6 +16,7 @@ import { type ModuleRun, Progress } from "../components/Progress.js";
 import { OptionalHint, Summary } from "../components/Summary.js";
 import type { InitFlags } from "../lib/args.js";
 import { buildModuleContext } from "../lib/context.js";
+import { createInitLogDir, moduleLogPath } from "../lib/logs.js";
 import type { Group, ModuleSpec } from "../lib/modules.js";
 import { moduleScriptPath } from "../lib/paths.js";
 import { detectPlatform, detectWslVersion } from "../lib/platform.js";
@@ -98,6 +99,7 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
 
   const [modules, setModules] = useState<ModuleRun[]>([]);
   const [done, setDone] = useState(false);
+  const [logDir, setLogDir] = useState<string | null>(null);
 
   // Re-initialize module state whenever specs change
   // (wizard transitions from [] to the real selection).
@@ -118,6 +120,15 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
     if (!autoStart || specs.length === 0) return;
 
     const abortController = new AbortController();
+    // Lazily create the log directory the first time we actually run modules,
+    // so the wizard's cancel-without-running path doesn't leave empty dirs.
+    let runLogDir: string | null = null;
+    try {
+      runLogDir = createInitLogDir(context.userHome);
+      setLogDir(runLogDir);
+    } catch {
+      // Logging is best-effort — never block a run because we couldn't mkdir.
+    }
 
     async function run() {
       for (let i = 0; i < specs.length; i++) {
@@ -131,7 +142,10 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
 
         try {
           const scriptPath = moduleScriptPath(spec.key);
-          const iter = runModule(scriptPath, context, "run", { signal: abortController.signal });
+          const iter = runModule(scriptPath, context, "run", {
+            signal: abortController.signal,
+            logFile: runLogDir ? moduleLogPath(runLogDir, spec.key) : undefined,
+          });
 
           while (true) {
             const { value, done: iterDone } = await iter.next();
@@ -182,7 +196,7 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
     };
   }, [specs, context, autoStart]);
 
-  return { modules, done };
+  return { modules, done, logDir };
 }
 
 // ── Non-interactive init (flags provided) ──────────────────────────────────
@@ -259,14 +273,14 @@ function NonInteractiveInit({ flags }: { flags: InitFlags }) {
 
 function NonInteractiveInitView({ state }: { state: InitState }) {
   const { platform, context, selected, optional, skippedNames, profile } = state;
-  const { modules, done } = useModuleExecution(selected, context, true);
+  const { modules, done, logDir } = useModuleExecution(selected, context, true);
 
   return (
     <Box flexDirection="column">
       <InitHeader username={context.username} host={hostname()} platform={platform} profileName={profile?.name} />
       <PlatformSkipped names={skippedNames} />
       <Progress modules={modules} total={selected.length} />
-      {done && <Summary modules={modules} />}
+      {done && <Summary modules={modules} logDir={logDir} />}
       {done && <OptionalHint specs={optional} />}
       <Text>{""}</Text>
     </Box>
@@ -296,7 +310,11 @@ function WizardInit() {
   };
 
   // Execution state — only populated after wizard confirmation
-  const { modules, done } = useModuleExecution(selectedModules, context, phase === "running" || phase === "done");
+  const { modules, done, logDir } = useModuleExecution(
+    selectedModules,
+    context,
+    phase === "running" || phase === "done",
+  );
 
   return (
     <Box flexDirection="column">
@@ -337,7 +355,7 @@ function WizardInit() {
       {(phase === "running" || phase === "done") && (
         <>
           <Progress modules={modules} total={selectedModules.length} />
-          {done && <Summary modules={modules} />}
+          {done && <Summary modules={modules} logDir={logDir} />}
         </>
       )}
 
