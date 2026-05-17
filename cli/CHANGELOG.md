@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.5-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.2.4-alpha.1...devlair-cli-v2.2.5-alpha.1) (2026-05-17)
+
+
+### Bug Fixes
+
+* **modules/tailscale:** never block on interactive browser auth ([e4ba6eb](https://github.com/ettoreaquino/devlair/commit/e4ba6ebecaf542b8aa982ffef53839a6017c7053))
+* **modules/tailscale:** never block on interactive browser auth ([a62df9f](https://github.com/ettoreaquino/devlair/commit/a62df9f6921b75ceba3be78a9e5319a3479a846f))
+
 ## [2.2.4-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.2.3-alpha.1...devlair-cli-v2.2.4-alpha.1) (2026-05-17)
 
 
