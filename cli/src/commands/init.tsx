@@ -16,7 +16,7 @@ import { type ModuleRun, Progress } from "../components/Progress.js";
 import { OptionalHint, Summary } from "../components/Summary.js";
 import type { InitFlags } from "../lib/args.js";
 import { buildModuleContext } from "../lib/context.js";
-import { createInitLogDir, moduleLogPath } from "../lib/logs.js";
+import { createInitLogDir, invokerOwnership, moduleLogPath } from "../lib/logs.js";
 import type { Group, ModuleSpec } from "../lib/modules.js";
 import { moduleScriptPath } from "../lib/paths.js";
 import { detectPlatform, detectWslVersion } from "../lib/platform.js";
@@ -120,8 +120,7 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
     if (!autoStart || specs.length === 0) return;
 
     const abortController = new AbortController();
-    // Lazily create the log directory the first time we actually run modules,
-    // so the wizard's cancel-without-running path doesn't leave empty dirs.
+    // Avoid creating empty dirs when the wizard is cancelled before running.
     let runLogDir: string | null = null;
     try {
       runLogDir = createInitLogDir(context.userHome);
@@ -142,9 +141,11 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
 
         try {
           const scriptPath = moduleScriptPath(spec.key);
+          const ownership = invokerOwnership();
           const iter = runModule(scriptPath, context, "run", {
             signal: abortController.signal,
             logFile: runLogDir ? moduleLogPath(runLogDir, spec.key) : undefined,
+            chownUidGid: ownership ?? undefined,
           });
 
           while (true) {
