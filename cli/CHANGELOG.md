@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.3.0-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.2.5-alpha.1...devlair-cli-v2.3.0-alpha.1) (2026-05-17)
+
+
+### Features
+
+* **modules/tailscale:** drive interactive auth and wait until connected ([962112b](https://github.com/ettoreaquino/devlair/commit/962112bc1715309f156cd6a6dca34a685a8a025a))
+* **modules/tailscale:** drive interactive auth and wait until connected ([0d27beb](https://github.com/ettoreaquino/devlair/commit/0d27beb2a8824e226276264f0a703ee23e9a9362))
+
 ## [2.2.5-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.2.4-alpha.1...devlair-cli-v2.2.5-alpha.1) (2026-05-17)
 
 
