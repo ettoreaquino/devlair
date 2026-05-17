@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.4.0-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.3.1-alpha.1...devlair-cli-v2.4.0-alpha.1) (2026-05-17)
+
+
+### Features
+
+* **init:** persist module stderr to per-run log files ([6467a8c](https://github.com/ettoreaquino/devlair/commit/6467a8c24d7ef74e187c38b4ed7e7b523a446af0))
+* **init:** persist module stderr to per-run log files ([8a8670c](https://github.com/ettoreaquino/devlair/commit/8a8670c0c78c09f5ef00c00e19316b18a4f48ddd))
+
+
+### Bug Fixes
+
+* **cli:** address PR review findings on feat/init-logs ([2dc9b61](https://github.com/ettoreaquino/devlair/commit/2dc9b61dc0393abb5e96a92f6d9d9d857ea53136))
+
 ## [2.3.1-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.3.0-alpha.1...devlair-cli-v2.3.1-alpha.1) (2026-05-17)
 
 
