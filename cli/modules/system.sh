@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# modules/system.sh — System update
+# cli/modules/system.sh — System update
 # devlair module: system
 set -euo pipefail
 
