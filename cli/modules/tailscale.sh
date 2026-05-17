@@ -39,13 +39,15 @@ ts_connect() {
   fi
 
   json_progress "starting tailscale"
-  local log
+  # Initialise pid/log before the trap is armed so a signal that arrives
+  # between `trap` and `pid=$!` does not hit `set -u` "unbound variable".
+  local pid=""
+  local log=""
   log=$(mktemp)
-  # Ensure the backgrounded process and temp file are cleaned up on any exit.
   # shellcheck disable=SC2064
-  trap "kill \$pid 2>/dev/null || true; wait \$pid 2>/dev/null || true; rm -f \"\$log\"" EXIT INT TERM
+  trap 'kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true; rm -f "$log"' EXIT INT TERM
   tailscale up >"$log" 2>&1 &
-  local pid=$!
+  pid=$!
 
   local url=""
   local waited=0
@@ -57,6 +59,7 @@ ts_connect() {
   done
 
   if [[ -z "$url" ]]; then
+    trap - EXIT INT TERM
     kill "$pid" 2>/dev/null || true
     wait "$pid" 2>/dev/null || true
     rm -f "$log"
