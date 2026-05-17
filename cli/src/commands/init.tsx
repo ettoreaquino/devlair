@@ -109,6 +109,7 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
         status: "pending" as const,
         detail: "",
         progressMsg: "",
+        authUrl: undefined,
       })),
     );
     setDone(false);
@@ -155,6 +156,9 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
               setModules((prev) => prev.map((m, j) => (j === i ? { ...m, progressMsg: value.message } : m)));
             } else if (value.type === "result") {
               finalDetail = value.detail;
+            } else if (value.type === "auth_url") {
+              const authUrl = { url: value.url, message: value.message };
+              setModules((prev) => prev.map((m, j) => (j === i ? { ...m, authUrl } : m)));
             }
           }
         } catch (err) {
@@ -163,7 +167,9 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
         }
 
         setModules((prev) =>
-          prev.map((m, j) => (j === i ? { ...m, status: finalStatus, detail: finalDetail, progressMsg: "" } : m)),
+          prev.map((m, j) =>
+            j === i ? { ...m, status: finalStatus, detail: finalDetail, progressMsg: "", authUrl: undefined } : m,
+          ),
         );
       }
 

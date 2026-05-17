@@ -54,6 +54,15 @@ json_install() {
     "$(json_escape "$tool")" "$(json_escape "$source")" "$verified"
 }
 
+# json_auth_url URL MESSAGE -- surface an out-of-band authentication URL the
+# user must open in a browser. Unlike `progress`, the wizard renders this
+# persistently so the URL stays visible while the module polls for completion.
+json_auth_url() {
+  local url=$1 message=${2:-}
+  printf '{"type":"auth_url","url":%s,"message":%s}\n' \
+    "$(json_escape "$url")" "$(json_escape "$message")"
+}
+
 # read_context -- consume all of stdin into the CONTEXT global.
 # Must be called before ctx_get. Aborts with an error if jq is unavailable,
 # since the whole protocol (ctx_get and json_escape) depends on it; silently
