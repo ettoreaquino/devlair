@@ -19,7 +19,7 @@ function countByStatus(modules: ModuleRun[]) {
   return { ok, warn, fail, skip };
 }
 
-export function Summary({ modules }: { modules: ModuleRun[] }) {
+export function Summary({ modules, logDir }: { modules: ModuleRun[]; logDir?: string | null }) {
   const { ok, warn, fail, skip } = countByStatus(modules);
   const borderColor = fail === 0 ? D_GREEN : D_RED;
 
@@ -53,6 +53,16 @@ export function Summary({ modules }: { modules: ModuleRun[] }) {
           </Text>
         )}
       </Box>
+
+      {fail > 0 && logDir && (
+        <Box marginTop={1}>
+          <Text>
+            {"  "}
+            <Text color={D_COMMENT}>Logs: </Text>
+            <Text color={D_CYAN}>{logDir}</Text>
+          </Text>
+        </Box>
+      )}
     </Box>
   );
 }

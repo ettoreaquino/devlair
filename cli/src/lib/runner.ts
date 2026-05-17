@@ -7,6 +7,7 @@
 //   - stderr is buffered and surfaced to callers opting into verbose output.
 
 import { spawn } from "node:child_process";
+import { chownSync, createWriteStream } from "node:fs";
 import type { ModuleContext, ModuleEvent, ModuleMode, Status } from "./types.js";
 import { ModuleExitCode } from "./types.js";
 
@@ -19,6 +20,17 @@ export interface RunOptions {
   onStderr?: (line: string) => void;
   /** Override the bash executable (defaults to "bash"). Useful for tests. */
   bashPath?: string;
+  /**
+   * Tee every stderr byte to this file as it streams. Created with mode 0600.
+   * Survives abort/timeout so a hung run still leaves a partial log on disk.
+   */
+  logFile?: string;
+  /**
+   * If set, chownSync the log file to [uid, gid] immediately after opening it.
+   * Populated from SUDO_UID/SUDO_GID when running under sudo so the invoking
+   * user can read their own module logs without elevated privileges.
+   */
+  chownUidGid?: [number, number];
 }
 
 export interface RunResult {
@@ -129,9 +141,22 @@ export async function* runModule(
 
   let stderrBuf = "";
   let stderrCarry = "";
+  const logStream = options.logFile ? createWriteStream(options.logFile, { mode: 0o600 }) : undefined;
+  if (logStream && options.logFile && options.chownUidGid) {
+    const [uid, gid] = options.chownUidGid;
+    const logFilePath = options.logFile;
+    logStream.once("open", () => {
+      try {
+        chownSync(logFilePath, uid, gid);
+      } catch {
+        // Best-effort; don't fail the run if chown is unavailable (e.g. non-root).
+      }
+    });
+  }
   child.stderr.setEncoding("utf8");
   child.stderr.on("data", (chunk: string) => {
     stderrBuf += chunk;
+    logStream?.write(chunk);
     if (!options.onStderr) return;
     stderrCarry += chunk;
     const lines = stderrCarry.split("\n");
@@ -177,5 +202,6 @@ export async function* runModule(
     // If the consumer abandoned the generator (early return / thrown error),
     // kill the process group so detached children don't linger.
     if (!exited) killTree("SIGTERM");
+    logStream?.end();
   }
 }
