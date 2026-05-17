@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.3.1-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.3.0-alpha.1...devlair-cli-v2.3.1-alpha.1) (2026-05-17)
+
+
+### Bug Fixes
+
+* **modules:** clear tailscale trap on no-URL path; pin pyenv Python to 3.12 ([36bcb93](https://github.com/ettoreaquino/devlair/commit/36bcb939d02398041425b2bcd08b7980de52fe48))
+* **modules:** clear tailscale trap on no-URL path; pin pyenv Python to 3.12 ([4511aa6](https://github.com/ettoreaquino/devlair/commit/4511aa60a5d7979ddc60e370eadc70cddaed7e9b))
+
 ## [2.3.0-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.2.5-alpha.1...devlair-cli-v2.3.0-alpha.1) (2026-05-17)
 
 
