@@ -10,16 +10,10 @@ read_context
 
 MODE=${1:-run}
 
-# Connect tailscale without ever blocking on browser auth.
-#
-# - With TS_AUTHKEY (env var) or config.tailscale_authkey set, we hand the key
-#   to `tailscale up --authkey=…` and bring the node up unattended.
-# - Without a key, `tailscale up` prints an auth URL on stderr and blocks until
-#   the user opens it. We can't drive that from a wizard, so we run it in the
-#   background, capture the URL it prints within a few seconds, kill the
-#   process, and surface the URL via a `warn` result. The user finishes auth
-#   out-of-band by running `sudo tailscale up` themselves.
+# tailscale up blocks on browser auth and cannot be driven interactively from
+# the wizard; this function surfaces the URL without blocking.
 ts_connect() {
+  local url_wait_secs=10
   local authkey="${TS_AUTHKEY:-}"
   if [[ -z "$authkey" ]]; then
     authkey=$(ctx_get_config tailscale_authkey)
@@ -27,7 +21,7 @@ ts_connect() {
 
   if [[ -n "$authkey" ]]; then
     json_progress "connecting with authkey"
-    tailscale up --authkey="$authkey" --reset >&2 || true
+    TS_AUTHKEY="$authkey" tailscale up --reset >&2 || true
     return
   fi
 
@@ -37,9 +31,7 @@ ts_connect() {
   # --timeout=0s makes `tailscale up` print the auth URL and return without
   # waiting for the user to open it on tailscaled versions that support it;
   # on older versions we fall back to a background process + sleep + kill.
-  if tailscale up --timeout=0s >"$log" 2>&1; then
-    : # already connected
-  fi
+  tailscale up --timeout=0s >"$log" 2>&1 || true
   local url
   url=$(grep -oE 'https://login\.tailscale\.com/[A-Za-z0-9_/.-]+' "$log" | head -1 || true)
   rm -f "$log"
@@ -51,7 +43,7 @@ ts_connect() {
     tailscale up >"$log" 2>&1 &
     local pid=$!
     local waited=0
-    while (( waited < 10 )); do
+    while (( waited < url_wait_secs )); do
       sleep 1
       ((waited++))
       url=$(grep -oE 'https://login\.tailscale\.com/[A-Za-z0-9_/.-]+' "$log" | head -1 || true)
