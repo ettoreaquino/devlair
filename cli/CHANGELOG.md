@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.4-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.2.3-alpha.1...devlair-cli-v2.2.4-alpha.1) (2026-05-17)
+
+
+### Bug Fixes
+
+* **cli:** release v2.2.4-alpha.1 with WSL bootstrap fixes ([68bac61](https://github.com/ettoreaquino/devlair/commit/68bac6179e7eee6e24dd64f0ff57b5179f2b643e))
+* **cli:** trigger v2.2.4-alpha.1 release with WSL bootstrap fixes ([9d221b1](https://github.com/ettoreaquino/devlair/commit/9d221b1e0a932b52d39fbcff62e94942f6137da4))
+
 ## [2.2.3-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.2.2-alpha.1...devlair-cli-v2.2.3-alpha.1) (2026-05-16)
 
 
