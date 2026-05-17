@@ -18,15 +18,7 @@ export interface ModuleRun {
 
 function AuthPanel({ url, message }: { url: string; message: string }) {
   return (
-    <Box
-      flexDirection="column"
-      marginLeft={4}
-      marginY={1}
-      paddingX={2}
-      paddingY={0}
-      borderStyle="round"
-      borderColor={D_PURPLE}
-    >
+    <Box flexDirection="column" marginLeft={4} marginY={1} paddingX={2} borderStyle="round" borderColor={D_PURPLE}>
       <Text color={D_PINK}>{message}</Text>
       <Text color={D_CYAN}>{url}</Text>
       <Text color={D_COMMENT}>Waiting for authentication…</Text>

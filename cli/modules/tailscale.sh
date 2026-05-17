@@ -19,7 +19,12 @@ MODE=${1:-run}
 # poll deadline expires first, we kill it.
 ts_connect() {
   local url_wait_secs=10
-  local poll_timeout_secs=${TS_AUTH_POLL_TIMEOUT_SECS:-300}
+  local poll_timeout_secs
+  if [[ "${TS_AUTH_POLL_TIMEOUT_SECS:-}" =~ ^[0-9]+$ ]]; then
+    poll_timeout_secs=$TS_AUTH_POLL_TIMEOUT_SECS
+  else
+    poll_timeout_secs=300
+  fi
   local poll_interval_secs=2
 
   local authkey="${TS_AUTHKEY:-}"
@@ -36,6 +41,9 @@ ts_connect() {
   json_progress "starting tailscale"
   local log
   log=$(mktemp)
+  # Ensure the backgrounded process and temp file are cleaned up on any exit.
+  # shellcheck disable=SC2064
+  trap "kill \$pid 2>/dev/null || true; wait \$pid 2>/dev/null || true; rm -f \"\$log\"" EXIT INT TERM
   tailscale up >"$log" 2>&1 &
   local pid=$!
 
@@ -61,6 +69,7 @@ ts_connect() {
   # `tailscale status` as soon as auth completes, even before this orphan
   # `tailscale up` returns.
   local elapsed=0
+  local timed_out=false
   while (( elapsed < poll_timeout_secs )); do
     if tailscale status >/dev/null 2>&1; then
       break
@@ -68,16 +77,17 @@ ts_connect() {
     sleep "$poll_interval_secs"
     elapsed=$((elapsed + poll_interval_secs))
   done
+  (( elapsed >= poll_timeout_secs )) && timed_out=true
 
+  # trap handles kill + wait + rm -f on EXIT; explicit cleanup here so the
+  # trap becomes a no-op for the normal path.
+  trap - EXIT INT TERM
   kill "$pid" 2>/dev/null || true
   wait "$pid" 2>/dev/null || true
   rm -f "$log"
 
   TS_AUTH_URL="$url"
-  TS_AUTH_TIMED_OUT="false"
-  if (( elapsed >= poll_timeout_secs )) && ! tailscale status >/dev/null 2>&1; then
-    TS_AUTH_TIMED_OUT="true"
-  fi
+  TS_AUTH_TIMED_OUT="$timed_out"
 }
 
 do_run() {
@@ -91,17 +101,18 @@ do_run() {
   fi
 
   TS_AUTH_URL=""
-  TS_AUTH_TIMED_OUT="false"
+  TS_AUTH_TIMED_OUT=""
   if ! tailscale status >/dev/null 2>&1; then
     ts_connect
   fi
 
   local ip
   ip=$(tailscale ip -4 2>/dev/null || true)
+  local poll_mins=$(( ${TS_AUTH_POLL_TIMEOUT_SECS:-300} / 60 ))
   if [[ -n "$ip" ]]; then
     json_result "ok" "$ip"
   elif [[ "$TS_AUTH_TIMED_OUT" == "true" ]]; then
-    json_result "fail" "auth not completed within 5 minutes — open $TS_AUTH_URL or run 'sudo tailscale up'"
+    json_result "fail" "auth not completed within ${poll_mins} minutes — open $TS_AUTH_URL or run 'sudo tailscale up'"
   elif [[ -n "$TS_AUTH_URL" ]]; then
     json_result "fail" "tailscale did not connect — open $TS_AUTH_URL or run 'sudo tailscale up'"
   else

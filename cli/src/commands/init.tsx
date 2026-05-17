@@ -109,7 +109,6 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
         status: "pending" as const,
         detail: "",
         progressMsg: "",
-        authUrl: undefined,
       })),
     );
     setDone(false);

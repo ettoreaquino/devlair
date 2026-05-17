@@ -55,8 +55,8 @@ json_install() {
 }
 
 # json_auth_url URL MESSAGE -- surface an out-of-band authentication URL the
-# user must open in a browser. Unlike `progress`, the wizard renders this
-# persistently so the URL stays visible while the module polls for completion.
+# user must open in a browser. Unlike `progress`, this event is sticky in the
+# UI and is not cleared by subsequent progress events.
 json_auth_url() {
   local url=$1 message=${2:-}
   printf '{"type":"auth_url","url":%s,"message":%s}\n' \
