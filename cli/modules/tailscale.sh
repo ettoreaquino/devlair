@@ -53,7 +53,8 @@ ts_connect() {
   local waited=0
   while (( waited < url_wait_secs )); do
     sleep 1
-    ((waited++))
+    # $((waited + 1)) avoids set -e abort on the first iteration where ((waited++)) would return 0
+    waited=$((waited + 1))
     url=$(grep -oE 'https://login\.tailscale\.com/[A-Za-z0-9_/.-]+' "$log" | head -1 || true)
     [[ -n "$url" ]] && break
   done
