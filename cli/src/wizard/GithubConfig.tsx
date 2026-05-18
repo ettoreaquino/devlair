@@ -1,10 +1,3 @@
-/**
- * Wizard step — collect github_email (required) and github_name (optional)
- * for the github module so its SSH key generation does not silently skip.
- * Shown after Confirmation, before module execution, only when `github`
- * is in the selected set and no profile already supplied these values.
- */
-
 import { Box, Text, useInput } from "ink";
 import { useState } from "react";
 import { D_COMMENT, D_CYAN, D_GREEN, D_PINK, D_PURPLE, D_RED } from "../lib/theme.js";
@@ -20,7 +13,7 @@ export interface GithubConfigProps {
   onCancel: () => void;
 }
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_RE = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
 
 type Field = "email" | "name";
 
@@ -39,11 +32,7 @@ export function GithubConfig({ onConfirm, onBack, onCancel }: GithubConfigProps)
       onBack();
       return;
     }
-    if (key.tab || key.downArrow) {
-      setFocus((f) => (f === "email" ? "name" : "email"));
-      return;
-    }
-    if (key.upArrow) {
+    if (key.tab || key.downArrow || key.upArrow) {
       setFocus((f) => (f === "email" ? "name" : "email"));
       return;
     }
