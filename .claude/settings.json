@@ -12,13 +12,13 @@
           },
           {
             "type": "command",
-            "command": "CMD=$(jq -r '.tool_input.command // \"\"' | head -1); echo \"$CMD\" | grep -qE '(^|[[:space:]]|&&[[:space:]]*|;[[:space:]]*|\\|[[:space:]]*)gh[[:space:]]+issue[[:space:]]+create\\b' && ! echo \"$CMD\" | grep -qE '/pr\\b' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"Heads up: gh issue create was run outside /pr. The issue may not be on the devlair roadmap board. Run /board-reconcile --dry-run to check, or /board-reconcile --fix to add it.\"}}' || true",
+            "command": "jq -r '.tool_input.command // \"\"' | head -1 | grep -qE '(^|[[:space:]]|&&[[:space:]]*|;[[:space:]]*|\\|[[:space:]]*)gh[[:space:]]+issue[[:space:]]+create\\b' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"Board coverage check: if this gh issue create ran outside /pr, run /board-reconcile --fix to ensure it is tracked on the devlair roadmap.\"}}' || true",
             "timeout": 5,
             "statusMessage": "Checking issue board coverage..."
           },
           {
             "type": "command",
-            "command": "CMD=$(jq -r '.tool_input.command // \"\"' | head -1); echo \"$CMD\" | grep -qE '(^|[[:space:]]|&&[[:space:]]*|;[[:space:]]*|\\|[[:space:]]*)gh[[:space:]]+pr[[:space:]]+create\\b' && ! echo \"$CMD\" | grep -qE '/pr\\b' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"Heads up: gh pr create was run outside /pr. The PR may not be on the board, may lack the Type field, and may not be linked to its issue properly. After /review-pr, run /board-reconcile --dry-run to verify.\"}}' || true",
+            "command": "jq -r '.tool_input.command // \"\"' | head -1 | grep -qE '(^|[[:space:]]|&&[[:space:]]*|;[[:space:]]*|\\|[[:space:]]*)gh[[:space:]]+pr[[:space:]]+create\\b' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"Board coverage check: if this gh pr create ran outside /pr, run /board-reconcile --fix to ensure the PR is tracked, has the Type field set, and is linked to its issue.\"}}' || true",
             "timeout": 5,
             "statusMessage": "Checking PR board coverage..."
           }

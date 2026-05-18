@@ -101,7 +101,7 @@ Parse the PR title's conventional-commit prefix and set the `Type` field. This p
 
 ```bash
 # Extract prefix: "feat(wizard): foo" -> "feat", "fix: bar" -> "fix"
-TYPE_NAME=$(echo "<PR_TITLE>" | awk -F'[(:]' '{print $1}' | tr -d ' ')
+TYPE_NAME=$(gh pr view <PR_NUMBER> --json title --jq '.title | split("(") | .[0] | split(":") | .[0]')
 case "$TYPE_NAME" in
   feat)     TYPE_OPT=fb49f55e ;;
   fix)      TYPE_OPT=8a8822f4 ;;

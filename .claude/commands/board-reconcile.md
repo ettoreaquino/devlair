@@ -51,9 +51,9 @@ Build a single drift report. Each row: `{number, kind, current, desired, repair}
 | Closed issue / merged PR on board, Status ≠ Done | Status=Done | `item-edit` → Done |
 | Open issue/PR on board, Status=Done | Status=Todo (issue) or In Progress (PR) | `item-edit` → correct status |
 | Item on board with no `Type` field set, where title has a parseable conventional-commit prefix | `Type=<prefix>` | `item-edit` Type field |
-| PR on board with title matching `^chore\(main\): release` | not on board | `item-delete` |
+| PR on board with title matching `^chore\(main\): release` **and** author login == `release-please[bot]` | not on board | `item-delete` |
 
-For the `Type` mapping, use the same prefix→option-id table from `/pr` Step 6.
+For the `Type` mapping, use the prefix→option-id table in the Project board reference section below.
 
 ### Step 3: Print the drift report
 
