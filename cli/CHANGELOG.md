@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.5.0-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.4.1-alpha.1...devlair-cli-v2.5.0-alpha.1) (2026-05-18)
+
+
+### Features
+
+* **wizard:** interactive github prompt + untimed tailscale auth ([19b9265](https://github.com/ettoreaquino/devlair/commit/19b9265b378c196aff07cc0847e46f398ed9238b))
+* **wizard:** interactive github prompt + untimed tailscale auth ([aab6c3d](https://github.com/ettoreaquino/devlair/commit/aab6c3db41a728e6d1d0d75e8ccb456d016144f5)), closes [#119](https://github.com/ettoreaquino/devlair/issues/119)
+
+
+### Bug Fixes
+
+* **runner:** await log stream flush before generator returns ([cd0ffd0](https://github.com/ettoreaquino/devlair/commit/cd0ffd0f8f28d8d219e622145f3def4a5bcdddd3))
+* **runner:** await log stream flush before generator returns ([514e494](https://github.com/ettoreaquino/devlair/commit/514e4947e493829c957e7fc532c4be680c24e374)), closes [#122](https://github.com/ettoreaquino/devlair/issues/122)
+
 ## [2.4.1-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.4.0-alpha.1...devlair-cli-v2.4.1-alpha.1) (2026-05-18)
 
 
