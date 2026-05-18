@@ -9,6 +9,10 @@ You are creating a pull request that follows the devlair SDLC practices. Every P
 
 **Assignment rule:** the linked issue AND the PR must be assigned to the developer running this command. Always pass `--assignee @me` (gh resolves it to the authenticated user) — never hardcode a username. This applies whether the issue is newly created or already existed.
 
+**Idempotency rule:** every board write in this skill is *set-to-desired-state*. `gh project item-add` is a no-op when the item is already on the board (returns the existing item ID), and `item-edit` writes the target status regardless of prior value. Re-running any step is safe.
+
+**Pagination rule:** every `gh project item-list` call must pass `--limit 500`. The default 100-item page can silently miss recently-added items, which manifests as an empty `ITEM_ID` and a `Could not resolve to a node with the global id of ''` error from `item-edit`.
+
 ### Argument parsing
 
 Parse `$ARGUMENTS` for:
@@ -26,7 +30,9 @@ Run these in parallel:
 4. `git rev-parse --abbrev-ref HEAD` — current branch name.
 5. `gh issue list --state open --assignee ettoreaquino --json number,title` — open issues.
 
-### Step 2: Ensure an issue exists
+### Step 2: Ensure an issue exists, on the board, and In Progress
+
+**Both branches (new issue and existing issue) end with the same three operations: assignee attached, item on the board, status In Progress.** That symmetry is what prevents the "existing issue silently skips the board" drift.
 
 If an issue number was provided in `$ARGUMENTS`:
 1. Verify it exists: `gh issue view <number> --json number,assignees`.
@@ -37,17 +43,16 @@ If no issue number was provided:
 1. Analyze the commits and diff to understand the scope of work.
 2. Draft an issue title and body describing the work.
 3. Create it: `gh issue create --title "..." --body "..." --assignee @me`.
-4. Add the issue to the project board as **In Progress**:
-   ```
-   gh project item-add 2 --owner ettoreaquino --url <issue-url>
-   ```
-   Then set status:
-   ```
-   ITEM_ID=$(gh project item-list 2 --owner ettoreaquino --format json --jq '.items[] | select(.content.number == <N>) | .id')
-   gh project item-edit --project-id PVT_kwHOAI_A384BTyaU --id "$ITEM_ID" \
-     --field-id PVTSSF_lAHOAI_A384BTyaUzhA-6Fg \
-     --single-select-option-id 47fc9ee4
-   ```
+
+**Then, for both branches**, ensure the issue is on the board and In Progress:
+
+```bash
+gh project item-add 2 --owner ettoreaquino --url <issue-url>
+ISSUE_ITEM=$(gh project item-list 2 --owner ettoreaquino --limit 500 --format json --jq '.items[] | select(.content.number == <N>) | .id')
+gh project item-edit --project-id PVT_kwHOAI_A384BTyaU --id "$ISSUE_ITEM" \
+  --field-id PVTSSF_lAHOAI_A384BTyaUzhA-6Fg \
+  --single-select-option-id 47fc9ee4
+```
 
 ### Step 3: Push branch
 
@@ -84,38 +89,75 @@ If no issue number was provided:
    ```
 2. Set status to **In Progress**:
    ```
-   PR_ITEM=$(gh project item-list 2 --owner ettoreaquino --format json --jq '.items[] | select(.content.number == <PR_NUMBER>) | .id')
+   PR_ITEM=$(gh project item-list 2 --owner ettoreaquino --limit 500 --format json --jq '.items[] | select(.content.number == <PR_NUMBER>) | .id')
    gh project item-edit --project-id PVT_kwHOAI_A384BTyaU --id "$PR_ITEM" \
      --field-id PVTSSF_lAHOAI_A384BTyaUzhA-6Fg \
      --single-select-option-id 47fc9ee4
    ```
 
-### Step 6: Also set the linked issue to In Progress (if not already)
+### Step 6: Set the `Type` field on the PR (DORA scaffolding)
 
-```
-ISSUE_ITEM=$(gh project item-list 2 --owner ettoreaquino --format json --jq '.items[] | select(.content.number == <ISSUE_NUMBER>) | .id')
-gh project item-edit --project-id PVT_kwHOAI_A384BTyaU --id "$ISSUE_ITEM" \
-  --field-id PVTSSF_lAHOAI_A384BTyaUzhA-6Fg \
-  --single-select-option-id 47fc9ee4
+Parse the PR title's conventional-commit prefix and set the `Type` field. This powers DORA Deployment Frequency slicing (e.g. exclude `chore` release PRs from the count).
+
+```bash
+# Extract prefix: "feat(wizard): foo" -> "feat", "fix: bar" -> "fix"
+TYPE_NAME=$(echo "<PR_TITLE>" | awk -F'[(:]' '{print $1}' | tr -d ' ')
+case "$TYPE_NAME" in
+  feat)     TYPE_OPT=fb49f55e ;;
+  fix)      TYPE_OPT=8a8822f4 ;;
+  chore)    TYPE_OPT=e4a0286c ;;
+  docs)     TYPE_OPT=229100de ;;
+  refactor) TYPE_OPT=428d2abe ;;
+  *)        TYPE_OPT="" ;;  # leave field empty for unknown prefixes
+esac
+if [ -n "$TYPE_OPT" ]; then
+  gh project item-edit --project-id PVT_kwHOAI_A384BTyaU --id "$PR_ITEM" \
+    --field-id PVTSSF_lAHOAI_A384BTyaUzhTNn1g \
+    --single-select-option-id "$TYPE_OPT"
+fi
 ```
 
-### Step 7: Report
+Idempotent: setting `Type=feat` twice is a no-op. Unknown prefixes leave the field blank rather than guessing.
+
+### Step 7: Final reconciliation check
+
+Quick verification that both items landed on the board with the expected status — surfaces silent no-ops from pagination or eventual-consistency races:
+
+```bash
+gh project item-list 2 --owner ettoreaquino --limit 500 --format json \
+  --jq '.items[] | select(.content.number == <ISSUE_NUMBER> or .content.number == <PR_NUMBER>) | "#\(.content.number) \(.status)"'
+```
+
+Both lines must show `In Progress`. If either is missing or wrong, re-run Step 2 (issue) or Step 5 (PR) — they are idempotent.
+
+### Step 8: Report
 
 Print a summary:
 - Issue: `#<N>` (created or existing)
 - PR: `#<PR>` — URL
 - Branch: `<branch>`
-- Project board: both items set to **In Progress**
+- Project board: both items In Progress, PR `Type=<feat|fix|...>`
 
 ### Project board reference
 
 ```
 Project ID:     PVT_kwHOAI_A384BTyaU
-Field ID:       PVTSSF_lAHOAI_A384BTyaUzhA-6Fg
-Status options:
+
+Status field:   PVTSSF_lAHOAI_A384BTyaUzhA-6Fg
   Todo:         f75ad846
   In Progress:  47fc9ee4
   Done:         98236657
+
+Type field:     PVTSSF_lAHOAI_A384BTyaUzhTNn1g
+  feat:         fb49f55e
+  fix:          8a8822f4
+  chore:        e4a0286c
+  docs:         229100de
+  refactor:     428d2abe
+
+Incident field: PVTSSF_lAHOAI_A384BTyaUzhTNn2A
+  No:           2c582288
+  Yes:          12d9b2e2
 ```
 
 ## User message

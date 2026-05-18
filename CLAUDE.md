@@ -179,32 +179,86 @@ Each subagent returns a compact JSON object, keeping the main context small.
 - Post-review agents — `.claude/agents/pr-fix-applier.md`, `.claude/agents/pr-readme-updater.md`
 - `/pr` — PR creation with issue linking and board management (`.claude/commands/pr.md`)
 - `/board` — project board visibility (`.claude/skills/board.md`)
+- `/board-reconcile` — audit + repair board drift; idempotent (`.claude/commands/board-reconcile.md`)
 
 ## Project board
 
 All work is tracked on the **devlair roadmap** project (GitHub Projects #2). The board has three columns: **Todo**, **In Progress**, **Done**.
 
 Workflow:
-1. **When starting work on an issue/epic:** set the issue to **In Progress** on the project board
-2. **When opening a PR:** add the PR to the project board as **In Progress** — use `gh project item-add 2 --owner ettoreaquino --url <PR_URL>` then set the status field
-3. **When the PR merges:** the `Closes #N` keyword auto-closes the issue; set both the issue and merged PR to **Done** on the board
-4. **Epics** stay **In Progress** until all child tasks/PRs are merged, then move to **Done**
+1. **When starting work on an issue/epic:** `/pr` sets the issue to **In Progress** automatically (both for newly created and pre-existing issues).
+2. **When opening a PR:** `/pr` adds the PR to the board as **In Progress** and sets its `Type` field from the conventional-commit prefix.
+3. **When the PR merges:** GitHub Projects automation moves both the PR and the auto-closed issue to **Done**. **Do not edit Status manually** except via `/board-reconcile --fix`.
+4. **Epics** stay **In Progress** until all child tasks/PRs are merged, then move to **Done** (manual — epics have no closing PR).
 
-CLI commands for project board management:
+### Automation source-of-truth
+
+The following Projects v2 built-in workflows are enabled in the project's **Settings → Workflows**:
+
+| Workflow | Effect |
+|---|---|
+| Auto-add to project (filter: `repo:ettoreaquino/devlair is:issue,pr -title:"chore(main): release"`) | New issues/PRs land on the board automatically; release-please bot PRs are excluded so they don't inflate Deployment Frequency |
+| Item closed → Status: Done | Covers `Closes #N` auto-closes |
+| Item reopened → Status: In Progress | Reverses the above |
+| Pull request merged → Status: Done | Direct merge transition |
+
+If a workflow is disabled or a bypass occurs (manual `gh issue create`, web-UI creation outside the filter, etc.), `/board-reconcile` catches it.
+
+### Reconciliation
+
+- `/board-reconcile` (alias `/board-reconcile --dry-run`) — audit only, prints a drift table.
+- `/board-reconcile --fix` — apply repairs. Every repair is set-to-desired-state, so re-running immediately after a successful pass reports zero drift.
+- `/pr` runs `/board-reconcile --dry-run --scope=this-pr` at end of flow as a per-PR sanity check.
+- Run `/board-reconcile --fix` weekly (use `/loop 7d /board-reconcile --fix` or `/schedule`).
+
+### DORA metrics
+
+Mapping each metric to a board/API query (all measurable today; field IDs documented below):
+
+| Metric | Query |
+|---|---|
+| **Deployment Frequency** | Merged PRs per window where `Type ≠ chore` (release-please excluded by board filter; explicit `Type` filter excludes the rare chore PR that did get added). |
+| **Lead Time for Changes** | `mergedAt(PR) − createdAt(linked issue)` per merged non-chore PR. Average / median over the window. |
+| **Change Failure Rate** | `count(Incident=Yes issues closed in window) / count(non-chore merged PRs in window)`. Set `Incident=Yes` manually when a bug is a regression from a prior deploy. |
+| **MTTR** | `closedAt(Incident=Yes issue) − mergedAt(introducing PR)` per incident. |
+
+### CLI commands for board management
+
+Use `/pr` and `/board-reconcile` for routine work. Raw `gh` is only needed for one-off ops:
+
 ```bash
-# Add an item (issue or PR) to the project
+# Add an item (idempotent — no-op if already present)
 gh project item-add 2 --owner ettoreaquino --url <URL>
 
-# Update status (get item ID from item-list, field/option IDs from field-list)
+# Update a field (always pass --limit 500 when looking up the item ID)
+ITEM_ID=$(gh project item-list 2 --owner ettoreaquino --limit 500 --format json \
+  --jq '.items[] | select(.content.number == <N>) | .id')
 gh project item-edit --project-id PVT_kwHOAI_A384BTyaU \
-  --id <ITEM_ID> \
-  --field-id PVTSSF_lAHOAI_A384BTyaUzhA-6Fg \
-  --single-select-option-id <STATUS_OPTION_ID>
+  --id "$ITEM_ID" \
+  --field-id <FIELD_ID> \
+  --single-select-option-id <OPTION_ID>
+```
 
-# Status option IDs:
-#   Todo:        f75ad846
-#   In Progress: 47fc9ee4
-#   Done:        98236657
+### Field reference
+
+```
+Project ID:     PVT_kwHOAI_A384BTyaU
+
+Status field:   PVTSSF_lAHOAI_A384BTyaUzhA-6Fg
+  Todo:         f75ad846
+  In Progress:  47fc9ee4
+  Done:         98236657
+
+Type field:     PVTSSF_lAHOAI_A384BTyaUzhTNn1g       (DORA: slice Deployment Frequency)
+  feat:         fb49f55e
+  fix:          8a8822f4
+  chore:        e4a0286c
+  docs:         229100de
+  refactor:     428d2abe
+
+Incident field: PVTSSF_lAHOAI_A384BTyaUzhTNn2A       (DORA: Change Failure Rate, MTTR)
+  No:           2c582288
+  Yes:          12d9b2e2
 ```
 
 ## Evolution context

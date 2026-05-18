@@ -9,6 +9,18 @@
             "command": "jq -r '.tool_input.command // \"\"' | head -1 | grep -qE '(^|[[:space:]]|&&[[:space:]]*|;[[:space:]]*|\\|[[:space:]]*)gh[[:space:]]+pr[[:space:]]+create\\b' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"A pull request was just created. You MUST now run the /review-pr command to fan out the four code reviewers, then pr-fix-applier, then pr-readme-updater, and post one structured comment. Use the PR number from the gh pr create output. The command body lives at .claude/commands/review-pr.md — read and follow it.\"}}' || true",
             "timeout": 5,
             "statusMessage": "Checking for PR review..."
+          },
+          {
+            "type": "command",
+            "command": "CMD=$(jq -r '.tool_input.command // \"\"' | head -1); echo \"$CMD\" | grep -qE '(^|[[:space:]]|&&[[:space:]]*|;[[:space:]]*|\\|[[:space:]]*)gh[[:space:]]+issue[[:space:]]+create\\b' && ! echo \"$CMD\" | grep -qE '/pr\\b' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"Heads up: gh issue create was run outside /pr. The issue may not be on the devlair roadmap board. Run /board-reconcile --dry-run to check, or /board-reconcile --fix to add it.\"}}' || true",
+            "timeout": 5,
+            "statusMessage": "Checking issue board coverage..."
+          },
+          {
+            "type": "command",
+            "command": "CMD=$(jq -r '.tool_input.command // \"\"' | head -1); echo \"$CMD\" | grep -qE '(^|[[:space:]]|&&[[:space:]]*|;[[:space:]]*|\\|[[:space:]]*)gh[[:space:]]+pr[[:space:]]+create\\b' && ! echo \"$CMD\" | grep -qE '/pr\\b' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"Heads up: gh pr create was run outside /pr. The PR may not be on the board, may lack the Type field, and may not be linked to its issue properly. After /review-pr, run /board-reconcile --dry-run to verify.\"}}' || true",
+            "timeout": 5,
+            "statusMessage": "Checking PR board coverage..."
           }
         ]
       }
