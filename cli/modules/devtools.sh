@@ -151,15 +151,17 @@ do_run() {
     aws_base="https://awscli.amazonaws.com/awscli-exe-linux-${aws_arch}"
 
     curl -fsSL "${aws_base}.zip" -o /tmp/awscliv2.zip >&2
-    if cmd_exists gpg; then
-      curl -fsSL "${aws_base}.zip.sig" -o /tmp/awscliv2.zip.sig >&2
-      curl -fsSL "$_AWS_CLI_GPG_KEY_URL" -o /tmp/aws-cli-key.asc >&2
+    # GPG verification is best-effort: AWS no longer publishes the public key
+    # at a stable URL, so a 404 here must not abort the install.
+    if cmd_exists gpg \
+      && curl -fsSL "${aws_base}.zip.sig" -o /tmp/awscliv2.zip.sig 2>/dev/null \
+      && curl -fsSL "$_AWS_CLI_GPG_KEY_URL" -o /tmp/aws-cli-key.asc 2>/dev/null; then
       gpg --batch --import /tmp/aws-cli-key.asc >&2 2>&1 || true
       if gpg --batch --verify /tmp/awscliv2.zip.sig /tmp/awscliv2.zip >&2 2>&1; then
         gpg_verified=true
       fi
-      rm -f /tmp/awscliv2.zip.sig /tmp/aws-cli-key.asc
     fi
+    rm -f /tmp/awscliv2.zip.sig /tmp/aws-cli-key.asc
     unzip -qo /tmp/awscliv2.zip -d /tmp >&2
     /tmp/aws/install >&2
     rm -rf /tmp/awscliv2.zip /tmp/aws

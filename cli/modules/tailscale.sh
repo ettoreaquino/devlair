@@ -53,7 +53,11 @@ ts_connect() {
   local waited=0
   while (( waited < url_wait_secs )); do
     sleep 1
-    ((waited++))
+    # Avoid `((waited++))` — its post-increment returns 0 on the first
+    # iteration, which under `set -e` would abort the script and fire the
+    # EXIT trap after the local `pid` has gone out of scope, triggering a
+    # "pid: unbound variable" under `set -u`.
+    waited=$((waited + 1))
     url=$(grep -oE 'https://login\.tailscale\.com/[A-Za-z0-9_/.-]+' "$log" | head -1 || true)
     [[ -n "$url" ]] && break
   done
