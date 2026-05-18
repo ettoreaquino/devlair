@@ -9,6 +9,18 @@
             "command": "jq -r '.tool_input.command // \"\"' | head -1 | grep -qE '(^|[[:space:]]|&&[[:space:]]*|;[[:space:]]*|\\|[[:space:]]*)gh[[:space:]]+pr[[:space:]]+create\\b' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"A pull request was just created. You MUST now run the /review-pr command to fan out the four code reviewers, then pr-fix-applier, then pr-readme-updater, and post one structured comment. Use the PR number from the gh pr create output. The command body lives at .claude/commands/review-pr.md — read and follow it.\"}}' || true",
             "timeout": 5,
             "statusMessage": "Checking for PR review..."
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command // \"\"' | head -1 | grep -qE '(^|[[:space:]]|&&[[:space:]]*|;[[:space:]]*|\\|[[:space:]]*)gh[[:space:]]+issue[[:space:]]+create\\b' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"Board coverage check: if this gh issue create ran outside /pr, run /board-reconcile --fix to ensure it is tracked on the devlair roadmap.\"}}' || true",
+            "timeout": 5,
+            "statusMessage": "Checking issue board coverage..."
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command // \"\"' | head -1 | grep -qE '(^|[[:space:]]|&&[[:space:]]*|;[[:space:]]*|\\|[[:space:]]*)gh[[:space:]]+pr[[:space:]]+create\\b' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"Board coverage check: if this gh pr create ran outside /pr, run /board-reconcile --fix to ensure the PR is tracked, has the Type field set, and is linked to its issue.\"}}' || true",
+            "timeout": 5,
+            "statusMessage": "Checking PR board coverage..."
           }
         ]
       }
