@@ -206,7 +206,10 @@ export async function* runModule(
     // returns sees the full stderr stream — otherwise the kernel's pending
     // writes can lose the race against a follow-up readFileSync.
     if (logStream) {
-      await new Promise<void>((resolve) => logStream.end(resolve));
+      await new Promise<void>((resolve) => {
+        logStream.once("error", () => resolve());
+        logStream.end(resolve);
+      });
     }
   }
 }
