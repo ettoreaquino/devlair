@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.5.1-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.5.0-alpha.1...devlair-cli-v2.5.1-alpha.1) (2026-05-18)
+
+
+### Bug Fixes
+
+* **wizard:** memoize context to prevent run from aborting itself ([1c775b8](https://github.com/ettoreaquino/devlair/commit/1c775b84312daaf36746f19143e8a6c52de46fcc))
+* **wizard:** memoize context to prevent run from aborting itself ([9a0137d](https://github.com/ettoreaquino/devlair/commit/9a0137d2f872084205c5d5cb9f97b6925cedc515))
+
 ## [2.5.0-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.4.1-alpha.1...devlair-cli-v2.5.0-alpha.1) (2026-05-18)
 
 
