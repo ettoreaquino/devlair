@@ -15,16 +15,11 @@ MODE=${1:-run}
 # the protocol, and poll `tailscale status` until the node connects.
 #
 # The backgrounded `tailscale up` keeps running for the duration of the poll;
-# once the user authenticates in their browser it completes on its own. If the
-# poll deadline expires first, we kill it.
+# once the user authenticates in their browser it completes on its own. The
+# wizard cancels the whole tree via SIGTERM (AbortController) if the user
+# bails — there is no internal timeout.
 ts_connect() {
   local url_wait_secs=10
-  local poll_timeout_secs
-  if [[ "${TS_AUTH_POLL_TIMEOUT_SECS:-}" =~ ^[0-9]+$ ]]; then
-    poll_timeout_secs=$TS_AUTH_POLL_TIMEOUT_SECS
-  else
-    poll_timeout_secs=300
-  fi
   local poll_interval_secs=2
 
   local authkey="${TS_AUTHKEY:-}"
@@ -69,19 +64,14 @@ ts_connect() {
 
   json_auth_url "$url" "Open this URL in your browser to authenticate Tailscale"
 
-  # Poll until the node connects. tailscaled writes its `Running` state into
-  # `tailscale status` as soon as auth completes, even before this orphan
-  # `tailscale up` returns.
-  local elapsed=0
-  local timed_out=false
-  while (( elapsed < poll_timeout_secs )); do
-    if tailscale status >/dev/null 2>&1; then
-      break
-    fi
+  # Poll forever until the node connects. tailscaled writes `Running` into
+  # `tailscale status` as soon as auth completes, even before the orphan
+  # `tailscale up` returns. The user is sitting at the wizard; if they need
+  # extra time we let them have it. Ctrl-C in the wizard sends SIGTERM down
+  # the process group and the EXIT trap below cleans up.
+  while ! tailscale status >/dev/null 2>&1; do
     sleep "$poll_interval_secs"
-    elapsed=$((elapsed + poll_interval_secs))
   done
-  (( elapsed >= poll_timeout_secs )) && timed_out=true
 
   # trap handles kill + wait + rm -f on EXIT; explicit cleanup here so the
   # trap becomes a no-op for the normal path.
@@ -91,7 +81,6 @@ ts_connect() {
   rm -f "$log"
 
   TS_AUTH_URL="$url"
-  TS_AUTH_TIMED_OUT="$timed_out"
 }
 
 do_run() {
@@ -105,18 +94,14 @@ do_run() {
   fi
 
   TS_AUTH_URL=""
-  TS_AUTH_TIMED_OUT=""
   if ! tailscale status >/dev/null 2>&1; then
     ts_connect
   fi
 
   local ip
   ip=$(tailscale ip -4 2>/dev/null || true)
-  local poll_mins=$(( ${TS_AUTH_POLL_TIMEOUT_SECS:-300} / 60 ))
   if [[ -n "$ip" ]]; then
     json_result "ok" "$ip"
-  elif [[ "$TS_AUTH_TIMED_OUT" == "true" ]]; then
-    json_result "fail" "auth not completed within ${poll_mins} minutes — open $TS_AUTH_URL or run 'sudo tailscale up'"
   elif [[ -n "$TS_AUTH_URL" ]]; then
     json_result "fail" "tailscale did not connect — open $TS_AUTH_URL or run 'sudo tailscale up'"
   else

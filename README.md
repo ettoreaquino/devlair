@@ -419,6 +419,11 @@ This downloads the latest `devlair-cli-v*` prerelease asset and installs it as `
 | `devlair disable-password [--yes]` | Linux-only, auto-elevates via sudo. `--yes` skips the interactive confirmation. |
 | `devlair claude [--plan TIER\|--1m on\|off\|--channels]` | Configures the local Claude Code install. No dashboard (see above). |
 
+**v2 wizard behavior notes:**
+
+- **GitHub config step** — when the `github` module is selected in the wizard, a dedicated `wizard-github` step collects `github_email` (required, regex-validated) and `github_name` (optional) before execution begins. In non-interactive mode (`--config`), `github_email` must be supplied via `config.github_email` in the profile YAML or the command exits with an error.
+- **Tailscale auth** — browser-based Tailscale authentication waits indefinitely. There is no timeout; the wizard's `AbortController` / SIGTERM is the only cancellation path (Ctrl-C).
+
 **Develop locally:**
 
 ```bash
@@ -449,7 +454,7 @@ cli/                    # v2 TypeScript CLI (alpha)
     index.tsx           # Ink app entrypoint
     commands/           # init, doctor, upgrade, claude, disable-password
     components/         # Ink UI components (Logo, Help, Progress, Summary)
-    wizard/             # interactive wizard (GroupSelect, ModuleSelect, Confirmation)
+    wizard/             # interactive wizard (GroupSelect, ModuleSelect, Confirmation, GithubConfig)
     lib/                # theme, types, runner, modules, platform detection,
                         # args, selection, profiles, jsonConfig, elevate
   modules/              # shell modules executed by the v2 binary
