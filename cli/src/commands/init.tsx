@@ -9,7 +9,7 @@
 import { hostname } from "node:os";
 import { useApp } from "ink";
 import { Box, Text } from "ink";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Logo } from "../components/Logo.js";
 import { type ModuleRun, Progress } from "../components/Progress.js";
@@ -330,7 +330,12 @@ function WizardInit() {
   const [extraConfig, setExtraConfig] = useState<Record<string, unknown>>({});
 
   const githubSelected = selectedModules.some((m) => m.key === "github");
-  const context: ModuleContext = { ...baseContext, config: { ...baseContext.config, ...extraConfig } };
+  // Stable identity: useModuleExecution's run effect depends on `context`, so
+  // recreating it on every render would abort the in-flight run on each setState.
+  const context = useMemo<ModuleContext>(
+    () => ({ ...baseContext, config: { ...baseContext.config, ...extraConfig } }),
+    [baseContext, extraConfig],
+  );
 
   const cancel = () => {
     exit();
