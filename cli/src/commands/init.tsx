@@ -26,10 +26,11 @@ import { selectModules } from "../lib/selection.js";
 import { D_COMMENT, D_FG, D_PINK, D_PURPLE, D_RED } from "../lib/theme.js";
 import type { ModuleContext, Status } from "../lib/types.js";
 import { Confirmation } from "../wizard/Confirmation.js";
+import { GithubConfig, type GithubConfigValues } from "../wizard/GithubConfig.js";
 import { GroupSelect } from "../wizard/GroupSelect.js";
 import { ModuleSelect } from "../wizard/ModuleSelect.js";
 
-type Phase = "wizard-groups" | "wizard-modules" | "wizard-confirm" | "running" | "done";
+type Phase = "wizard-groups" | "wizard-modules" | "wizard-confirm" | "wizard-github" | "running" | "done";
 
 function InitHeader({
   username,
@@ -218,6 +219,15 @@ function buildInitState(flags: InitFlags, profile: Profile | null): InitState {
   const context = buildModuleContext(platform, wslVersion, config);
   const profileSelection = profile ? resolveProfileKeys(profile) : undefined;
   const { selected, optional, platformSkipped } = selectModules(flags, platform, profileSelection);
+
+  // Non-interactive mode cannot prompt — surface required config gaps up front
+  // rather than letting the github module silently skip with exit 2.
+  if (selected.some((m) => m.key === "github") && !config.github_email) {
+    throw new ProfileError(
+      "github module requires `config.github_email` in your --config setup.yaml, or run `devlair init` interactively.",
+    );
+  }
+
   return {
     platform,
     context,
@@ -230,10 +240,24 @@ function buildInitState(flags: InitFlags, profile: Profile | null): InitState {
 
 function NonInteractiveInit({ flags }: { flags: InitFlags }) {
   const { exit } = useApp();
-  const [initState, setInitState] = useState<InitState | null>(() =>
-    flags.config ? null : buildInitState(flags, null),
-  );
-  const [error, setError] = useState<string | null>(null);
+  const initial = (() => {
+    if (flags.config) return { state: null, error: null };
+    try {
+      return { state: buildInitState(flags, null), error: null };
+    } catch (err) {
+      const msg = err instanceof ProfileError ? err.message : err instanceof Error ? err.message : String(err);
+      return { state: null, error: msg };
+    }
+  })();
+  const [initState, setInitState] = useState<InitState | null>(initial.state);
+  const [error, setError] = useState<string | null>(initial.error);
+
+  useEffect(() => {
+    if (error !== null) {
+      process.exitCode = 1;
+      setTimeout(() => exit(), 0);
+    }
+  }, [error, exit]);
 
   useEffect(() => {
     if (initState !== null || error !== null) return;
@@ -246,14 +270,12 @@ function NonInteractiveInit({ flags }: { flags: InitFlags }) {
         if (cancelled) return;
         const msg = err instanceof ProfileError ? err.message : err instanceof Error ? err.message : String(err);
         setError(msg);
-        process.exitCode = 1;
-        setTimeout(() => exit(), 0);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [flags, initState, error, exit]);
+  }, [flags, initState, error]);
 
   if (error !== null) {
     return (
@@ -300,11 +322,15 @@ function WizardInit() {
     return { platform, wslVersion, context };
   });
 
-  const { platform, context } = envState;
+  const { platform, context: baseContext } = envState;
 
   const [phase, setPhase] = useState<Phase>("wizard-groups");
   const [selectedGroups, setSelectedGroups] = useState<Set<Group>>(new Set());
   const [selectedModules, setSelectedModules] = useState<ModuleSpec[]>([]);
+  const [extraConfig, setExtraConfig] = useState<Record<string, unknown>>({});
+
+  const githubSelected = selectedModules.some((m) => m.key === "github");
+  const context: ModuleContext = { ...baseContext, config: { ...baseContext.config, ...extraConfig } };
 
   const cancel = () => {
     exit();
@@ -347,8 +373,23 @@ function WizardInit() {
       {phase === "wizard-confirm" && (
         <Confirmation
           modules={selectedModules}
-          onConfirm={() => setPhase("running")}
+          onConfirm={() => setPhase(githubSelected ? "wizard-github" : "running")}
           onBack={() => setPhase("wizard-modules")}
+          onCancel={cancel}
+        />
+      )}
+
+      {phase === "wizard-github" && (
+        <GithubConfig
+          onConfirm={(values: GithubConfigValues) => {
+            setExtraConfig((prev) => ({
+              ...prev,
+              github_email: values.email,
+              ...(values.name ? { github_name: values.name } : {}),
+            }));
+            setPhase("running");
+          }}
+          onBack={() => setPhase("wizard-confirm")}
           onCancel={cancel}
         />
       )}
