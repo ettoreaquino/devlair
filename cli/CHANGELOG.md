@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.1-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.4.0-alpha.1...devlair-cli-v2.4.1-alpha.1) (2026-05-18)
+
+
+### Bug Fixes
+
+* **modules:** tailscale set -e abort + AWS CLI key 404 ([7386030](https://github.com/ettoreaquino/devlair/commit/7386030a6827d011e1b97f0f8d2c75b2d6046741))
+
 ## [2.4.0-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.3.1-alpha.1...devlair-cli-v2.4.0-alpha.1) (2026-05-17)
 
 
