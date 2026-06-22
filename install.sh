@@ -233,8 +233,7 @@ printf "  %s%s%s\n\n" "$C_COMMENT" "${INSTALL_DIR}/${BIN}" "$C_RESET"
 if [[ "$CHANNEL" == "pre" ]]; then
   printf "%s!%s %sv2 alpha%s — the following v1 commands have been REMOVED:\n\n" \
     "$C_ORANGE" "$C_RESET" "$C_BOLD" "$C_RESET"
-  printf "  %sdevlair filesystem%s   not ported\n" "$C_PINK" "$C_RESET"
-  printf "\n"
+  printf "  %sdevlair filesystem%s   not ported\n\n" "$C_PINK" "$C_RESET"
   printf "  %sReport issues: https://github.com/ettoreaquino/devlair/issues%s\n\n" "$C_COMMENT" "$C_RESET"
 fi
 
