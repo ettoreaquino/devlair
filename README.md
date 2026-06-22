@@ -31,7 +31,7 @@ devlair init
 That's it. The installer downloads a prebuilt binary for your architecture and places it in `/usr/local/bin`. `devlair init` takes care of the rest.
 
 > [!NOTE]
-> **Preview the v2 alpha** with `curl ... | sudo bash -s -- --pre`. The v2 rewrite drops `sync`, `filesystem`, and `claw` — see [v2 (TypeScript + Ink — alpha)](#v2-typescript--ink--alpha).
+> **v2 is now stable.** Install with `curl ... | sudo bash -s -- --pre`. The v2 rewrite drops `sync`, `filesystem`, and `claw` — see [v2 (TypeScript + Ink)](#v2-typescript--ink--stable).
 
 ## Why devlair
 
@@ -55,7 +55,7 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
 
 **Composable**
 
-13 modules you can run individually with `--only` or skip with `--skip`. Each module is self-contained and does one thing well.
+12 modules you can run individually with `--only` or skip with `--skip`. Each module is self-contained and does one thing well.
 
 </td>
 </tr>
@@ -349,25 +349,22 @@ uv run pytest tests/unit/
 uv run ruff check devlair/ tests/
 ```
 
-### v2 (TypeScript + Ink — alpha)
+### v2 (TypeScript + Ink — stable)
 
-> [!WARNING]
-> v2 is in early alpha. The TypeScript + Ink rewrite is under active development.
-> For the stable CLI, use the [v1.x releases](https://github.com/ettoreaquino/devlair/releases/latest).
-
-**Try the alpha:**
+**Install v2:**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | sudo bash -s -- --pre
 ```
 
-This downloads the latest `devlair-cli-v*` prerelease asset and installs it as `/usr/local/bin/devlair`, replacing v1. The companion `modules.tar.gz` (shell scripts invoked by the wizard) is verified against the same `checksums.txt` and extracted to `/usr/local/share/devlair/modules/`. To roll back, re-run the installer without `--pre`.
+This downloads the latest `devlair-cli-v*` asset and installs it as `/usr/local/bin/devlair`, replacing v1. The companion `modules.tar.gz` (shell scripts invoked by the wizard) is verified against the same `checksums.txt` and extracted to `/usr/local/share/devlair/modules/`. To roll back to v1, re-run the installer without `--pre`.
 
 **Removed in v2** (vs. v1):
 
 | Command | Replacement |
 |---------|-------------|
 | `devlair filesystem` | Removed — not ported |
+| `devlair sync` / rclone | Removed — not ported |
 | `devlair claude` usage dashboard | Pin to v1 for the dashboard. v2 `devlair claude` prints a short status panel only (plan + model); `--plan`, `--1m on\|off`, and `--channels` still work for configuration. |
 
 **Ported in v2:**
@@ -405,9 +402,9 @@ devlair/                # v1 Python CLI (stable)
   runner.py             # subprocess helpers
   context.py            # shared types, user resolution, JSON config helpers
   console.py            # Rich console + Dracula color tokens
-  modules/              # one file per init module (13 modules)
+  modules/              # one file per init module (12 modules)
   features/             # doctor, upgrade, disable-password, filesystem, claude, sync, audit, profile
-cli/                    # v2 TypeScript CLI (alpha)
+cli/                    # v2 TypeScript CLI (stable)
   src/
     index.tsx           # Ink app entrypoint
     commands/           # init, doctor, upgrade, claude, disable-password
