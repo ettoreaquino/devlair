@@ -16,8 +16,8 @@ describe("parseInitFlags", () => {
   });
 
   test("parses --skip with comma-separated values", () => {
-    const flags = parseInitFlags(["--skip", "rclone,claude"]);
-    expect(flags.skip).toEqual(new Set(["rclone", "claude"]));
+    const flags = parseInitFlags(["--skip", "devtools,claude"]);
+    expect(flags.skip).toEqual(new Set(["devtools", "claude"]));
   });
 
   test("parses --group with comma-separated values", () => {
