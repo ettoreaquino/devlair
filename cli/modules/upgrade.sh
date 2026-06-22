@@ -86,16 +86,6 @@ if [[ -d "$USER_HOME/.nvm" ]]; then
   json_check "nvm + Node LTS" "ok" "updated"
 fi
 
-# ── rclone ────────────────────────────────────────────────────────────────────
-
-if cmd_exists rclone; then
-  json_progress "upgrading rclone"
-  tmp=$(download_script "https://rclone.org/install.sh")
-  bash "$tmp" >&2 || true
-  rm -f "$tmp"
-  json_check "rclone" "ok" "$(rclone --version 2>/dev/null | head -1 || echo 'updated')"
-fi
-
 # ── Bun ───────────────────────────────────────────────────────────────────────
 
 if [[ -x "$USER_HOME/.bun/bin/bun" ]]; then

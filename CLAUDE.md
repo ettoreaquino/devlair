@@ -56,7 +56,6 @@ Module groups and dependencies are defined in `devlair/modules/__init__.py` via 
 | core | system, timezone*, zsh, shell | shell → zsh |
 | network | tailscale†, ssh*, firewall* | ssh → tailscale, firewall → ssh |
 | coding | tmux, devtools, github | — |
-| cloud-sync | rclone‡ | — |
 | ai | claude‡ | claude → devtools |
 | desktop | gnome_terminal* | — |
 
@@ -82,7 +81,7 @@ Docker on WSL: `devlair init` requires Docker Desktop for Windows with WSL integ
 Schema (version 1):
 - `version: 1` — required
 - `name: string` — optional, shown in init header
-- `groups: [list]` — groups to include (core, network, coding, cloud-sync, ai, desktop)
+- `groups: [list]` — groups to include (core, network, coding, ai, desktop)
 - `modules: [list]` — explicit module keys (overrides groups when set)
 - `skip: [list]` — modules to exclude
 - `config: {mapping}` — per-module config, keyed by module name
@@ -97,7 +96,7 @@ Tool installs follow a download-then-execute pattern instead of piping curl to s
 - **AWS CLI v2** — GPG signature verification using AWS's published public key
 - **Docker, gh** — installed via apt with GPG-signed keyrings (already verified)
 - **fzf** — installed via git clone (git provides integrity)
-- **uv, pyenv, nvm, rclone, bun** — download script to temp file, then execute (no pipe)
+- **uv, pyenv, nvm, bun** — download script to temp file, then execute (no pipe)
 
 Audit logging writes JSON Lines to `~/.devlair/audit.json` (0600 permissions):
 - `log_tool_install()` — records tool name, source, and whether the install was cryptographically verified

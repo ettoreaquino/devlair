@@ -31,7 +31,7 @@ devlair init
 That's it. The installer downloads a prebuilt binary for your architecture and places it in `/usr/local/bin`. `devlair init` takes care of the rest.
 
 > [!NOTE]
-> **Preview the v2 alpha** with `curl ... | sudo bash -s -- --pre`. The v2 rewrite drops `sync`, `filesystem`, and `claw` — pin to v1 if you depend on them. See [v2 (TypeScript + Ink — alpha)](#v2-typescript--ink--alpha).
+> **Preview the v2 alpha** with `curl ... | sudo bash -s -- --pre`. The v2 rewrite drops `sync`, `filesystem`, and `claw` — see [v2 (TypeScript + Ink — alpha)](#v2-typescript--ink--alpha).
 
 ## Why devlair
 
@@ -81,10 +81,6 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
     upgrade [--no-self]                 Upgrade tools & re-apply configs
     disable-password                    Lock SSH to key-only auth
 
-  Cloud & Filesystem
-    sync [--add|--remove|--now]         Manage rclone folder syncs
-    filesystem                          AI-guided folder structure design
-
   AI Agents & Channels
     claude [--plan TIER] [--1m on|off]  Usage dashboard & config
 
@@ -112,7 +108,7 @@ devlair init --only ssh,tmux
 devlair init --group core,coding
 
 # Install opt-in modules
-devlair init --only claude,rclone
+devlair init --only claude
 
 # Skip specific modules
 devlair init --skip devtools,gnome_terminal
@@ -130,30 +126,6 @@ devlair doctor --fix
 devlair upgrade
 ```
 
-<details>
-<summary><b>Cloud sync</b></summary>
-
-```bash
-# Show configured cloud syncs and timer status
-devlair sync
-
-# Configure a new cloud folder sync (interactive)
-devlair sync --add
-
-# Configure with a preset name
-devlair sync --add --name store
-
-# Run all syncs immediately
-devlair sync --now
-
-# Remove a configured sync
-devlair sync --remove
-
-# Remove a specific sync by name
-devlair sync --remove --name store
-```
-
-</details>
 
 <details>
 <summary><b>Claude Code dashboard</b></summary>
@@ -218,7 +190,7 @@ devlair hooks into Claude Code to track session usage and display a dashboard:
 
 ## What gets installed
 
-`devlair init` runs these modules in order. Some modules are **opt-in** and not included in a default run — use `devlair init --only <module>` or `--group` to enable them. Opt-in modules: `rclone`, `claude`; `tailscale` is opt-in on WSL.
+`devlair init` runs these modules in order. Some modules are **opt-in** and not included in a default run — use `devlair init --only <module>` or `--group` to enable them. Opt-in modules: `claude`; `tailscale` is opt-in on WSL.
 
 <details>
 <summary><b>System</b> — OS packages and essentials</summary>
@@ -297,18 +269,6 @@ Installs (skipping any that already exist):
 
 </details>
 
-<details>
-<summary><b>rclone bisync</b> — bidirectional cloud sync via systemd timer</summary>
-
-rclone is opt-in: install it with `devlair init --only rclone`. Then run `devlair sync --add` to configure a sync:
-- Prompts for a short sync name (e.g. `store`, `vault`) used as the systemd unit identifier
-- Walks through `rclone config` for OAuth (Google Drive, S3, and [70+ providers](https://rclone.org/overview/))
-- Creates a named systemd user timer (`rclone-<name>.timer`) that bisyncs every 5 minutes
-- Runs an initial `bisync --resync` to bootstrap state immediately after setup
-
-`devlair sync` shows timer status and last run time per configured sync. `devlair sync --remove` stops and deletes a sync's systemd units and log file (does not touch the rclone remote or local files). The login banner automatically shows synced drives when service files are present. `devlair upgrade` keeps rclone up to date and reports timer health.
-
-</details>
 
 <details>
 <summary><b>GitHub</b> — SSH key + git config</summary>
@@ -368,7 +328,7 @@ Verifies every component without making changes — checks installed tools, conf
 devlair upgrade
 ```
 
-Checks for a new devlair binary first — if a new version is available, it downloads, replaces, and re-execs so the rest of the upgrade runs new code. Then upgrades system packages and any tools that were installed during init (Docker, GitHub CLI, AWS CLI, pyenv/Python, nvm/Node, Bun, rclone). After upgrading, automatically re-applies module configurations (hooks, settings, shell aliases) so new config shapes take effect immediately. Reports rclone sync timer health when configured. Use `--no-self` to skip the binary update.
+Checks for a new devlair binary first — if a new version is available, it downloads, replaces, and re-execs so the rest of the upgrade runs new code. Then upgrades system packages and any tools that were installed during init (Docker, GitHub CLI, AWS CLI, pyenv/Python, nvm/Node, Bun). After upgrading, automatically re-applies module configurations (hooks, settings, shell aliases) so new config shapes take effect immediately. Use `--no-self` to skip the binary update.
 
 ## Requirements
 
@@ -407,9 +367,7 @@ This downloads the latest `devlair-cli-v*` prerelease asset and installs it as `
 
 | Command | Replacement |
 |---------|-------------|
-| `devlair sync` | Pin to v1 or run `rclone bisync` directly |
 | `devlair filesystem` | Removed — not ported |
-| `devlair claw` | Removed — not ported |
 | `devlair claude` usage dashboard | Pin to v1 for the dashboard. v2 `devlair claude` prints a short status panel only (plan + model); `--plan`, `--1m on\|off`, and `--channels` still work for configuration. |
 
 **Ported in v2:**

@@ -21,11 +21,9 @@ describe("selectModules", () => {
     expect(keys).toContain("zsh");
     expect(keys).toContain("devtools");
     // Should NOT include opt-in modules (they go to optional)
-    expect(keys).not.toContain("rclone");
     expect(keys).not.toContain("claude");
     // Optional should contain opt-in modules
     const optKeys = optional.map((s) => s.key);
-    expect(optKeys).toContain("rclone");
     expect(optKeys).toContain("claude");
     // No platform-skipped on linux
     expect(platformSkipped).toHaveLength(0);

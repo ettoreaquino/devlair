@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { GROUPS, MODULE_SPECS, REAPPLY_KEYS, keysForGroups, resolveOrder, validateDag } from "../lib/modules.js";
 
 describe("MODULE_SPECS", () => {
-  test("has 13 modules", () => {
-    expect(MODULE_SPECS).toHaveLength(13);
+  test("has 12 modules", () => {
+    expect(MODULE_SPECS).toHaveLength(12);
   });
 
   test("all keys are unique", () => {
@@ -60,9 +60,9 @@ describe("keysForGroups", () => {
 });
 
 describe("resolveOrder", () => {
-  test("returns all 13 modules when no keys are specified", () => {
+  test("returns all 12 modules when no keys are specified", () => {
     const specs = resolveOrder();
-    expect(specs).toHaveLength(13);
+    expect(specs).toHaveLength(12);
   });
 
   test("preserves topological order", () => {
@@ -134,7 +134,6 @@ describe("resolveOrder", () => {
       "zsh",
       "tmux",
       "devtools",
-      "rclone",
       "github",
       "shell",
       "gnome_terminal",

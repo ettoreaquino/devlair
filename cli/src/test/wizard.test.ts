@@ -10,7 +10,7 @@ import { GROUPS, MODULE_SPECS, type ModuleSpec, keysForGroups, resolveOrder } fr
 
 describe("GroupSelect logic", () => {
   test("all groups are defined", () => {
-    expect(GROUPS).toEqual(["core", "network", "coding", "cloud-sync", "ai", "desktop"]);
+    expect(GROUPS).toEqual(["core", "network", "coding", "ai", "desktop"]);
   });
 
   test("every module belongs to a known group", () => {

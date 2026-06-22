@@ -1,6 +1,6 @@
 import type { Platform } from "./types.js";
 
-export const GROUPS = ["core", "network", "coding", "cloud-sync", "ai", "desktop"] as const;
+export const GROUPS = ["core", "network", "coding", "ai", "desktop"] as const;
 export type Group = (typeof GROUPS)[number];
 
 export interface ModuleSpec {
@@ -46,7 +46,6 @@ export const MODULE_SPECS: readonly ModuleSpec[] = [
   spec("zsh", "Zsh + Dracula", "core", { reapply: true }),
   spec("tmux", "tmux", "coding", { reapply: true }),
   spec("devtools", "Dev tools", "coding", { reapply: true }),
-  spec("rclone", "rclone sync", "cloud-sync", { defaultOn: [] }),
   spec("github", "GitHub SSH key", "coding"),
   spec("shell", "Shell aliases", "core", { deps: ["zsh"], reapply: true }),
   spec("gnome_terminal", "Gnome Terminal Dracula", "desktop", { reapply: true, platforms: ["linux"] }),

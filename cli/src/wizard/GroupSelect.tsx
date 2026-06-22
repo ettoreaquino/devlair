@@ -12,7 +12,6 @@ const GROUP_DESCRIPTIONS: Record<Group, string> = {
   core: "System update, timezone, Zsh, shell aliases",
   network: "Tailscale, SSH, firewall + Fail2Ban",
   coding: "tmux, dev tools (Docker, Node, Python, etc.), GitHub SSH key",
-  "cloud-sync": "rclone cloud sync",
   ai: "Claude Code AI assistant",
   desktop: "Gnome Terminal Dracula theme",
 };
