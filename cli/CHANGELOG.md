@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.5.2-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.5.1-alpha.1...devlair-cli-v2.5.2-alpha.1) (2026-06-22)
+
+
+### Bug Fixes
+
+* **cli:** address PR review findings on fix/progress-history-and-warn-status ([0bc4b28](https://github.com/ettoreaquino/devlair/commit/0bc4b2878f4cd31f8f164f1aee6ea7e61df18b3a))
+* **init:** accumulate progress history and honour warn status ([2fa24f4](https://github.com/ettoreaquino/devlair/commit/2fa24f48dd27fc5947d3562ef556d665d90229ac))
+* **init:** accumulate progress history and honour warn status from modules ([083a4f3](https://github.com/ettoreaquino/devlair/commit/083a4f3c401a30c0a6e4ec095a1baef1c560b53b))
+* **init:** fix biome lint errors — array index key and formatter ([435bda4](https://github.com/ettoreaquino/devlair/commit/435bda42da99ab28c723a7ba7fde264d567c97c9))
+
 ## [2.5.1-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.5.0-alpha.1...devlair-cli-v2.5.1-alpha.1) (2026-05-18)
 
 
