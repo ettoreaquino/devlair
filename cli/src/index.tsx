@@ -37,6 +37,9 @@ function parseCommand(args: string[]): Command {
   if (args.includes("--version") || args.includes("-V")) {
     return { type: "version" };
   }
+  if (args.includes("--help") || args.includes("-h")) {
+    return { type: "help" };
+  }
   const firstArg = args[0];
   if (firstArg === "init") {
     return { type: "init", flags: parseInitFlags(args.slice(1)) };
