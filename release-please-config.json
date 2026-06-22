@@ -18,8 +18,6 @@
       "package-name": "devlair-cli",
       "include-component-in-tag": true,
       "tag-separator": "-",
-      "prerelease": true,
-      "prerelease-type": "alpha",
       "exclude-paths": [".claude", ".github", "CLAUDE.md", "README.md", "install.sh"]
     }
   }
