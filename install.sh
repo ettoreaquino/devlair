@@ -113,18 +113,22 @@ printf "\n%s%s devlair installer%s  %s· channel: %s · arch: %s%s\n\n" \
 section "Resolving release"
 if [[ "$CHANNEL" == "v1" ]]; then
   ASSET_PREFIX="devlair"
-  # v1 releases use v1.x.x tags — filter by major version.
   LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases?per_page=30" \
     | grep -o '"tag_name": *"v1\.[^"]*"' \
     | head -1 \
     | grep -o '"v[^"]*"' | tr -d '"')
+  if [[ -n "${LATEST:-}" && ! "$LATEST" =~ ^v[0-9]+\.[0-9]+\.[0-9] ]]; then
+    err "Unexpected version format: $LATEST"; exit 1
+  fi
 else
   ASSET_PREFIX="devlair-cli"
-  # v2 releases use v2.x.x tags — filter by major version.
   LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases?per_page=30" \
     | grep -o '"tag_name": *"v2\.[^"]*"' \
     | head -1 \
     | grep -o '"v[^"]*"' | tr -d '"')
+  if [[ -n "${LATEST:-}" && ! "$LATEST" =~ ^v[0-9]+\.[0-9]+\.[0-9] ]]; then
+    err "Unexpected version format: $LATEST"; exit 1
+  fi
 fi
 
 if [[ -z "${LATEST:-}" ]]; then
@@ -141,6 +145,8 @@ section "Downloading binary"
 BASE_URL="https://github.com/${REPO}/releases/download/${LATEST}"
 TMP=$(mktemp)
 TMP_CHECKSUMS=$(mktemp)
+cleanup() { rm -f "${TMP:-}" "${TMP_CHECKSUMS:-}" "${TMP_MODULES:-}"; rm -rf "${STAGE_DIR:-}"; }
+trap cleanup EXIT
 curl -fsSL "${BASE_URL}/${ASSET}" -o "$TMP"
 curl -fsSL "${BASE_URL}/checksums.txt" -o "$TMP_CHECKSUMS"
 ok "downloaded ${ASSET}"
@@ -181,7 +187,7 @@ if [[ "$CHANNEL" != "v1" ]]; then
   # under sudo; chmod immediately after pins a known-safe mode regardless of
   # the installer's umask.
   STAGE_DIR=$(mktemp -d)
-  tar -xzf "$TMP_MODULES" -C "$STAGE_DIR" --no-same-owner --no-same-permissions
+  tar -xzf "$TMP_MODULES" -C "$STAGE_DIR" --no-same-owner --no-same-permissions --no-absolute-filenames
   chmod -R u=rwX,go=rX "$STAGE_DIR/modules"
   rm -f "$TMP_MODULES"
 
