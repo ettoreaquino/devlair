@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.0](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.5.2-alpha.1...devlair-cli-v2.6.0) (2026-06-22)
+
+
+### Bug Fixes
+
+* **cli:** add -h/--help as explicit flag alias for help command ([4633aec](https://github.com/ettoreaquino/devlair/commit/4633aec805698321181a952e951c1a9ea14e8de2))
+
 ## [2.5.2-alpha.1](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.5.1-alpha.1...devlair-cli-v2.5.2-alpha.1) (2026-06-22)
 
 
