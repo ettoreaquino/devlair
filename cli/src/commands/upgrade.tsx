@@ -262,6 +262,7 @@ export function UpgradeView({ flags, version }: { flags: UpgradeFlags; version: 
         status: "pending" as const,
         detail: "",
         progressMsg: "",
+        progressHistory: [],
       })),
     );
 
@@ -276,6 +277,7 @@ export function UpgradeView({ flags, version }: { flags: UpgradeFlags; version: 
 
         let finalStatus: Status = "fail";
         let finalDetail = "";
+        let resultEmitted = false;
 
         try {
           const scriptPath = moduleScriptPath(spec.key);
@@ -284,13 +286,25 @@ export function UpgradeView({ flags, version }: { flags: UpgradeFlags; version: 
           while (true) {
             const { value, done } = await iter.next();
             if (done) {
-              finalStatus = value.status;
+              if (!resultEmitted) finalStatus = value.status;
               break;
             }
             if (value.type === "progress") {
-              setReapplyModules((prev) => prev.map((m, j) => (j === i ? { ...m, progressMsg: value.message } : m)));
+              setReapplyModules((prev) =>
+                prev.map((m, j) =>
+                  j === i
+                    ? {
+                        ...m,
+                        progressMsg: value.message,
+                        progressHistory: m.progressMsg ? [...m.progressHistory, m.progressMsg] : m.progressHistory,
+                      }
+                    : m,
+                ),
+              );
             } else if (value.type === "result") {
+              finalStatus = value.status;
               finalDetail = value.detail;
+              resultEmitted = true;
             }
           }
         } catch (err) {
@@ -299,7 +313,9 @@ export function UpgradeView({ flags, version }: { flags: UpgradeFlags; version: 
         }
 
         setReapplyModules((prev) =>
-          prev.map((m, j) => (j === i ? { ...m, status: finalStatus, detail: finalDetail, progressMsg: "" } : m)),
+          prev.map((m, j) =>
+            j === i ? { ...m, status: finalStatus, detail: finalDetail, progressMsg: "", progressHistory: [] } : m,
+          ),
         );
       }
 

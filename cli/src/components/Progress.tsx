@@ -13,6 +13,7 @@ export interface ModuleRun {
   status: ModuleRunStatus;
   detail: string;
   progressMsg: string;
+  progressHistory: string[];
   authUrl?: { url: string; message: string };
 }
 
@@ -50,6 +51,16 @@ function ModuleLine({ mod, index, total }: { mod: ModuleRun; index: number; tota
           </Text>
           {mod.progressMsg ? <Text color={D_COMMENT}> {mod.progressMsg}</Text> : null}
         </Box>
+        {mod.progressHistory.length > 0 ? (
+          <Box flexDirection="column" marginLeft={6}>
+            {mod.progressHistory.map((msg, idx) => (
+              <Text key={idx} color={D_COMMENT}>
+                {"✓ "}
+                {msg}
+              </Text>
+            ))}
+          </Box>
+        ) : null}
         {mod.authUrl ? <AuthPanel url={mod.authUrl.url} message={mod.authUrl.message} /> : null}
       </Box>
     );

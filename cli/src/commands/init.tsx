@@ -112,6 +112,7 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
         status: "pending" as const,
         detail: "",
         progressMsg: "",
+        progressHistory: [],
       })),
     );
     setDone(false);
@@ -139,6 +140,7 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
 
         let finalStatus: Status = "fail";
         let finalDetail = "";
+        let resultEmitted = false;
 
         try {
           const scriptPath = moduleScriptPath(spec.key);
@@ -152,7 +154,9 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
           while (true) {
             const { value, done: iterDone } = await iter.next();
             if (iterDone) {
-              finalStatus = value.status;
+              // Only fall back to exit-code status when the module never emitted
+              // a `result` event — otherwise we'd promote warn→ok on exit 0.
+              if (!resultEmitted) finalStatus = value.status;
               // A module that exits non-zero without emitting a `result` event
               // (e.g. a missing runtime dep aborting _lib.sh early) leaves the
               // UI showing a bare ✗. Fall back to the last non-empty stderr
@@ -168,9 +172,21 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
               break;
             }
             if (value.type === "progress") {
-              setModules((prev) => prev.map((m, j) => (j === i ? { ...m, progressMsg: value.message } : m)));
+              setModules((prev) =>
+                prev.map((m, j) =>
+                  j === i
+                    ? {
+                        ...m,
+                        progressMsg: value.message,
+                        progressHistory: m.progressMsg ? [...m.progressHistory, m.progressMsg] : m.progressHistory,
+                      }
+                    : m,
+                ),
+              );
             } else if (value.type === "result") {
+              finalStatus = value.status;
               finalDetail = value.detail;
+              resultEmitted = true;
             } else if (value.type === "auth_url") {
               const authUrl = { url: value.url, message: value.message };
               setModules((prev) => prev.map((m, j) => (j === i ? { ...m, authUrl } : m)));
@@ -183,7 +199,9 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
 
         setModules((prev) =>
           prev.map((m, j) =>
-            j === i ? { ...m, status: finalStatus, detail: finalDetail, progressMsg: "", authUrl: undefined } : m,
+            j === i
+              ? { ...m, status: finalStatus, detail: finalDetail, progressMsg: "", progressHistory: [], authUrl: undefined }
+              : m,
           ),
         );
       }
