@@ -196,7 +196,14 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
         setModules((prev) =>
           prev.map((m, j) =>
             j === i
-              ? { ...m, status: finalStatus, detail: finalDetail, progressMsg: "", progressHistory: [], authUrl: undefined }
+              ? {
+                  ...m,
+                  status: finalStatus,
+                  detail: finalDetail,
+                  progressMsg: "",
+                  progressHistory: [],
+                  authUrl: undefined,
+                }
               : m,
           ),
         );

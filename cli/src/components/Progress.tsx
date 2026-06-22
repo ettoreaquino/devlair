@@ -53,8 +53,8 @@ function ModuleLine({ mod, index, total }: { mod: ModuleRun; index: number; tota
         </Box>
         {mod.progressHistory.length > 0 && (
           <Box flexDirection="column" marginLeft={6}>
-            {mod.progressHistory.map((msg, idx) => (
-              <Text key={idx} color={D_COMMENT}>
+            {mod.progressHistory.map((msg) => (
+              <Text key={msg} color={D_COMMENT}>
                 {"✓ "}
                 {msg}
               </Text>
