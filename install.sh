@@ -111,11 +111,12 @@ printf "\n%s%s devlair installer%s  %s· channel: %s · arch: %s%s\n\n" \
 section "Resolving release"
 if [[ "$CHANNEL" == "pre" ]]; then
   ASSET_PREFIX="devlair-cli"
-  # GitHub's /releases/latest endpoint excludes prereleases, so list and filter.
+  # v2 releases use plain v2.x.x tags — filter by major version to distinguish
+  # from v1 (v1.x.x) without relying on the old devlair-cli-v* prefix.
   LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases?per_page=30" \
-    | grep -o '"tag_name": *"devlair-cli-v[^"]*"' \
+    | grep -o '"tag_name": *"v2\.[^"]*"' \
     | head -1 \
-    | sed -E 's/.*"(devlair-cli-v[^"]*)"/\1/')
+    | grep -o '"v[^"]*"' | tr -d '"')
 else
   ASSET_PREFIX="devlair"
   LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
@@ -231,7 +232,7 @@ printf "  %s%s%s\n\n" "$C_COMMENT" "${INSTALL_DIR}/${BIN}" "$C_RESET"
 
 # ── Channel-specific post-install notice ──────────────────────────────────────
 if [[ "$CHANNEL" == "pre" ]]; then
-  printf "%s!%s %sv2 alpha%s — the following v1 commands have been REMOVED:\n\n" \
+  printf "%s!%s %sv2%s — the following v1 commands have been REMOVED:\n\n" \
     "$C_ORANGE" "$C_RESET" "$C_BOLD" "$C_RESET"
   printf "  %sdevlair filesystem%s   not ported\n\n" "$C_PINK" "$C_RESET"
   printf "  %sReport issues: https://github.com/ettoreaquino/devlair/issues%s\n\n" "$C_COMMENT" "$C_RESET"
