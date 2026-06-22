@@ -28,10 +28,7 @@ curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.s
 devlair init
 ```
 
-That's it. The installer downloads a prebuilt binary for your architecture and places it in `/usr/local/bin`. `devlair init` takes care of the rest.
-
-> [!NOTE]
-> **v2 is now stable.** Install with `curl ... | sudo bash -s -- --pre`. The v2 rewrite drops `sync`, `filesystem`, and `claw` — see [v2 (TypeScript + Ink)](#v2-typescript--ink--stable).
+That's it. The installer downloads the v2 (TypeScript + Ink) binary for your architecture and places it in `/usr/local/bin`. `devlair init` takes care of the rest.
 
 ## Why devlair
 
@@ -351,13 +348,13 @@ uv run ruff check devlair/ tests/
 
 ### v2 (TypeScript + Ink — stable)
 
-**Install v2:**
+**Install v2 (default):**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | sudo bash -s -- --pre
+curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | sudo bash
 ```
 
-This downloads the latest `devlair-cli-v*` asset and installs it as `/usr/local/bin/devlair`, replacing v1. The companion `modules.tar.gz` (shell scripts invoked by the wizard) is verified against the same `checksums.txt` and extracted to `/usr/local/share/devlair/modules/`. To roll back to v1, re-run the installer without `--pre`.
+The installer downloads the latest `devlair-cli-linux-{arch}` binary and places it at `/usr/local/bin/devlair`. The companion `modules.tar.gz` (shell scripts invoked by the wizard) is verified against `checksums.txt` and extracted to `/usr/local/share/devlair/modules/`. To install the legacy v1 (Python) instead, pass `--v1`.
 
 **Removed in v2** (vs. v1):
 
