@@ -3,18 +3,19 @@
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | sudo bash
-#   curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | sudo bash -s -- --pre
+#   curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | sudo bash -s -- --v1
 #
 # Channels:
-#   stable   Latest v1 release (Python). Default.
-#   --pre    Latest v2 alpha (TypeScript + Ink). Preview — see breaking changes below.
+#   (default)  Latest v2 release (TypeScript + Ink).
+#   --v1       Latest v1 release (Python). Legacy.
+#   --pre      Deprecated — v2 is now the default. Accepted for backward compatibility.
 set -euo pipefail
 
 REPO="ettoreaquino/devlair"
 BIN="devlair"
 INSTALL_DIR="/usr/local/bin"
 SHARE_DIR="/usr/local/share/devlair"
-CHANNEL="stable"
+CHANNEL="v2"
 
 # Computed after we know INSTALL_DIR — reused for binary install, modules
 # install, and any apt-get fallbacks below so the sudo decision is made once.
@@ -79,8 +80,9 @@ verify_checksum() {
 # ── Parse flags ───────────────────────────────────────────────────────────────
 for arg in "$@"; do
   case "$arg" in
-    --pre)    CHANNEL="pre" ;;
-    --stable) CHANNEL="stable" ;;
+    --v1)    CHANNEL="v1" ;;
+    --stable) CHANNEL="v1" ;;  # --stable used to mean v1; kept for compat
+    --pre)   ;;                # no-op: v2 is now the default
     -h|--help)
       sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
@@ -109,18 +111,19 @@ printf "\n%s%s devlair installer%s  %s· channel: %s · arch: %s%s\n\n" \
 
 # ── Channel configuration ─────────────────────────────────────────────────────
 section "Resolving release"
-if [[ "$CHANNEL" == "pre" ]]; then
-  ASSET_PREFIX="devlair-cli"
-  # v2 releases use plain v2.x.x tags — filter by major version to distinguish
-  # from v1 (v1.x.x) without relying on the old devlair-cli-v* prefix.
+if [[ "$CHANNEL" == "v1" ]]; then
+  ASSET_PREFIX="devlair"
+  # v1 releases use v1.x.x tags — filter by major version.
   LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases?per_page=30" \
-    | grep -o '"tag_name": *"v2\.[^"]*"' \
+    | grep -o '"tag_name": *"v1\.[^"]*"' \
     | head -1 \
     | grep -o '"v[^"]*"' | tr -d '"')
 else
-  ASSET_PREFIX="devlair"
-  LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
-    | grep -o '"tag_name": *"[^"]*"' | head -1 \
+  ASSET_PREFIX="devlair-cli"
+  # v2 releases use v2.x.x tags — filter by major version.
+  LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases?per_page=30" \
+    | grep -o '"tag_name": *"v2\.[^"]*"' \
+    | head -1 \
     | grep -o '"v[^"]*"' | tr -d '"')
 fi
 
@@ -143,9 +146,13 @@ curl -fsSL "${BASE_URL}/checksums.txt" -o "$TMP_CHECKSUMS"
 ok "downloaded ${ASSET}"
 
 # ── Verify SHA-256 checksum ──────────────────────────────────────────────────
-# Stable channel: soft-warn on missing entry (pre-existing behavior; tracked
-# separately). Mismatches still hard-fail inside verify_checksum.
-verify_checksum "$TMP" "$ASSET" "$TMP_CHECKSUMS" 0
+# v1: soft-warn on missing entry (pre-existing behavior). Mismatches always abort.
+# v2: hard-fail — the release CI always publishes checksums.
+if [[ "$CHANNEL" == "v1" ]]; then
+  verify_checksum "$TMP" "$ASSET" "$TMP_CHECKSUMS" 0
+else
+  verify_checksum "$TMP" "$ASSET" "$TMP_CHECKSUMS" 1
+fi
 
 chmod 755 "$TMP"
 
@@ -155,11 +162,11 @@ $MAYBE_SUDO mv "$TMP" "${INSTALL_DIR}/${BIN}"
 $MAYBE_SUDO chmod 755 "${INSTALL_DIR}/${BIN}"
 ok "${INSTALL_DIR}/${BIN}"
 
-# ── Pre-release: fetch modules tarball ────────────────────────────────────────
+# ── v2: fetch modules tarball ─────────────────────────────────────────────────
 # v2 shell modules live outside the compiled binary and ship as a separate
-# tarball. v1 (stable) is self-contained and does not need this step.
-if [[ "$CHANNEL" == "pre" ]]; then
-  section "Fetching v2 modules"
+# tarball. v1 is self-contained and does not need this step.
+if [[ "$CHANNEL" != "v1" ]]; then
+  section "Fetching modules"
   TMP_MODULES=$(mktemp)
   curl -fsSL "${BASE_URL}/modules.tar.gz" -o "$TMP_MODULES"
 
@@ -187,7 +194,7 @@ if [[ "$CHANNEL" == "pre" ]]; then
   rm -rf "$STAGE_DIR"
   ok "modules installed to ${SHARE_DIR}/modules"
 
-  # ── Pre-release: WSL-specific dpkg state cleanup ──────────────────────────
+  # ── WSL-specific dpkg state cleanup ──────────────────────────────────────
   # Ubuntu 24.04 WSL ships with openssh-server in a half-configured state:
   # its postinst calls `systemctl restart ssh`, but systemd isn't running by
   # default on WSL, so the postinst exits 1 and dpkg leaves the package in
@@ -208,7 +215,7 @@ if [[ "$CHANNEL" == "pre" ]]; then
     $MAYBE_SUDO dpkg --configure -a >/dev/null 2>&1 || true
   fi
 
-  # ── Pre-release: bootstrap runtime deps ────────────────────────────────────
+  # ── Bootstrap runtime deps ────────────────────────────────────────────────
   # modules/_lib.sh hard-requires jq for context parsing; on a fresh Ubuntu
   # the binary installs cleanly but every `devlair init` step exits 1 before
   # emitting any output. Install jq up-front so the first wizard run works.
@@ -230,8 +237,8 @@ rm -f "$TMP_CHECKSUMS"
 printf "\n%s✓%s %sdevlair %s installed%s\n" "$C_GREEN" "$C_RESET" "$C_BOLD" "$LATEST" "$C_RESET"
 printf "  %s%s%s\n\n" "$C_COMMENT" "${INSTALL_DIR}/${BIN}" "$C_RESET"
 
-# ── Channel-specific post-install notice ──────────────────────────────────────
-if [[ "$CHANNEL" == "pre" ]]; then
+# ── Post-install notice (v2 only) ─────────────────────────────────────────────
+if [[ "$CHANNEL" != "v1" ]]; then
   printf "%s!%s %sv2%s — the following v1 commands have been REMOVED:\n\n" \
     "$C_ORANGE" "$C_RESET" "$C_BOLD" "$C_RESET"
   printf "  %sdevlair filesystem%s   not ported\n\n" "$C_PINK" "$C_RESET"
