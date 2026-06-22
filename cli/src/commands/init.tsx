@@ -157,10 +157,6 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
               // Only fall back to exit-code status when the module never emitted
               // a `result` event — otherwise we'd promote warn→ok on exit 0.
               if (!resultEmitted) finalStatus = value.status;
-              // A module that exits non-zero without emitting a `result` event
-              // (e.g. a missing runtime dep aborting _lib.sh early) leaves the
-              // UI showing a bare ✗. Fall back to the last non-empty stderr
-              // line so the user sees what actually happened.
               if (!finalDetail && finalStatus !== "ok") {
                 const lastErr = value.stderr
                   .split("\n")
