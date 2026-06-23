@@ -49,7 +49,6 @@ EOF
     chown_user "$ssh_conf"
   fi
 
-  # Git global config (no network required — do this before the wait)
   run_as "$USERNAME" git config --global user.email "$email" >&2
   local git_name
   git_name=$(ctx_get_config github_name)
@@ -86,7 +85,7 @@ do_check() {
     return
   fi
 
-  if run_as "$USERNAME" ssh -T git@github.com -o StrictHostKeyChecking=no 2>&1 | grep -q "successfully authenticated"; then
+  if run_as "$USERNAME" ssh -T git@github.com -o StrictHostKeyChecking=accept-new 2>&1 | grep -q "successfully authenticated"; then
     json_check "github connection" "ok"
   else
     json_check "github connection" "fail"
