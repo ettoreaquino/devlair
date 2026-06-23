@@ -187,7 +187,7 @@ if [[ "$CHANNEL" != "v1" ]]; then
   # under sudo; chmod immediately after pins a known-safe mode regardless of
   # the installer's umask.
   STAGE_DIR=$(mktemp -d)
-  tar -xzf "$TMP_MODULES" -C "$STAGE_DIR" --no-same-owner --no-same-permissions --no-absolute-filenames
+  tar -xzf "$TMP_MODULES" -C "$STAGE_DIR" --no-same-owner --no-same-permissions
   chmod -R u=rwX,go=rX "$STAGE_DIR/modules"
   rm -f "$TMP_MODULES"
 
