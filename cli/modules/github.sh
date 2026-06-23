@@ -49,23 +49,6 @@ EOF
     chown_user "$ssh_conf"
   fi
 
-  # Display public key for the user (via progress event)
-  local pub
-  pub=$(cat "${gh_key}.pub")
-  json_progress "Add this public key to GitHub: $pub"
-
-  # Test connection
-  local connected=false
-  if run_as "$USERNAME" ssh -T git@github.com -o StrictHostKeyChecking=accept-new >/dev/null 2>&1; then
-    connected=true
-  else
-    # ssh -T returns exit 1 on success with "successfully authenticated" on stderr
-    if run_as "$USERNAME" ssh -T git@github.com -o StrictHostKeyChecking=accept-new 2>&1 | grep -q "successfully authenticated"; then
-      connected=true
-    fi
-  fi
-
-  # Git global config
   run_as "$USERNAME" git config --global user.email "$email" >&2
   local git_name
   git_name=$(ctx_get_config github_name)
@@ -74,11 +57,23 @@ EOF
   fi
   run_as "$USERNAME" git config --global init.defaultBranch main >&2
 
-  if [[ "$connected" == "true" ]]; then
-    json_result "ok" "connected"
-  else
-    json_result "warn" "key added but connection test failed — check GitHub"
-  fi
+  # Surface the public key and wait for the user to add it to GitHub.
+  # AuthPanel renders: key (pink) + URL (cyan) + "Waiting for authentication…"
+  # No timeout — user completes the step at their own pace; Ctrl-C in the
+  # wizard sends SIGTERM and cancels the whole tree.
+  local pub
+  pub=$(cat "${gh_key}.pub")
+  json_auth_url "https://github.com/settings/ssh/new" "$pub"
+
+  local poll_interval=3
+  while true; do
+    if run_as "$USERNAME" ssh -T git@github.com -o StrictHostKeyChecking=accept-new 2>&1 | grep -q "successfully authenticated"; then
+      break
+    fi
+    sleep "$poll_interval"
+  done
+
+  json_result "ok" "connected"
 }
 
 do_check() {
@@ -90,7 +85,7 @@ do_check() {
     return
   fi
 
-  if run_as "$USERNAME" ssh -T git@github.com -o StrictHostKeyChecking=no 2>&1 | grep -q "successfully authenticated"; then
+  if run_as "$USERNAME" ssh -T git@github.com -o StrictHostKeyChecking=accept-new 2>&1 | grep -q "successfully authenticated"; then
     json_check "github connection" "ok"
   else
     json_check "github connection" "fail"
