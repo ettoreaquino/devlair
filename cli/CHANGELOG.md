@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.7.0](https://github.com/ettoreaquino/devlair/compare/v2.6.0...v2.7.0) (2026-06-23)
+
+
+### Features
+
+* **wizard:** wait for GitHub SSH connection before completing module ([4b90af1](https://github.com/ettoreaquino/devlair/commit/4b90af13e5f3186b67fb1ba6a7bbc639a9d3a4db))
+* **wizard:** wait for GitHub SSH connection before completing module ([5e27f98](https://github.com/ettoreaquino/devlair/commit/5e27f98405b898ff2415662523bfe9b75e46b180))
+
+
+### Bug Fixes
+
+* **cli:** address PR review findings on feat/github-wait-for-connection ([daaa4d3](https://github.com/ettoreaquino/devlair/commit/daaa4d3be1b58e410259e42583b39e004253cb82))
+
 ## [2.6.0](https://github.com/ettoreaquino/devlair/compare/devlair-cli-v2.5.2-alpha.1...devlair-cli-v2.6.0) (2026-06-22)
 
 
