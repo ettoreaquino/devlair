@@ -1,5 +1,46 @@
 # Changelog
 
+## [1.9.0](https://github.com/ettoreaquino/devlair/compare/v1.8.0...v1.9.0) (2026-06-23)
+
+
+### Features
+
+* **install:** match devlair Dracula style and clarify WSL cleanup ([f13a5f3](https://github.com/ettoreaquino/devlair/commit/f13a5f3923e12bb1967c59069e82933dbcc691b3))
+* **install:** match devlair Dracula style and clarify WSL cleanup message ([a0d732f](https://github.com/ettoreaquino/devlair/commit/a0d732f00adb1b62ad0e72927549b0c4d4bc58d7))
+* **modules/tailscale:** drive interactive auth and wait until connected ([962112b](https://github.com/ettoreaquino/devlair/commit/962112bc1715309f156cd6a6dca34a685a8a025a))
+* **wizard:** interactive github prompt + untimed tailscale auth ([19b9265](https://github.com/ettoreaquino/devlair/commit/19b9265b378c196aff07cc0847e46f398ed9238b))
+
+
+### Bug Fixes
+
+* **install:** address PR review findings on fix/v2-as-default-install-channel ([4d885ef](https://github.com/ettoreaquino/devlair/commit/4d885ef6db03be6929ecaec51f16c1ebb0dd89fb))
+* **install:** fold blank line into preceding printf in post-install notice ([d691d4d](https://github.com/ettoreaquino/devlair/commit/d691d4deb74300425d771710aeb06fc216e91800))
+* **install:** harden v2 modules tarball extraction ([f1f036c](https://github.com/ettoreaquino/devlair/commit/f1f036c484084c7d320f551f00e6fbe692662dc1))
+* **install:** make v2 the default install channel ([294cb69](https://github.com/ettoreaquino/devlair/commit/294cb69170a45bd8a81a569ddd37998f2de66405))
+* **install:** make v2 the default install channel ([305a1cc](https://github.com/ettoreaquino/devlair/commit/305a1cc39fba94dc30700581acf701a4349dc656))
+* **install:** preflight repair of broken dpkg state on Debian-likes ([54e5e31](https://github.com/ettoreaquino/devlair/commit/54e5e31d1eb9ced36556ec2619579429149d67da))
+* **install:** preflight repair of broken dpkg state on Debian-likes ([29a3064](https://github.com/ettoreaquino/devlair/commit/29a3064f10d0e50c1d05bce5f7881f38b82315d3)), closes [#91](https://github.com/ettoreaquino/devlair/issues/91)
+* **install:** remove unsupported --no-absolute-filenames tar flag ([251c92c](https://github.com/ettoreaquino/devlair/commit/251c92c9828c6304045f34d8f103929bcdff94b7))
+* **install:** remove unsupported --no-absolute-filenames tar flag ([d58ebb7](https://github.com/ettoreaquino/devlair/commit/d58ebb77745558f5835b2bf2c685d8036d32daf3))
+* **install:** WSL-scope dpkg repair and switch to dpkg-query status check ([bd53b13](https://github.com/ettoreaquino/devlair/commit/bd53b13b7ebdcb1da1d7051cc1b729852438f392))
+* **modules:** gate ufw/fail2ban doctor checks behind platform ([14ac239](https://github.com/ettoreaquino/devlair/commit/14ac239664bad84e01b732e25dbfde036383363e))
+* **modules:** split system.sh essentials by platform to unblock WSL ([d1e38a6](https://github.com/ettoreaquino/devlair/commit/d1e38a6b279bceba45a0d621c923d97f3cbe0382))
+* **modules:** split system.sh essentials by platform to unblock WSL ([0ea29f7](https://github.com/ettoreaquino/devlair/commit/0ea29f763ffa8108f8b4267963faf958b27a7aaa)), closes [#94](https://github.com/ettoreaquino/devlair/issues/94)
+* **release:** drop devlair-cli prefix from v2 tags, use plain v2.x.x ([e592b5d](https://github.com/ettoreaquino/devlair/commit/e592b5d24c9a8ba9bb3b6caea78692a121cbd62b))
+* **v2/install:** ship modules tarball alongside binary ([75d6415](https://github.com/ettoreaquino/devlair/commit/75d641524700acfd7db640c2eb5cc7f2e3da917a))
+* **v2/install:** ship modules tarball alongside binary ([d6ef9f4](https://github.com/ettoreaquino/devlair/commit/d6ef9f4d9af3a85d7089007934e03016a87547e4)), closes [#84](https://github.com/ettoreaquino/devlair/issues/84)
+* **v2:** bootstrap jq + surface stderr in init UI ([4abd41e](https://github.com/ettoreaquino/devlair/commit/4abd41e4e0aa3960e81f7c1ffb594c9824f896fe))
+* **v2:** bootstrap jq + surface stderr so init failures aren't silent ([fbcc5d8](https://github.com/ettoreaquino/devlair/commit/fbcc5d86106532e11fd46e005ed15e52e1de1ff0))
+
+
+### Documentation
+
+* **readme:** mention modules tarball in v2 --pre install step ([a150542](https://github.com/ettoreaquino/devlair/commit/a150542d6fb809a0c41b9d955e486bbe1208cfb4))
+* **readme:** note system module's Linux-only essentials ([0d7e650](https://github.com/ettoreaquino/devlair/commit/0d7e650dce6dc42aeab64acf0bd611f8283c06bb))
+* **readme:** promote v2 to stable, fix module count, add rclone removal ([ff2252f](https://github.com/ettoreaquino/devlair/commit/ff2252ff93d116261d8594657aa6578af9e9c52c))
+* **readme:** sync v2 surface with feat/interactive-github-and-untimed-tailscale ([2616a64](https://github.com/ettoreaquino/devlair/commit/2616a643fe3d26db76fe5f8f80b7668b1004bd66))
+* **readme:** sync v2 surface with feat/tailscale-interactive-auth ([ff21ae1](https://github.com/ettoreaquino/devlair/commit/ff21ae11efc7d949e55b74d30760a4eea9efcdd2))
+
 ## [1.8.0](https://github.com/ettoreaquino/devlair/compare/v1.7.1...v1.8.0) (2026-05-16)
 
 
