@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# modules/timezone.sh — Timezone
+# cli/modules/timezone.sh — Timezone
 # devlair module: timezone
 set -euo pipefail
 
@@ -8,6 +8,7 @@ source "$SCRIPT_DIR/_lib.sh"
 
 read_context
 
+PLATFORM=$(ctx_get platform)
 MODE=${1:-run}
 
 do_run() {
@@ -15,14 +16,30 @@ do_run() {
   tz=$(ctx_get_config timezone)
   [[ -z "$tz" ]] && tz="UTC"
 
-  timedatectl set-timezone "$tz" >&2
+  if [[ ! "$tz" =~ ^[A-Za-z_][A-Za-z0-9_+/-]*$ ]]; then
+    json_result "fail" "invalid timezone: $tz"
+    exit 1
+  fi
+
+  if [[ "$PLATFORM" == "macos" ]]; then
+    ln -sf "/usr/share/zoneinfo/$tz" /etc/localtime >&2
+  else
+    timedatectl set-timezone "$tz" >&2
+  fi
+
   json_result "ok" "$tz"
 }
 
 do_check() {
   local tz
-  tz=$(timedatectl show --property=Timezone --value 2>/dev/null || echo "unknown")
-  json_check "timezone" "ok" "$tz"
+  if [[ "$PLATFORM" == "macos" ]]; then
+    tz=$(readlink /etc/localtime 2>/dev/null | sed 's|.*/zoneinfo/||' || echo "unknown")
+  else
+    tz=$(timedatectl show --property=Timezone --value 2>/dev/null || echo "unknown")
+  fi
+  local status="ok"
+  [[ "$tz" == "unknown" ]] && status="fail"
+  json_check "timezone" "$status" "$tz"
 }
 
 case "$MODE" in
