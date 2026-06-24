@@ -37,8 +37,8 @@ bind r source-file ~/.tmux.conf \\; display "Reloaded"
 set -g mode-keys vi
 set -g set-clipboard on
 
-# Clipboard command: wl-copy (Wayland) > xclip (X11) > cat /dev/null (OSC 52 only)
-CLIP_CMD='command -v wl-copy >/dev/null && wl-copy || { command -v xclip >/dev/null && xclip -selection clipboard || cat >/dev/null; }'
+# Clipboard command: pbcopy (macOS) > wl-copy (Wayland) > xclip (X11) > cat /dev/null (OSC 52 only)
+CLIP_CMD='command -v pbcopy >/dev/null && pbcopy || { command -v wl-copy >/dev/null && wl-copy || { command -v xclip >/dev/null && xclip -selection clipboard || cat >/dev/null; }; }'
 
 # v begins selection, C-v toggles rectangle, y yanks to system clipboard
 bind -T copy-mode-vi v     send-keys -X begin-selection
@@ -107,18 +107,20 @@ run '~/.tmux/plugins/tpm/tpm'
 
 
 def run(ctx: SetupContext) -> ModuleResult:
+    group = None if ctx.platform == "macos" else ctx.username
+
     conf = ctx.user_home / ".tmux.conf"
     conf.write_text(TMUX_CONF)
-    shutil.chown(conf, ctx.username, ctx.username)
+    shutil.chown(conf, ctx.username, group)
 
-    # Clipboard helper for Wayland/X11 copy support inside tmux
-    if not runner.cmd_exists("wl-copy") and not runner.cmd_exists("xclip"):
+    # Clipboard helper: macOS has pbcopy built-in; Linux/WSL may need wl-clipboard
+    if ctx.platform != "macos" and not runner.cmd_exists("wl-copy") and not runner.cmd_exists("xclip"):
         runner.apt_install("wl-clipboard", quiet=True)
 
     plugins_dir = ctx.user_home / ".tmux" / "plugins"
     plugins_dir.mkdir(parents=True, exist_ok=True)
-    shutil.chown(plugins_dir, ctx.username, ctx.username)
-    shutil.chown(plugins_dir.parent, ctx.username, ctx.username)
+    shutil.chown(plugins_dir, ctx.username, group)
+    shutil.chown(plugins_dir.parent, ctx.username, group)
 
     tpm_path = plugins_dir / "tpm"
     if not tpm_path.exists():
@@ -142,7 +144,7 @@ def check() -> list[CheckItem]:
     plugins_dir = Path("~/.tmux/plugins").expanduser()
     continuum_ok = (plugins_dir / "tmux-continuum").exists()
     resurrect_ok = (plugins_dir / "tmux-resurrect").exists()
-    clip_ok = runner.cmd_exists("wl-copy") or runner.cmd_exists("xclip")
+    clip_ok = runner.cmd_exists("pbcopy") or runner.cmd_exists("wl-copy") or runner.cmd_exists("xclip")
     return [
         CheckItem(label="tmux installed", status="ok" if tmux_ok else "fail"),
         CheckItem(
@@ -155,7 +157,7 @@ def check() -> list[CheckItem]:
             status="ok" if resurrect_ok and continuum_ok else "warn",
         ),
         CheckItem(
-            label="Clipboard tool (wl-copy / xclip)",
+            label="Clipboard tool (pbcopy / wl-copy / xclip)",
             status="ok" if clip_ok else "warn",
         ),
     ]

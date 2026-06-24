@@ -1,3 +1,4 @@
+import pwd as _pwd
 import shutil
 from pathlib import Path
 
@@ -49,14 +50,17 @@ source "$ZIM_HOME/init.zsh"
 
 
 def run(ctx: SetupContext) -> ModuleResult:
-    # Install zsh if missing
+    # Install zsh if missing (pre-installed on macOS; apt on Linux/WSL)
     if not runner.cmd_exists("zsh"):
-        runner.apt_install("zsh", quiet=True)
+        if ctx.platform == "macos":
+            runner.brew_install("zsh", quiet=True)
+        else:
+            runner.apt_install("zsh", quiet=True)
 
     zsh_bin = runner.get_output("which zsh")
 
-    # Set as default shell for the user
-    current_shell = runner.get_output(f"getent passwd {ctx.username} | cut -d: -f7")
+    # Set as default shell for the user (pwd module is portable; getent is Linux-only)
+    current_shell = _pwd.getpwnam(ctx.username).pw_shell
     if current_shell != zsh_bin:
         runner.run(["chsh", "-s", zsh_bin, ctx.username])
 
@@ -64,20 +68,23 @@ def run(ctx: SetupContext) -> ModuleResult:
     zimrc = ctx.user_home / ".zimrc"
     zshrc = ctx.user_home / ".zshrc"
 
+    # On macOS primary groups don't match the username (typically "staff")
+    group = None if ctx.platform == "macos" else ctx.username
+
     # Write .zimrc
     zimrc.write_text(ZIMRC)
-    shutil.chown(zimrc, ctx.username, ctx.username)
+    shutil.chown(zimrc, ctx.username, group)
 
     # Prevent system /etc/zsh/zshrc from calling compinit before zimfw
     zshenv = ctx.user_home / ".zshenv"
     if not zshenv.exists() or "skip_global_compinit" not in zshenv.read_text():
         zshenv.write_text(ZSHENV)
-        shutil.chown(zshenv, ctx.username, ctx.username)
+        shutil.chown(zshenv, ctx.username, group)
 
     # Write .zshrc header (only if not already managed by devlair)
     if not zshrc.exists() or "devlair" not in zshrc.read_text():
         zshrc.write_text(ZSHRC_HEADER)
-        shutil.chown(zshrc, ctx.username, ctx.username)
+        shutil.chown(zshrc, ctx.username, group)
 
     # Bootstrap zimfw and install modules as the user
     runner.run_shell_as(
@@ -93,7 +100,7 @@ def run(ctx: SetupContext) -> ModuleResult:
         quiet=True,
     )
 
-    shutil.chown(zim_home, ctx.username, ctx.username)
+    shutil.chown(zim_home, ctx.username, group)
 
     return ModuleResult(status="ok", detail="zsh with Dracula via zimfw")
 
