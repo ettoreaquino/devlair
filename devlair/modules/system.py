@@ -56,8 +56,8 @@ def check() -> list[CheckItem]:
     return [
         CheckItem(
             label=label,
-            status="ok" if runner.cmd_exists(cmd) else "fail",
-            detail="installed" if runner.cmd_exists(cmd) else "missing",
+            status="ok" if (exists := runner.cmd_exists(cmd)) else "fail",
+            detail="installed" if exists else "missing",
         )
         for label, cmd in checks
     ]
