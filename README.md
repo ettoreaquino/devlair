@@ -187,7 +187,7 @@ devlair hooks into Claude Code to track session usage and display a dashboard:
 
 ## What gets installed
 
-`devlair init` runs these modules in order. Some modules are **opt-in** and not included in a default run — use `devlair init --only <module>` or `--group` to enable them. Opt-in modules: `claude`; `tailscale` is opt-in on WSL and macOS. Portable modules (supported on Linux, WSL, and macOS): `tailscale`, `zsh`, `tmux`, `rclone`, `github`, `shell`, `claude`. Linux-only modules (auto-skipped elsewhere): `timezone`, `ssh`, `firewall`, `gnome_terminal`.
+`devlair init` runs these modules in order. Some modules are **opt-in** and not included in a default run — use `devlair init --only <module>` or `--group` to enable them. Opt-in modules: `claude`; `tailscale` is opt-in on WSL and macOS. Portable modules (supported on Linux, WSL, and macOS): `tailscale`, `zsh`, `tmux`, `rclone`, `github`, `shell`, `claude`, `devtools`. Linux-only modules (auto-skipped elsewhere): `timezone`, `ssh`, `firewall`, `gnome_terminal`.
 
 <details>
 <summary><b>System</b> — OS packages and essentials</summary>
@@ -263,6 +263,8 @@ Installs (skipping any that already exist):
 | [gh](https://cli.github.com/) | GitHub CLI |
 | [aws](https://aws.amazon.com/cli/) | AWS CLI v2 |
 | [Bun](https://bun.sh/) | JavaScript runtime (required for Claude Code channels) |
+
+On macOS, `pyenv`, `gh`, and `aws` are installed via `brew` instead of apt/curl. Build dependencies for pyenv (openssl, readline, sqlite3, xz, zlib) are also installed via brew. Docker is not installed on macOS — the module prints guidance to install Docker Desktop for Mac and continues without error.
 
 </details>
 
