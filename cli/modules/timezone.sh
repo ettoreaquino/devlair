@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# modules/timezone.sh — Timezone
+# cli/modules/timezone.sh — Timezone
 # devlair module: timezone
 set -euo pipefail
 
@@ -8,6 +8,7 @@ source "$SCRIPT_DIR/_lib.sh"
 
 read_context
 
+PLATFORM=$(ctx_get platform)
 MODE=${1:-run}
 
 do_run() {
@@ -15,13 +16,22 @@ do_run() {
   tz=$(ctx_get_config timezone)
   [[ -z "$tz" ]] && tz="UTC"
 
-  timedatectl set-timezone "$tz" >&2
+  if [[ "$PLATFORM" == "macos" ]]; then
+    systemsetup -settimezone "$tz" >&2
+  else
+    timedatectl set-timezone "$tz" >&2
+  fi
+
   json_result "ok" "$tz"
 }
 
 do_check() {
   local tz
-  tz=$(timedatectl show --property=Timezone --value 2>/dev/null || echo "unknown")
+  if [[ "$PLATFORM" == "macos" ]]; then
+    tz=$(systemsetup -gettimezone 2>/dev/null | sed 's/Time Zone: //' || echo "unknown")
+  else
+    tz=$(timedatectl show --property=Timezone --value 2>/dev/null || echo "unknown")
+  fi
   json_check "timezone" "ok" "$tz"
 }
 

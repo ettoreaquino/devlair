@@ -112,8 +112,8 @@ describe("resolveOrder", () => {
     const macosKeys = macosSpecs.map((s) => s.key);
     expect(macosKeys).toContain("system");
     expect(macosKeys).toContain("ssh");
+    expect(macosKeys).toContain("timezone");
     // Linux/WSL-only modules are excluded
-    expect(macosKeys).not.toContain("timezone");
     expect(macosKeys).not.toContain("firewall");
     expect(macosKeys).not.toContain("gnome_terminal");
   });

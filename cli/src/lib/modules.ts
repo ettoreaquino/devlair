@@ -39,7 +39,7 @@ function spec(
 
 export const MODULE_SPECS: readonly ModuleSpec[] = [
   spec("system", "System update", "core", { platforms: ["linux", "wsl", "macos"] }),
-  spec("timezone", "Timezone", "core", { platforms: ["linux"] }),
+  spec("timezone", "Timezone", "core", { platforms: ["linux", "macos"] }),
   spec("tailscale", "Tailscale", "network", { defaultOn: ["linux"] }),
   spec("ssh", "SSH", "network", { deps: ["tailscale"], platforms: ["linux", "macos"] }),
   spec("firewall", "Firewall + Fail2Ban", "network", { deps: ["ssh"], platforms: ["linux"] }),
