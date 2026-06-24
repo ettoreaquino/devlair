@@ -1,8 +1,6 @@
 const MAX_DETAIL_LEN = 120;
 
 /**
- * Pick the most useful single line from module stderr for display in the UI.
- *
  * Strategy (apt prints root-cause errors before summaries):
  *   1. First `E:` line — the original error, not the meta-summary.
  *   2. Last non-empty line that contains at least one alphanumeric character.
@@ -19,7 +17,7 @@ export function pickStderrDetail(stderr: string): string {
   const firstErr = lines.find((l) => l.startsWith("E:"));
   if (firstErr) return cap(firstErr);
 
-  const meaningful = lines.filter((l) => /[a-zA-Z0-9]/.test(l));
+  const meaningful = lines.filter((l) => /[a-z0-9]/i.test(l));
   const picked = meaningful.length > 0 ? meaningful[meaningful.length - 1] : lines[lines.length - 1];
   return cap(picked);
 }
