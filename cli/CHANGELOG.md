@@ -1,5 +1,30 @@
 # Changelog
 
+## [2.8.0](https://github.com/ettoreaquino/devlair/compare/v2.7.0...v2.8.0) (2026-06-24)
+
+
+### Features
+
+* **macos:** add macOS support to ssh module ([8fdcf62](https://github.com/ettoreaquino/devlair/commit/8fdcf628d99d4a0db4479e9b7ab5285ef2e2ac79))
+* **macos:** add macOS support to ssh module (PR 2b) ([e4374c1](https://github.com/ettoreaquino/devlair/commit/e4374c19759fadb9737234bfa532ca26f614cad8))
+* **macos:** add macOS support to timezone module ([a14bdea](https://github.com/ettoreaquino/devlair/commit/a14bdea7702e4da62a21c5d19fc0e2831276d491))
+* **macos:** add macOS support to timezone module (PR 2c) ([b05555f](https://github.com/ettoreaquino/devlair/commit/b05555f0602fe3be9e278e03b8830e4a2b7be204))
+* **macos:** add system module and brew helpers for macOS ([22396bb](https://github.com/ettoreaquino/devlair/commit/22396bb1e1b5b609c0ed59200f16478a16c66a0b))
+* **macos:** add system module with brew helpers (PR 2a) ([3556630](https://github.com/ettoreaquino/devlair/commit/3556630ff6a40a77d82c13a4a4bcf1e90344cade))
+
+
+### Bug Fixes
+
+* **init:** improve stderr heuristic to surface apt root-cause line ([724000a](https://github.com/ettoreaquino/devlair/commit/724000a4bc6918e5ee5b29033ad59e693273edde))
+* **init:** prefer first E: line over apt meta-summary in stderr fallback ([534aecc](https://github.com/ettoreaquino/devlair/commit/534aecccad2b4e469a232395b8567d6752296643))
+* **macos:** address ssh reviewer findings ([92f0980](https://github.com/ettoreaquino/devlair/commit/92f0980f70799efc97254be56940edc49c1ec5c1))
+* **macos:** address timezone reviewer findings ([185be67](https://github.com/ettoreaquino/devlair/commit/185be67b1958c02cfa8ddfb250a4e1acf38b3452))
+* **macos:** brew_ensure failure guard, brew check in doctor, drop test comment ([004445c](https://github.com/ettoreaquino/devlair/commit/004445c6309398907bcef40b598d0513ea14ec49))
+* **macos:** remove duplicate MACOS_ESSENTIALS comment ([6774bd8](https://github.com/ettoreaquino/devlair/commit/6774bd882b98e788a748a7048125d371585c8c05))
+* **security:** remove chmod 644 from download_script ([c845a0a](https://github.com/ettoreaquino/devlair/commit/c845a0adef5370735f3bd21c3cb2431677c75e85))
+* **security:** remove world-readable chmod from download_script ([680a736](https://github.com/ettoreaquino/devlair/commit/680a736b5fa0d8eac61b633a80a0c93e810b5fd8))
+* **stderr:** drop what-narration from JSDoc, use /i flag on regex ([4f04d6f](https://github.com/ettoreaquino/devlair/commit/4f04d6fe9fbd49287e89dd844b451d78356c9813))
+
 ## [2.7.0](https://github.com/ettoreaquino/devlair/compare/v2.6.0...v2.7.0) (2026-06-23)
 
 
