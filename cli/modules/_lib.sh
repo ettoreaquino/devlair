@@ -146,7 +146,6 @@ download_script() {
   local url=$1
   local tmp
   tmp=$(mktemp --suffix=.sh)
-  chmod 644 "$tmp"
   curl -fsSL "$url" -o "$tmp" >&2
   printf '%s' "$tmp"
 }
