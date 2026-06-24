@@ -107,9 +107,11 @@ run '~/.tmux/plugins/tpm/tpm'
 
 
 def run(ctx: SetupContext) -> ModuleResult:
+    group = None if ctx.platform == "macos" else ctx.username
+
     conf = ctx.user_home / ".tmux.conf"
     conf.write_text(TMUX_CONF)
-    shutil.chown(conf, ctx.username, ctx.username)
+    shutil.chown(conf, ctx.username, group)
 
     # Clipboard helper: macOS has pbcopy built-in; Linux/WSL may need wl-clipboard
     if ctx.platform != "macos" and not runner.cmd_exists("wl-copy") and not runner.cmd_exists("xclip"):
@@ -117,8 +119,8 @@ def run(ctx: SetupContext) -> ModuleResult:
 
     plugins_dir = ctx.user_home / ".tmux" / "plugins"
     plugins_dir.mkdir(parents=True, exist_ok=True)
-    shutil.chown(plugins_dir, ctx.username, ctx.username)
-    shutil.chown(plugins_dir.parent, ctx.username, ctx.username)
+    shutil.chown(plugins_dir, ctx.username, group)
+    shutil.chown(plugins_dir.parent, ctx.username, group)
 
     tpm_path = plugins_dir / "tpm"
     if not tpm_path.exists():
