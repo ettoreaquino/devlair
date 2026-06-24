@@ -187,7 +187,7 @@ devlair hooks into Claude Code to track session usage and display a dashboard:
 
 ## What gets installed
 
-`devlair init` runs these modules in order. Some modules are **opt-in** and not included in a default run — use `devlair init --only <module>` or `--group` to enable them. Opt-in modules: `claude`; `tailscale` is opt-in on WSL and macOS. Portable modules (supported on Linux, WSL, and macOS): `system`, `tailscale`, `zsh`, `tmux`, `rclone`, `github`, `shell`, `claude`, `devtools`. Linux-only modules (auto-skipped elsewhere): `timezone`, `ssh`, `firewall`, `gnome_terminal`.
+`devlair init` runs these modules in order. Some modules are **opt-in** and not included in a default run — use `devlair init --only <module>` or `--group` to enable them. Opt-in modules: `claude`; `tailscale` is opt-in on WSL and macOS. Portable modules (supported on Linux, WSL, and macOS): `system`, `tailscale`, `zsh`, `tmux`, `rclone`, `github`, `shell`, `claude`, `devtools`, `ssh`. Linux-only modules (auto-skipped elsewhere): `timezone`, `firewall`, `gnome_terminal`.
 
 <details>
 <summary><b>System</b> — OS packages and essentials</summary>
@@ -220,6 +220,8 @@ Creates `/etc/ssh/sshd_config.d/99-hardened.conf` with:
 - ListenAddress restricted to Tailscale IP (when available)
 
 Prompts for your SSH public key if `authorized_keys` is empty.
+
+On macOS, enables Remote Login via `systemsetup -setremotelogin on` and manages `sshd` through `launchctl`. The hardened config drop-in and authorized_keys setup are identical across platforms.
 
 </details>
 
