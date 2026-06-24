@@ -1,7 +1,8 @@
 import { Box, Text } from "ink";
+import stripAnsi from "strip-ansi";
 import { D_COMMENT, D_FG, D_PINK, D_PURPLE } from "../lib/theme.js";
 
-const BRAND = "d e v l a i r";
+export const BRAND = "d e v l a i r";
 const INNER_WIDTH = 48;
 const MIN_W_SHORT = 16;
 
@@ -52,8 +53,8 @@ function Border({ W, left, right }: { W: number; left: string; right: string }) 
 function ContentRow({ W, children }: { W: number; children: string }) {
   const innerLen = [...children].length;
   const pad = W - innerLen;
-  const padL = Math.floor(pad / 2);
-  const padR = pad - padL;
+  const padL = Math.max(0, Math.floor(pad / 2));
+  const padR = Math.max(0, pad - padL);
   return (
     <Text>
       <Text color={D_PURPLE}>{"  │"}</Text>
@@ -65,13 +66,13 @@ function ContentRow({ W, children }: { W: number; children: string }) {
   );
 }
 
-function FullLogo({ W, grad }: { W: number; grad: string }) {
+function FullLogo({ W, grad, brand }: { W: number; grad: string; brand: string }) {
   const gradR = [...grad].reverse().join("");
-  const gap = W - grad.length - gradR.length - 4;
-  const iw = BRAND.length + 4;
-  const ib = "═".repeat(iw - 2);
-  const pt = Math.floor((W - iw) / 2);
-  const pr = W - iw - pt;
+  const gap = Math.max(0, W - grad.length - gradR.length - 4);
+  const iw = [...brand].length + 4;
+  const ib = "═".repeat(Math.max(0, iw - 2));
+  const pt = Math.max(0, Math.floor((W - iw) / 2));
+  const pr = Math.max(0, W - iw - pt);
 
   const GradRow = () => (
     <Text>
@@ -105,7 +106,7 @@ function FullLogo({ W, grad }: { W: number; grad: string }) {
         {" ".repeat(pt)}
         <Text color={D_PINK}>{"║ "}</Text>
         <Text color={D_FG} bold>
-          {BRAND}
+          {brand}
         </Text>
         <Text color={D_PINK}>{" ║"}</Text>
         {" ".repeat(pr)}
@@ -118,12 +119,12 @@ function FullLogo({ W, grad }: { W: number; grad: string }) {
   );
 }
 
-function MediumLogo({ W, grad }: { W: number; grad: string }) {
+function MediumLogo({ W, grad, brand }: { W: number; grad: string; brand: string }) {
   const gradR = [...grad].reverse().join("");
-  const innerLen = grad.length + 2 + BRAND.length + 2 + gradR.length;
+  const innerLen = grad.length + 2 + [...brand].length + 2 + gradR.length;
   const pad = W - innerLen;
-  const padL = Math.floor(pad / 2);
-  const padR = pad - padL;
+  const padL = Math.max(0, Math.floor(pad / 2));
+  const padR = Math.max(0, pad - padL);
 
   return (
     <Box flexDirection="column">
@@ -134,7 +135,7 @@ function MediumLogo({ W, grad }: { W: number; grad: string }) {
         <Text color={D_COMMENT}>{grad}</Text>
         {"  "}
         <Text color={D_FG} bold>
-          {BRAND}
+          {brand}
         </Text>
         {"  "}
         <Text color={D_COMMENT}>{gradR}</Text>
@@ -146,21 +147,22 @@ function MediumLogo({ W, grad }: { W: number; grad: string }) {
   );
 }
 
-function ShortLogo({ W }: { W: number }) {
+function ShortLogo({ W, brand }: { W: number; brand: string }) {
   return (
     <Box flexDirection="column">
       <Border W={W} left="╭" right="╮" />
-      <ContentRow W={W}>{BRAND}</ContentRow>
+      <ContentRow W={W}>{brand}</ContentRow>
       <Border W={W} left="╰" right="╯" />
     </Box>
   );
 }
 
-export function Logo({ cols }: { cols?: number }) {
+export function Logo({ cols, brand }: { cols?: number; brand?: string }) {
   const termCols = cols ?? process.stdout.columns ?? 80;
   const { W, grad, innerBox } = resolveDecoration(termCols);
+  const b = stripAnsi(brand ?? BRAND).slice(0, 40);
 
-  if (grad && innerBox) return <FullLogo W={W} grad={grad} />;
-  if (grad) return <MediumLogo W={W} grad={grad} />;
-  return <ShortLogo W={W} />;
+  if (grad && innerBox) return <FullLogo W={W} grad={grad} brand={b} />;
+  if (grad) return <MediumLogo W={W} grad={grad} brand={b} />;
+  return <ShortLogo W={W} brand={b} />;
 }

@@ -73,7 +73,7 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
   vX.Y.Z
 
   Setup & Health
-    init [--only MOD] [--skip MOD] [--group GRP] [--config FILE]  Interactive wizard (or non-interactive with flags)
+    init [--only MOD] [--skip MOD] [--group GRP] [--config FILE] [--brand NAME]  Interactive wizard (or non-interactive with flags)
     doctor [--fix]                      Check system health & fix drift
     upgrade [--no-self]                 Upgrade tools & re-apply configs
     disable-password                    Lock SSH to key-only auth

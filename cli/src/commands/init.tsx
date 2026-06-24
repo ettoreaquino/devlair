@@ -11,7 +11,7 @@ import { useApp } from "ink";
 import { Box, Text } from "ink";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { Logo } from "../components/Logo.js";
+import { BRAND, Logo } from "../components/Logo.js";
 import { type ModuleRun, Progress } from "../components/Progress.js";
 import { OptionalHint, Summary } from "../components/Summary.js";
 import type { InitFlags } from "../lib/args.js";
@@ -38,21 +38,23 @@ function InitHeader({
   host,
   platform,
   profileName,
+  brand,
 }: {
   username: string;
   host: string;
   platform: string;
   profileName?: string;
+  brand?: string;
 }) {
   const suffix = platform === "wsl" ? " (WSL)" : platform === "macos" ? " (macOS)" : "";
 
   return (
     <Box flexDirection="column">
-      <Logo />
+      <Logo brand={brand} />
       <Box marginBottom={1}>
         <Text>{"  "}</Text>
         <Text color={D_PURPLE} bold>
-          devlair
+          {brand ?? BRAND}
         </Text>
         <Text color={D_PINK} bold>
           {"  init"}
@@ -309,16 +311,22 @@ function NonInteractiveInit({ flags }: { flags: InitFlags }) {
       </Box>
     );
   }
-  return <NonInteractiveInitView state={initState} />;
+  return <NonInteractiveInitView state={initState} brand={flags.brand} />;
 }
 
-function NonInteractiveInitView({ state }: { state: InitState }) {
+function NonInteractiveInitView({ state, brand }: { state: InitState; brand?: string }) {
   const { platform, context, selected, optional, skippedNames, profile } = state;
   const { modules, done, logDir } = useModuleExecution(selected, context, true);
 
   return (
     <Box flexDirection="column">
-      <InitHeader username={context.username} host={hostname()} platform={platform} profileName={profile?.name} />
+      <InitHeader
+        username={context.username}
+        host={hostname()}
+        platform={platform}
+        profileName={profile?.name}
+        brand={brand}
+      />
       <PlatformSkipped names={skippedNames} />
       <Progress modules={modules} total={selected.length} />
       {done && <Summary modules={modules} logDir={logDir} />}
@@ -330,7 +338,7 @@ function NonInteractiveInitView({ state }: { state: InitState }) {
 
 // ── Interactive wizard init (no flags) ─────────────────────────────────────
 
-function WizardInit() {
+function WizardInit({ brand }: { brand?: string }) {
   const { exit } = useApp();
 
   const [envState] = useState(() => {
@@ -368,7 +376,7 @@ function WizardInit() {
 
   return (
     <Box flexDirection="column">
-      <InitHeader username={context.username} host={hostname()} platform={platform} />
+      <InitHeader username={context.username} host={hostname()} platform={platform} brand={brand} />
 
       {phase === "wizard-groups" && (
         <GroupSelect
@@ -435,5 +443,5 @@ export function InitView({ flags }: { flags: InitFlags }) {
   if (hasExplicitFlags(flags)) {
     return <NonInteractiveInit flags={flags} />;
   }
-  return <WizardInit />;
+  return <WizardInit brand={flags.brand} />;
 }
