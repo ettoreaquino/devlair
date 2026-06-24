@@ -244,7 +244,7 @@ Installs zsh, sets it as default, and configures [zimfw](https://zimfw.sh) with:
 <details>
 <summary><b>tmux</b> — Dracula-themed multiplexer</summary>
 
-Writes `~/.tmux.conf` with Dracula colors, `C-a` prefix, mouse support, 50k line history, and intuitive split bindings (`|` and `-`). Vi copy-mode with mouse drag selection piped to the system clipboard (`wl-copy` on Wayland, `xclip` on X11, OSC 52 fallback). Installs `wl-clipboard` automatically when no clipboard tool is found. Includes [TPM](https://github.com/tmux-plugins/tpm), [tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect) + [tmux-continuum](https://github.com/tmux-plugins/tmux-continuum) for automatic session save/restore — TPM plugins are installed non-interactively during init/upgrade. Claude Code popup on `C-a y`.
+Writes `~/.tmux.conf` with Dracula colors, `C-a` prefix, mouse support, 50k line history, and intuitive split bindings (`|` and `-`). Vi copy-mode with mouse drag selection piped to the system clipboard (`pbcopy` on macOS, `wl-copy` on Wayland, `xclip` on X11, OSC 52 fallback). Installs `wl-clipboard` automatically on Linux/WSL when no clipboard tool is found. Includes [TPM](https://github.com/tmux-plugins/tpm), [tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect) + [tmux-continuum](https://github.com/tmux-plugins/tmux-continuum) for automatic session save/restore — TPM plugins are installed non-interactively during init/upgrade. Claude Code popup on `C-a y`.
 
 </details>
 
@@ -277,7 +277,7 @@ Generates an `ed25519` SSH key for GitHub, configures `~/.ssh/config`, tests the
 <details>
 <summary><b>Shell</b> — aliases + login banner</summary>
 
-Appends aliases to `.zshrc` (`ll`, `..`, `ports`, `dps`, `t` for tmux, `bcat` → `bat`, etc.) and a `tmx` command for session management. The login banner shows live tmux sessions and named channel sessions:
+Appends aliases to `.zshrc` and a `tmx` command for session management. Aliases are platform-aware: `ll`, `ports`, and `update` expand differently on macOS (`ls -G`, `lsof`, `brew`) vs Linux/WSL (`ls --color`, `ss`, `apt`). The `BROWSER` env var is set to `open` on macOS and `wslview` on WSL. The login banner shows live tmux sessions and named channel sessions:
 
 ```
 ╭─ myhost ──────────────────────────────────────╮
