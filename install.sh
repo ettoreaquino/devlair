@@ -50,11 +50,19 @@ meta()    { printf "    %s%s%s\n" "$C_COMMENT" "$1" "$C_RESET"; }
 # Compares sha256 of <file> against the entry for <asset_name> in <checksums_file>.
 # When <hard_fail_on_missing> is "1", a missing entry aborts; otherwise it warns
 # and continues. Mismatches always abort. Removes <file> on failure.
+sha256() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1"
+  else
+    shasum -a 256 "$1"
+  fi
+}
+
 verify_checksum() {
   local file="$1" asset="$2" sums="$3" hard_fail="$4"
   local expected actual
   expected=$(grep " ${asset}\$" "$sums" | awk '{print $1}')
-  actual=$(sha256sum "$file" | awk '{print $1}')
+  actual=$(sha256 "$file" | awk '{print $1}')
 
   if [[ -z "$expected" ]]; then
     if [[ "$hard_fail" == "1" ]]; then
@@ -81,7 +89,6 @@ verify_checksum() {
 for arg in "$@"; do
   case "$arg" in
     --v1)    CHANNEL="v1" ;;
-    --stable) CHANNEL="v1" ;;  # --stable used to mean v1; kept for compat
     --pre)   ;;                # no-op: v2 is now the default
     -h|--help)
       sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
@@ -95,7 +102,17 @@ for arg in "$@"; do
   esac
 done
 
-# ── Detect architecture ───────────────────────────────────────────────────────
+# ── Detect OS + architecture ──────────────────────────────────────────────────
+OS=$(uname -s)
+case "$OS" in
+  Linux)  OS_SUFFIX="linux"  ;;
+  Darwin) OS_SUFFIX="darwin" ;;
+  *)
+    err "Unsupported OS: $OS"
+    exit 1
+    ;;
+esac
+
 ARCH=$(uname -m)
 case "$ARCH" in
   x86_64)          ARCH_SUFFIX="x86_64"  ;;
@@ -106,8 +123,15 @@ case "$ARCH" in
     ;;
 esac
 
-printf "\n%s%s devlair installer%s  %s· channel: %s · arch: %s%s\n\n" \
-  "$C_BOLD" "$C_PINK" "$C_RESET" "$C_COMMENT" "$CHANNEL" "$ARCH_SUFFIX" "$C_RESET"
+# v1 is Python/PyInstaller — Linux binaries only.
+if [[ "$CHANNEL" == "v1" && "$OS_SUFFIX" == "darwin" ]]; then
+  err "v1 channel does not support macOS — no Darwin binary is published."
+  meta "Use the default channel (v2) for macOS support."
+  exit 1
+fi
+
+printf "\n%s%s devlair installer%s  %s· channel: %s · os: %s · arch: %s%s\n\n" \
+  "$C_BOLD" "$C_PINK" "$C_RESET" "$C_COMMENT" "$CHANNEL" "$OS_SUFFIX" "$ARCH_SUFFIX" "$C_RESET"
 
 # ── Channel configuration ─────────────────────────────────────────────────────
 section "Resolving release"
@@ -136,7 +160,7 @@ if [[ -z "${LATEST:-}" ]]; then
   exit 1
 fi
 
-ASSET="${ASSET_PREFIX}-linux-${ARCH_SUFFIX}"
+ASSET="${ASSET_PREFIX}-${OS_SUFFIX}-${ARCH_SUFFIX}"
 ok "release ${LATEST}"
 meta "asset: ${ASSET}"
 
@@ -187,7 +211,11 @@ if [[ "$CHANNEL" != "v1" ]]; then
   # under sudo; chmod immediately after pins a known-safe mode regardless of
   # the installer's umask.
   STAGE_DIR=$(mktemp -d)
-  tar -xzf "$TMP_MODULES" -C "$STAGE_DIR" --no-same-owner --no-same-permissions
+  # --no-same-permissions is GNU tar only; BSD tar (macOS) ignores permissions
+  # by default so the flag is not needed there.
+  TAR_OPTS=(--no-same-owner)
+  [[ "$OS_SUFFIX" == "linux" ]] && TAR_OPTS+=(--no-same-permissions)
+  tar -xzf "$TMP_MODULES" -C "$STAGE_DIR" "${TAR_OPTS[@]}"
   chmod -R u=rwX,go=rX "$STAGE_DIR/modules"
   rm -f "$TMP_MODULES"
 
@@ -231,8 +259,11 @@ if [[ "$CHANNEL" != "v1" ]]; then
       $MAYBE_SUDO apt-get update -qq >/dev/null
       $MAYBE_SUDO apt-get install -y -qq jq >/dev/null
       ok "jq installed"
+    elif command -v brew >/dev/null 2>&1; then
+      brew install --quiet jq >/dev/null  # brew must not run as root — no $MAYBE_SUDO
+      ok "jq installed"
     else
-      warn "jq is required by devlair modules but apt-get is not available"
+      warn "jq is required by devlair modules but no package manager found"
       meta "install jq manually before running 'devlair init'"
     fi
   fi

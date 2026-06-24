@@ -103,11 +103,21 @@ jobs:
       matrix:
         include:
           - runs-on: ubuntu-latest
+            os: linux
             arch: x86_64
             target: bun-linux-x64
           - runs-on: ubuntu-24.04-arm
+            os: linux
             arch: aarch64
             target: bun-linux-arm64
+          - runs-on: macos-latest
+            os: darwin
+            arch: aarch64
+            target: bun-darwin-arm64
+          - runs-on: macos-13
+            os: darwin
+            arch: x86_64
+            target: bun-darwin-x64
 
     runs-on: ${{ matrix.runs-on }}
 
@@ -120,7 +130,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: '1.2.17'
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -130,19 +140,19 @@ jobs:
           bun build --compile \
             --target=${{ matrix.target }} \
             src/index.tsx \
-            --outfile dist/devlair-cli-linux-${{ matrix.arch }}
+            --outfile dist/devlair-cli-${{ matrix.os }}-${{ matrix.arch }}
 
       - name: Upload binary to release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.release-please.outputs.cli_tag_name }}
-          files: cli/dist/devlair-cli-linux-${{ matrix.arch }}
+          files: cli/dist/devlair-cli-${{ matrix.os }}-${{ matrix.arch }}
 
       - name: Upload binary as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: devlair-cli-linux-${{ matrix.arch }}
-          path: cli/dist/devlair-cli-linux-${{ matrix.arch }}
+          name: devlair-cli-${{ matrix.os }}-${{ matrix.arch }}
+          path: cli/dist/devlair-cli-${{ matrix.os }}-${{ matrix.arch }}
 
   package-cli-modules:
     needs: release-please
@@ -177,7 +187,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: assets
-          pattern: devlair-cli-linux-*
+          pattern: devlair-cli-*
           merge-multiple: true
 
       - name: Download modules tarball
@@ -189,7 +199,7 @@ jobs:
       - name: Generate checksums
         run: |
           cd assets
-          sha256sum devlair-cli-linux-* modules.tar.gz | tee checksums.txt
+          sha256sum devlair-cli-* modules.tar.gz | tee checksums.txt
 
       - name: Upload checksums to release
         uses: softprops/action-gh-release@v2
