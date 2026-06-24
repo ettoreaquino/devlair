@@ -41,20 +41,23 @@ def run(ctx: SetupContext) -> ModuleResult:
         skipped.append("pyenv")
     else:
         console.print("    [muted]pyenv...[/muted]")
-        runner.apt_install(
-            "libssl-dev",
-            "libbz2-dev",
-            "libreadline-dev",
-            "libsqlite3-dev",
-            "libncursesw5-dev",
-            "xz-utils",
-            "tk-dev",
-            "libxml2-dev",
-            "libxmlsec1-dev",
-            "libffi-dev",
-            "liblzma-dev",
-            quiet=True,
-        )
+        if ctx.platform == "macos":
+            runner.brew_install("openssl", "readline", "sqlite3", "xz", "zlib", quiet=True)
+        else:
+            runner.apt_install(
+                "libssl-dev",
+                "libbz2-dev",
+                "libreadline-dev",
+                "libsqlite3-dev",
+                "libncursesw5-dev",
+                "xz-utils",
+                "tk-dev",
+                "libxml2-dev",
+                "libxmlsec1-dev",
+                "libffi-dev",
+                "liblzma-dev",
+                quiet=True,
+            )
         script = runner.download_script("https://pyenv.run")
         try:
             runner.run_shell_as(ctx.username, f'bash "{script}"', quiet=True)
@@ -114,8 +117,12 @@ def run(ctx: SetupContext) -> ModuleResult:
     # ── Docker ────────────────────────────────────────────────────────────────
     if runner.cmd_exists("docker"):
         skipped.append("docker")
-    elif ctx.platform == "wsl":
-        console.print("    [warning]docker — install Docker Desktop on Windows, not inside WSL[/warning]")
+    elif ctx.platform in ("wsl", "macos"):
+        console.print(
+            "    [warning]docker — install Docker Desktop"
+            + (" on Windows, not inside WSL" if ctx.platform == "wsl" else " for Mac")
+            + "[/warning]"
+        )
         skipped.append("docker")
     else:
         console.print("    [muted]docker...[/muted]")
@@ -146,6 +153,11 @@ def run(ctx: SetupContext) -> ModuleResult:
     # ── GitHub CLI ────────────────────────────────────────────────────────────
     if runner.cmd_exists("gh"):
         skipped.append("gh")
+    elif ctx.platform == "macos":
+        console.print("    [muted]gh...[/muted]")
+        runner.brew_install("gh", quiet=True)
+        safe_log_install(ctx.user_home, tool="gh", source="brew:cli.github.com", verified=True)
+        installed.append("gh")
     else:
         console.print("    [muted]gh...[/muted]")
         runner.run_shell(
@@ -167,10 +179,15 @@ def run(ctx: SetupContext) -> ModuleResult:
     # ── AWS CLI v2 (with GPG signature verification) ────────────────────────
     if runner.cmd_exists("aws"):
         skipped.append("aws")
+    elif ctx.platform == "macos":
+        console.print("    [muted]aws cli...[/muted]")
+        runner.brew_install("awscli", quiet=True)
+        safe_log_install(ctx.user_home, tool="aws", source="brew:awscli", verified=True)
+        installed.append("aws")
     else:
         console.print("    [muted]aws cli...[/muted]")
-        arch = runner.get_output("dpkg --print-architecture")
-        aws_arch = "x86_64" if arch == "amd64" else "aarch64"
+        raw_arch = runner.get_output("uname -m")
+        aws_arch = "aarch64" if raw_arch == "aarch64" else "x86_64"
         aws_base = f"https://awscli.amazonaws.com/awscli-exe-linux-{aws_arch}"
         gpg_ok_marker = runner.safe_tempfile(suffix=".gpg_ok")
         gpg_ok_marker.unlink()  # remove so touch is the signal
