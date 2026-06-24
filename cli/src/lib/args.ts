@@ -5,7 +5,7 @@ export interface InitFlags {
   skip: Set<string>;
   group: Set<string> | null;
   config: string | null;
-  brand: string | undefined;
+  brand?: string;
 }
 
 export interface DoctorFlags {
