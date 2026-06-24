@@ -30,6 +30,8 @@ LINUX_ESSENTIALS=( openssh-server ufw fail2ban avahi-daemon )
 
 # macOS package list — net-tools/build-essential/ca-certificates/locales are
 # Linux-specific; Keychain handles CAs, Xcode CLT handles build tooling.
+# Excludes from ESSENTIALS: net-tools, build-essential, ca-certificates, locales
+# (Linux/apt-specific; macOS handles these via system frameworks and Xcode CLT)
 MACOS_ESSENTIALS=( git curl wget vim htop tmux unzip jq tree rsync zsh bat fzf gnupg )
 
 do_run() {
@@ -70,6 +72,9 @@ do_check() {
   local checks=( "git:git" "curl:curl" "tmux:tmux" "zsh:zsh" )
   if [[ "$PLATFORM" == "linux" ]]; then
     checks+=( "ufw:ufw" "fail2ban:fail2ban-client" )
+  fi
+  if [[ "$PLATFORM" == "macos" ]]; then
+    checks+=( "brew:brew" )
   fi
   for pair in "${checks[@]}"; do
     label="${pair%%:*}"

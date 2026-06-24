@@ -110,7 +110,6 @@ describe("resolveOrder", () => {
   test("filters by platform: macos", () => {
     const macosSpecs = resolveOrder(undefined, "macos");
     const macosKeys = macosSpecs.map((s) => s.key);
-    // system runs on macOS (PR 2a)
     expect(macosKeys).toContain("system");
     // Linux/WSL-only modules are excluded
     expect(macosKeys).not.toContain("timezone");

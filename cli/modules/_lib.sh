@@ -122,6 +122,9 @@ brew_ensure() {
     eval "$(/opt/homebrew/bin/brew shellenv)"
   elif [[ -x /usr/local/bin/brew ]]; then
     eval "$(/usr/local/bin/brew shellenv)"
+  else
+    json_result "fail" "Homebrew installed but brew not found at expected paths"
+    exit 1
   fi
 }
 
