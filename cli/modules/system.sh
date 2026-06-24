@@ -28,7 +28,22 @@ ESSENTIALS=(
 # bare Linux already.
 LINUX_ESSENTIALS=( openssh-server ufw fail2ban avahi-daemon )
 
+# Excludes from ESSENTIALS: net-tools, build-essential, ca-certificates, locales
+# (Linux/apt-specific; macOS handles these via system frameworks and Xcode CLT)
+MACOS_ESSENTIALS=( git curl wget vim htop tmux unzip jq tree rsync zsh bat fzf gnupg )
+
 do_run() {
+  if [[ "$PLATFORM" == "macos" ]]; then
+    brew_ensure
+    json_progress "updating Homebrew"
+    brew update --quiet >&2
+    json_progress "upgrading packages"
+    brew upgrade --quiet >&2
+    brew_install "${MACOS_ESSENTIALS[@]}"
+    json_result "ok" "packages up to date"
+    return
+  fi
+
   json_progress "updating package lists"
   apt-get update -qq >&2
   json_progress "upgrading packages"
@@ -55,6 +70,9 @@ do_check() {
   local checks=( "git:git" "curl:curl" "tmux:tmux" "zsh:zsh" )
   if [[ "$PLATFORM" == "linux" ]]; then
     checks+=( "ufw:ufw" "fail2ban:fail2ban-client" )
+  fi
+  if [[ "$PLATFORM" == "macos" ]]; then
+    checks+=( "brew:brew" )
   fi
   for pair in "${checks[@]}"; do
     label="${pair%%:*}"

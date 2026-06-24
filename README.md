@@ -187,12 +187,12 @@ devlair hooks into Claude Code to track session usage and display a dashboard:
 
 ## What gets installed
 
-`devlair init` runs these modules in order. Some modules are **opt-in** and not included in a default run — use `devlair init --only <module>` or `--group` to enable them. Opt-in modules: `claude`; `tailscale` is opt-in on WSL and macOS. Portable modules (supported on Linux, WSL, and macOS): `tailscale`, `zsh`, `tmux`, `rclone`, `github`, `shell`, `claude`, `devtools`. Linux-only modules (auto-skipped elsewhere): `timezone`, `ssh`, `firewall`, `gnome_terminal`.
+`devlair init` runs these modules in order. Some modules are **opt-in** and not included in a default run — use `devlair init --only <module>` or `--group` to enable them. Opt-in modules: `claude`; `tailscale` is opt-in on WSL and macOS. Portable modules (supported on Linux, WSL, and macOS): `system`, `tailscale`, `zsh`, `tmux`, `rclone`, `github`, `shell`, `claude`, `devtools`. Linux-only modules (auto-skipped elsewhere): `timezone`, `ssh`, `firewall`, `gnome_terminal`.
 
 <details>
 <summary><b>System</b> — OS packages and essentials</summary>
 
-Runs `apt update && upgrade` and installs core packages: `git`, `curl`, `vim`, `htop`, `tmux`, `zsh`, `bat`, `fzf`, `build-essential`, and more. On bare Linux it also installs `openssh-server`, `ufw`, `fail2ban`, and `avahi-daemon`; these are skipped on WSL because they ship systemd-managed postinst scripts that don't work under WSL's systemd-less default (the dedicated `ssh` and `firewall` modules are also Linux-only).
+Runs `apt update && upgrade` and installs core packages: `git`, `curl`, `vim`, `htop`, `tmux`, `zsh`, `bat`, `fzf`, `build-essential`, and more. On bare Linux it also installs `openssh-server`, `ufw`, `fail2ban`, and `avahi-daemon`; these are skipped on WSL because they ship systemd-managed postinst scripts that don't work under WSL's systemd-less default (the dedicated `ssh` and `firewall` modules are also Linux-only). On macOS, the module ensures Homebrew is installed, runs `brew update && brew upgrade`, and installs a set of macOS essentials via `brew install` (`git`, `curl`, `wget`, `vim`, `htop`, `tmux`, `unzip`, `jq`, `tree`, `rsync`, `zsh`, `bat`, `fzf`, `gnupg`).
 
 </details>
 

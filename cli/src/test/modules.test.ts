@@ -93,7 +93,7 @@ describe("resolveOrder", () => {
     expect(keys).toContain("firewall");
   });
 
-  test("filters by platform", () => {
+  test("filters by platform: wsl", () => {
     const wslSpecs = resolveOrder(undefined, "wsl");
     const wslKeys = wslSpecs.map((s) => s.key);
     // Linux-only modules should be excluded on WSL
@@ -105,6 +105,17 @@ describe("resolveOrder", () => {
     expect(wslKeys).toContain("system");
     expect(wslKeys).toContain("zsh");
     expect(wslKeys).toContain("devtools");
+  });
+
+  test("filters by platform: macos", () => {
+    const macosSpecs = resolveOrder(undefined, "macos");
+    const macosKeys = macosSpecs.map((s) => s.key);
+    expect(macosKeys).toContain("system");
+    // Linux/WSL-only modules are excluded
+    expect(macosKeys).not.toContain("timezone");
+    expect(macosKeys).not.toContain("ssh");
+    expect(macosKeys).not.toContain("firewall");
+    expect(macosKeys).not.toContain("gnome_terminal");
   });
 
   test("combines keys + platform filter", () => {
