@@ -16,8 +16,13 @@ do_run() {
   tz=$(ctx_get_config timezone)
   [[ -z "$tz" ]] && tz="UTC"
 
+  if [[ ! "$tz" =~ ^[A-Za-z_][A-Za-z0-9_+/-]*$ ]]; then
+    json_result "fail" "invalid timezone: $tz"
+    exit 1
+  fi
+
   if [[ "$PLATFORM" == "macos" ]]; then
-    systemsetup -settimezone "$tz" >&2
+    ln -sf "/usr/share/zoneinfo/$tz" /etc/localtime >&2
   else
     timedatectl set-timezone "$tz" >&2
   fi
@@ -28,11 +33,13 @@ do_run() {
 do_check() {
   local tz
   if [[ "$PLATFORM" == "macos" ]]; then
-    tz=$(systemsetup -gettimezone 2>/dev/null | sed 's/Time Zone: //' || echo "unknown")
+    tz=$(readlink /etc/localtime 2>/dev/null | sed 's|.*/zoneinfo/||' || echo "unknown")
   else
     tz=$(timedatectl show --property=Timezone --value 2>/dev/null || echo "unknown")
   fi
-  json_check "timezone" "ok" "$tz"
+  local status="ok"
+  [[ "$tz" == "unknown" ]] && status="fail"
+  json_check "timezone" "$status" "$tz"
 }
 
 case "$MODE" in
