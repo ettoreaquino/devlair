@@ -187,7 +187,7 @@ devlair hooks into Claude Code to track session usage and display a dashboard:
 
 ## What gets installed
 
-`devlair init` runs these modules in order. Some modules are **opt-in** and not included in a default run — use `devlair init --only <module>` or `--group` to enable them. Opt-in modules: `claude`; `tailscale` is opt-in on WSL.
+`devlair init` runs these modules in order. Some modules are **opt-in** and not included in a default run — use `devlair init --only <module>` or `--group` to enable them. Opt-in modules: `claude`; `tailscale` is opt-in on WSL and macOS. Portable modules (supported on Linux, WSL, and macOS): `tailscale`, `zsh`, `tmux`, `rclone`, `github`, `shell`, `claude`. Linux-only modules (auto-skipped elsewhere): `timezone`, `ssh`, `firewall`, `gnome_terminal`.
 
 <details>
 <summary><b>System</b> — OS packages and essentials</summary>
@@ -329,7 +329,7 @@ Checks for a new devlair binary first — if a new version is available, it down
 
 ## Requirements
 
-- **OS:** Ubuntu 24.04 LTS or WSL 2 (Ubuntu)
+- **OS:** Ubuntu 24.04 LTS, WSL 2 (Ubuntu), or macOS (portable modules only — see module list above)
 - **Arch:** x86_64 or aarch64
 - **Privileges:** root or a user with `sudo`
 - **WSL extras:** Docker Desktop for Windows with WSL integration enabled (for Docker-dependent modules)

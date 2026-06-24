@@ -36,17 +36,17 @@ class ModuleSpec:
 MODULE_SPECS: list[ModuleSpec] = [
     ModuleSpec("system",         "System update",          system,         "core"),
     ModuleSpec("timezone",       "Timezone",               timezone,       "core",                                    platforms={"linux"}),
-    ModuleSpec("tailscale",      "Tailscale",              tailscale,      "network",                                 default_on={"linux"}),
+    ModuleSpec("tailscale",      "Tailscale",              tailscale,      "network",                                 default_on={"linux"},                          platforms={"linux", "wsl", "macos"}),
     ModuleSpec("ssh",            "SSH",                    ssh,            "network",     deps=["tailscale"],        platforms={"linux"}),
     ModuleSpec("firewall",       "Firewall + Fail2Ban",    firewall,       "network",     deps=["ssh"],              platforms={"linux"}),
-    ModuleSpec("zsh",            "Zsh + Dracula",          zsh,            "core",        reapply=True),
-    ModuleSpec("tmux",           "tmux",                   tmux,           "coding",      reapply=True),
+    ModuleSpec("zsh",            "Zsh + Dracula",          zsh,            "core",        reapply=True,              platforms={"linux", "wsl", "macos"}),
+    ModuleSpec("tmux",           "tmux",                   tmux,           "coding",      reapply=True,              platforms={"linux", "wsl", "macos"}),
     ModuleSpec("devtools",       "Dev tools",              devtools,       "coding",      reapply=True),
-    ModuleSpec("rclone",         "rclone sync",            rclone,         "cloud-sync",                              default_on=set()),
-    ModuleSpec("github",         "GitHub SSH key",         github,         "coding"),
-    ModuleSpec("shell",          "Shell aliases",          shell,          "core",        deps=["zsh"], reapply=True),
+    ModuleSpec("rclone",         "rclone sync",            rclone,         "cloud-sync",                              default_on=set(),                              platforms={"linux", "wsl", "macos"}),
+    ModuleSpec("github",         "GitHub SSH key",         github,         "coding",                                 platforms={"linux", "wsl", "macos"}),
+    ModuleSpec("shell",          "Shell aliases",          shell,          "core",        deps=["zsh"], reapply=True, platforms={"linux", "wsl", "macos"}),
     ModuleSpec("gnome_terminal", "Gnome Terminal Dracula", gnome_terminal, "desktop",     reapply=True,              platforms={"linux"}),
-    ModuleSpec("claude",         "Claude Code",            claude,         "ai",          deps=["devtools"], reapply=True, default_on=set()),
+    ModuleSpec("claude",         "Claude Code",            claude,         "ai",          deps=["devtools"], reapply=True, default_on=set(),                         platforms={"linux", "wsl", "macos"}),
 ]
 # fmt: on
 
