@@ -23,6 +23,7 @@ import { detectPlatform, detectWslVersion } from "../lib/platform.js";
 import { type Profile, ProfileError, loadProfile, resolveProfileKeys } from "../lib/profiles.js";
 import { runModule } from "../lib/runner.js";
 import { selectModules } from "../lib/selection.js";
+import { pickStderrDetail } from "../lib/stderr.js";
 import { D_COMMENT, D_FG, D_PINK, D_PURPLE, D_RED } from "../lib/theme.js";
 import type { ModuleContext, Status } from "../lib/types.js";
 import { Confirmation } from "../wizard/Confirmation.js";
@@ -158,12 +159,8 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
               // a `result` event — otherwise we'd promote warn→ok on exit 0.
               if (!resultEmitted) finalStatus = value.status;
               if (!finalDetail && finalStatus !== "ok") {
-                const lastErr = value.stderr
-                  .split("\n")
-                  .map((s) => s.trim())
-                  .filter(Boolean)
-                  .pop();
-                if (lastErr) finalDetail = lastErr;
+                const picked = pickStderrDetail(value.stderr);
+                if (picked) finalDetail = picked;
               }
               break;
             }
