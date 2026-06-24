@@ -66,7 +66,7 @@ def apt_install(*packages: str, quiet: bool = False) -> None:
 
 
 def brew_install(*packages: str, quiet: bool = False) -> None:
-    run(["brew", "install"] + list(packages), capture=quiet)
+    run(["brew", "install"] + (["--quiet"] if quiet else []) + list(packages), capture=quiet)
 
 
 def get_output(cmd: str | list) -> str:
