@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# modules/ssh.sh — SSH
+# cli/modules/ssh.sh — SSH
 # devlair module: ssh
 set -euo pipefail
 
@@ -10,17 +10,13 @@ read_context
 
 USERNAME=$(ctx_get username)
 USER_HOME=$(ctx_get userHome)
+PLATFORM=$(ctx_get platform)
 MODE=${1:-run}
 
 SSHD_CONF="/etc/ssh/sshd_config.d/99-hardened.conf"
 
 do_run() {
-  # Back up existing config
-  if [[ -f /etc/ssh/sshd_config ]]; then
-    cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak
-  fi
-
-  # Get Tailscale IP for ListenAddress
+  # Get Tailscale IP for ListenAddress (optional on all platforms)
   local ts_ip listen
   ts_ip=$(tailscale ip -4 2>/dev/null || true)
   if [[ -n "$ts_ip" ]]; then
@@ -29,7 +25,17 @@ do_run() {
     listen="# ListenAddress <set after tailscale connects>"
   fi
 
-  # Write hardened sshd config from template
+  if [[ "$PLATFORM" == "macos" ]]; then
+    json_progress "enabling remote login"
+    systemsetup -setremotelogin on >&2
+  else
+    # Back up existing config
+    if [[ -f /etc/ssh/sshd_config ]]; then
+      cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak
+    fi
+  fi
+
+  # Write hardened sshd config from template (portable across Linux and macOS)
   json_progress "writing hardened sshd config"
   mkdir -p "$(dirname "$SSHD_CONF")"
   sed -e "s|%%LISTEN_ADDRESS%%|$listen|" \
@@ -64,7 +70,13 @@ do_run() {
     fi
   fi
 
-  systemctl restart ssh >&2 || true
+  # Restart sshd — launchctl on macOS, systemctl on Linux
+  json_progress "restarting sshd"
+  if [[ "$PLATFORM" == "macos" ]]; then
+    launchctl kickstart -k system/com.openssh.sshd >&2 || true
+  else
+    systemctl restart ssh >&2 || true
+  fi
 
   if [[ -n "$ts_ip" ]]; then
     json_result "ok" "locked to $ts_ip"
@@ -74,12 +86,20 @@ do_run() {
 }
 
 do_check() {
-  local sshd_status
-  sshd_status=$(systemctl is-active ssh 2>/dev/null || echo "inactive")
-  if [[ "$sshd_status" == "active" ]]; then
-    json_check "sshd running" "ok"
+  if [[ "$PLATFORM" == "macos" ]]; then
+    if launchctl list com.openssh.sshd 2>/dev/null | grep -q '"PID"'; then
+      json_check "sshd running" "ok"
+    else
+      json_check "sshd running" "fail"
+    fi
   else
-    json_check "sshd running" "fail"
+    local sshd_status
+    sshd_status=$(systemctl is-active ssh 2>/dev/null || echo "inactive")
+    if [[ "$sshd_status" == "active" ]]; then
+      json_check "sshd running" "ok"
+    else
+      json_check "sshd running" "fail"
+    fi
   fi
 
   if [[ -f "$SSHD_CONF" ]]; then
