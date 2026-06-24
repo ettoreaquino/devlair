@@ -54,7 +54,7 @@ function InitHeader({
       <Box marginBottom={1}>
         <Text>{"  "}</Text>
         <Text color={D_PURPLE} bold>
-          {brand ?? BRAND}
+          {BRAND}
         </Text>
         <Text color={D_PINK} bold>
           {"  init"}

@@ -10,7 +10,16 @@ read_context
 
 USERNAME=$(ctx_get username)
 USER_HOME=$(ctx_get userHome)
+PLATFORM=$(ctx_get platform)
 MODE=${1:-run}
+
+_run_as_user() {
+  if [[ "$PLATFORM" == "macos" ]]; then
+    bash -c "$1"
+  else
+    run_shell_as "$USERNAME" "$1"
+  fi
+}
 
 do_run() {
   local gh_key="$USER_HOME/.ssh/id_ed25519_github"
@@ -30,13 +39,32 @@ do_run() {
 
   # Generate key as the user
   json_progress "generating SSH key"
-  run_as "$USERNAME" ssh-keygen -t ed25519 -C "$email" -f "$gh_key" -N "" >&2
+  mkdir -p "$USER_HOME/.ssh"
+  chmod 700 "$USER_HOME/.ssh"
+  if [[ "$PLATFORM" == "macos" ]]; then
+    ssh-keygen -t ed25519 -C "$email" -f "$gh_key" -N "" >&2
+  else
+    run_as "$USERNAME" ssh-keygen -t ed25519 -C "$email" -f "$gh_key" -N "" >&2
+  fi
 
   # SSH config entry (idempotent)
   local conf_text=""
   [[ -f "$ssh_conf" ]] && conf_text=$(cat "$ssh_conf")
   if [[ "$conf_text" != *"Host github.com"* ]]; then
-    cat >> "$ssh_conf" <<EOF
+    if [[ "$PLATFORM" == "macos" ]]; then
+      cat >> "$ssh_conf" <<EOF
+
+# GitHub
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile $gh_key
+    IdentitiesOnly yes
+    UseKeychain yes
+    AddKeysToAgent yes
+EOF
+    else
+      cat >> "$ssh_conf" <<EOF
 
 # GitHub
 Host github.com
@@ -45,29 +73,44 @@ Host github.com
     IdentityFile $gh_key
     IdentitiesOnly yes
 EOF
+    fi
     chmod 600 "$ssh_conf"
-    chown_user "$ssh_conf"
+    [[ "$PLATFORM" != "macos" ]] && chown_user "$ssh_conf"
   fi
 
-  run_as "$USERNAME" git config --global user.email "$email" >&2
+  # Add key to macOS Keychain so it persists across reboots
+  if [[ "$PLATFORM" == "macos" ]]; then
+    ssh-add --apple-use-keychain "$gh_key" >&2 || true
+  fi
+
+  if [[ "$PLATFORM" == "macos" ]]; then
+    bash -c "git config --global user.email \"$email\"" >&2
+  else
+    run_as "$USERNAME" git config --global user.email "$email" >&2
+  fi
   local git_name
   git_name=$(ctx_get_config github_name)
   if [[ -n "$git_name" ]]; then
-    run_as "$USERNAME" git config --global user.name "$git_name" >&2
+    if [[ "$PLATFORM" == "macos" ]]; then
+      bash -c "git config --global user.name \"$git_name\"" >&2
+    else
+      run_as "$USERNAME" git config --global user.name "$git_name" >&2
+    fi
   fi
-  run_as "$USERNAME" git config --global init.defaultBranch main >&2
+  if [[ "$PLATFORM" == "macos" ]]; then
+    bash -c "git config --global init.defaultBranch main" >&2
+  else
+    run_as "$USERNAME" git config --global init.defaultBranch main >&2
+  fi
 
   # Surface the public key and wait for the user to add it to GitHub.
-  # AuthPanel renders: key (pink) + URL (cyan) + "Waiting for authentication…"
-  # No timeout — user completes the step at their own pace; Ctrl-C in the
-  # wizard sends SIGTERM and cancels the whole tree.
   local pub
   pub=$(cat "${gh_key}.pub")
   json_auth_url "https://github.com/settings/ssh/new" "$pub"
 
   local poll_interval=3
   while true; do
-    if run_as "$USERNAME" ssh -T git@github.com -o StrictHostKeyChecking=accept-new 2>&1 | grep -q "successfully authenticated"; then
+    if _run_as_user "ssh -T git@github.com -o StrictHostKeyChecking=accept-new 2>&1" | grep -q "successfully authenticated"; then
       break
     fi
     sleep "$poll_interval"
@@ -85,7 +128,7 @@ do_check() {
     return
   fi
 
-  if run_as "$USERNAME" ssh -T git@github.com -o StrictHostKeyChecking=accept-new 2>&1 | grep -q "successfully authenticated"; then
+  if _run_as_user "ssh -T git@github.com -o StrictHostKeyChecking=accept-new 2>&1" | grep -q "successfully authenticated"; then
     json_check "github connection" "ok"
   else
     json_check "github connection" "fail"

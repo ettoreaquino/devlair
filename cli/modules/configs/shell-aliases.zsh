@@ -1,10 +1,25 @@
 # ── devlair aliases ───────────────────────────────────────────────────────────
+
+# macOS: ensure Homebrew is on PATH first
+if [[ "$(uname)" == "Darwin" ]]; then
+  if [[ -x /opt/homebrew/bin/brew ]]; then
+    export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
+  elif [[ -x /usr/local/bin/brew ]]; then
+    export PATH="/usr/local/bin:/usr/local/sbin:$PATH"
+  fi
+fi
+
 alias ll='ls -lah --color=auto'
 alias ..='cd ..'
 alias ...='cd ../..'
-alias ports='sudo ss -tulnp'
+if [[ "$(uname)" == "Darwin" ]]; then
+  alias ports='sudo lsof -iTCP -iUDP -nP | grep LISTEN'
+  alias update='brew update && brew upgrade'
+else
+  alias ports='sudo ss -tulnp'
+  alias update='sudo apt update && sudo apt upgrade -y'
+fi
 alias dps='docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"'
-alias update='sudo apt update && sudo apt upgrade -y'
 alias ts='tailscale status'
 alias t='tmux new-session -A -s dev'
 alias bcat='bat --paging=never'
@@ -34,7 +49,15 @@ export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
 # ── fzf ───────────────────────────────────────────────────────────────────────
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+if [[ "$(uname)" == "Darwin" ]]; then
+  # fzf installed via Homebrew
+  _fzf_prefix=$(brew --prefix fzf 2>/dev/null || true)
+  [[ -n "$_fzf_prefix" ]] && source "$_fzf_prefix/shell/key-bindings.zsh" 2>/dev/null || true
+  [[ -n "$_fzf_prefix" ]] && source "$_fzf_prefix/shell/completion.zsh" 2>/dev/null || true
+  unset _fzf_prefix
+else
+  [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+fi
 
 # ── WSL browser ──────────────────────────────────────────────────────────────
 # Redirect xdg-open / BROWSER to the Windows default browser via wslview
@@ -56,7 +79,11 @@ if [ -t 0 ]; then
   _dl_host=${HOST:-$(hostname)}
   _dl_ip=$(tailscale ip -4 2>/dev/null || echo "TS off")
   _dl_disk=$(df -h / | awk 'NR==2{print $3"/"$2}')
-  _dl_mem=$(free -h | awk 'NR==2{gsub(/i/,"",$3); gsub(/i/,"",$2); print $3"/"$2}')
+  if [[ "$(uname)" == "Darwin" ]]; then
+    _dl_mem=$(vm_stat | awk '/Pages active/{a=$3} /Pages wired/{w=$4} END{printf "%.1fG used", (a+w)*4096/1073741824}' 2>/dev/null || echo "n/a")
+  else
+    _dl_mem=$(free -h | awk 'NR==2{gsub(/i/,"",$3); gsub(/i/,"",$2); print $3"/"$2}')
+  fi
   _dl_dashes=${(l:_dl_IW::─:)}
 
   # row helper — prints │ content padded to inner width │

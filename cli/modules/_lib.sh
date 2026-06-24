@@ -145,7 +145,7 @@ run_shell_as() {
 download_script() {
   local url=$1
   local tmp
-  tmp=$(mktemp --suffix=.sh)
+  tmp=$(mktemp /tmp/devlair.XXXXXX.sh 2>/dev/null || mktemp)
   curl -fsSL "$url" -o "$tmp" >&2
   printf '%s' "$tmp"
 }

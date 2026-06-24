@@ -43,13 +43,18 @@ export const MODULE_SPECS: readonly ModuleSpec[] = [
   spec("tailscale", "Tailscale", "network", { defaultOn: ["linux"] }),
   spec("ssh", "SSH", "network", { deps: ["tailscale"], platforms: ["linux", "macos"] }),
   spec("firewall", "Firewall + Fail2Ban", "network", { deps: ["ssh"], platforms: ["linux"] }),
-  spec("zsh", "Zsh + Dracula", "core", { reapply: true }),
-  spec("tmux", "tmux", "coding", { reapply: true }),
-  spec("devtools", "Dev tools", "coding", { reapply: true }),
-  spec("github", "GitHub SSH key", "coding"),
-  spec("shell", "Shell aliases", "core", { deps: ["zsh"], reapply: true }),
+  spec("zsh", "Zsh + Dracula", "core", { reapply: true, platforms: ["linux", "wsl", "macos"] }),
+  spec("tmux", "tmux", "coding", { reapply: true, platforms: ["linux", "wsl", "macos"] }),
+  spec("devtools", "Dev tools", "coding", { reapply: true, platforms: ["linux", "wsl", "macos"] }),
+  spec("github", "GitHub SSH key", "coding", { platforms: ["linux", "wsl", "macos"] }),
+  spec("shell", "Shell aliases", "core", { deps: ["zsh"], reapply: true, platforms: ["linux", "wsl", "macos"] }),
   spec("gnome_terminal", "Gnome Terminal Dracula", "desktop", { reapply: true, platforms: ["linux"] }),
-  spec("claude", "Claude Code", "ai", { deps: ["devtools"], reapply: true, defaultOn: [] }),
+  spec("claude", "Claude Code", "ai", {
+    deps: ["devtools"],
+    reapply: true,
+    defaultOn: [],
+    platforms: ["linux", "wsl", "macos"],
+  }),
 ];
 
 export const REAPPLY_KEYS: ReadonlySet<string> = new Set(MODULE_SPECS.filter((s) => s.reapply).map((s) => s.key));
