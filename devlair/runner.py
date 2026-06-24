@@ -65,6 +65,10 @@ def apt_install(*packages: str, quiet: bool = False) -> None:
     run(["apt-get", "install", "-y", "-qq"] + list(packages), capture=quiet)
 
 
+def brew_install(*packages: str, quiet: bool = False) -> None:
+    run(["brew", "install"] + list(packages), capture=quiet)
+
+
 def get_output(cmd: str | list) -> str:
     result = run(cmd, capture=True, check=False)
     return result.stdout.strip()
