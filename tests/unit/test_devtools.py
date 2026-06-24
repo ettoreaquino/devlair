@@ -24,7 +24,10 @@ def mock_runner(mocker):
     mocker.patch("devlair.modules.devtools.runner.run")
     mocker.patch("devlair.modules.devtools.runner.get_output", return_value="")
     mocker.patch("devlair.modules.devtools.runner.download_script", return_value=MagicMock(unlink=lambda **kw: None))
-    mocker.patch("devlair.modules.devtools.runner.safe_tempfile", return_value=MagicMock(exists=lambda: False, unlink=lambda **kw: None))
+    mocker.patch(
+        "devlair.modules.devtools.runner.safe_tempfile",
+        return_value=MagicMock(exists=lambda: False, unlink=lambda **kw: None),
+    )
     mocker.patch("devlair.modules.devtools.safe_log_install")
     mocker.patch("devlair.modules.devtools.console.print")
     return mocker
@@ -55,25 +58,13 @@ def test_pyenv_uses_apt_on_linux(mock_runner, tmp_path):
     brew_install.assert_not_called()
 
 
-def test_docker_skipped_on_macos(mock_runner, tmp_path):
+@pytest.mark.parametrize("platform", ["macos", "wsl"])
+def test_docker_skipped(mock_runner, tmp_path, platform):
     mock_runner.patch(
         "devlair.modules.devtools.runner.cmd_exists",
         side_effect=lambda cmd: cmd != "docker",
     )
-    ctx = _ctx("macos", tmp_path)
-
-    result = devtools.run(ctx)
-
-    assert "docker" in result.detail
-    assert "skipped" in result.detail
-
-
-def test_docker_skipped_on_wsl(mock_runner, tmp_path):
-    mock_runner.patch(
-        "devlair.modules.devtools.runner.cmd_exists",
-        side_effect=lambda cmd: cmd != "docker",
-    )
-    ctx = _ctx("wsl", tmp_path)
+    ctx = _ctx(platform, tmp_path)
 
     result = devtools.run(ctx)
 
