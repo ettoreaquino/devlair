@@ -187,7 +187,7 @@ devlair hooks into Claude Code to track session usage and display a dashboard:
 
 ## What gets installed
 
-`devlair init` runs these modules in order. Some modules are **opt-in** and not included in a default run — use `devlair init --only <module>` or `--group` to enable them. Opt-in modules: `claude`; `tailscale` is opt-in on WSL and macOS. Portable modules (supported on Linux, WSL, and macOS): `system`, `tailscale`, `zsh`, `tmux`, `rclone`, `github`, `shell`, `claude`, `devtools`, `ssh`. Linux-only modules (auto-skipped elsewhere): `timezone`, `firewall`, `gnome_terminal`.
+`devlair init` runs these modules in order. Some modules are **opt-in** and not included in a default run — use `devlair init --only <module>` or `--group` to enable them. Opt-in modules: `claude`; `tailscale` is opt-in on WSL and macOS. Portable modules (supported on Linux, WSL, and macOS): `system`, `tailscale`, `zsh`, `tmux`, `rclone`, `github`, `shell`, `claude`, `devtools`, `ssh`, `timezone`. Linux-only modules (auto-skipped elsewhere): `firewall`, `gnome_terminal`.
 
 <details>
 <summary><b>System</b> — OS packages and essentials</summary>
@@ -199,7 +199,7 @@ Runs `apt update && upgrade` and installs core packages: `git`, `curl`, `vim`, `
 <details>
 <summary><b>Timezone</b> — interactive timezone configuration</summary>
 
-Displays the current timezone and prompts for a new one. Uses `timedatectl` under the hood.
+Displays the current timezone and prompts for a new one. On Linux/WSL, uses `timedatectl set-timezone`. On macOS, sets the timezone by symlinking `/etc/localtime` to `/usr/share/zoneinfo/<tz>` (compatible with macOS 15+). The configured timezone is IANA-validated before being applied; `do_check` reports `fail` when the timezone cannot be read.
 
 </details>
 
