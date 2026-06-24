@@ -114,7 +114,7 @@ jobs:
             os: darwin
             arch: aarch64
             target: bun-darwin-arm64
-          - runs-on: macos-13
+          - runs-on: macos-15-intel
             os: darwin
             arch: x86_64
             target: bun-darwin-x64
