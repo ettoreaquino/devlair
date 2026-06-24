@@ -20,6 +20,8 @@ Read the PR diff the orchestrator gives you and flag quality issues that a maint
 - **Unnecessary JSX/HTML/Ink nesting** with no layout purpose.
 - **Comments that explain WHAT instead of WHY** — devlair's CLAUDE.md says default to no comments; only keep ones that capture non-obvious reasoning.
 - **Half-finished implementations** or backwards-compat shims that the project's "no preserve-old-API" rule forbids.
+- **Platform assumption correctness** — when code branches on a platform, verify the assumed behavior is real. A config written to a path the platform doesn't read, a service name that doesn't match, a tool assumed to be on PATH — these are high findings. Don't let "compiles and runs" substitute for "does what it claims."
+- **Design coherence** — technically correct but architecturally wrong choices (writing to a drop-in dir without ensuring the base config includes it, restarting a service without verifying the config loaded cleanly). Ask: does the system as a whole actually achieve the stated goal?
 
 ## What NOT to flag
 

@@ -62,6 +62,12 @@ Bash is for **read-only inspection only**: `grep`, `find`, `stat`, `git log`, `g
 - Unbounded input parsing (DoS via large payloads).
 - TOCTOU races in file operations.
 
+**Silent security failures**
+- Config written to a path the platform doesn't read (e.g., a drop-in directory without a corresponding `Include` directive in the base config).
+- Hardening applied (SSH restrictions, firewall rules, permission changes) but the service not reloaded, leaving the old config active.
+- Security feature enabled in code but skipped at runtime due to a platform mismatch, wrong service name, or missing prerequisite.
+- Rate as `high` when the failure means a stated security posture is silently not enforced.
+
 ## Output format — JSON only, no prose
 
 ```json

@@ -13,11 +13,15 @@ Read the PR diff the orchestrator gives you, then search the rest of the repo fo
 
 ## Where to look
 
-- Python: `devlair/`, especially `devlair/runner.py`, `devlair/console.py`, `devlair/context.py`, `devlair/features/`
-- TypeScript v2: `cli/src/lib/`, `cli/src/components/`, `cli/src/wizard/`
-- Shell: `install.sh`, `cli/modules/` shell scripts
+**v2 (active codebase — all new work goes here):**
+- TypeScript: `cli/src/lib/`, `cli/src/components/`, `cli/src/commands/`, `cli/src/wizard/`
+- Shell: `cli/modules/_lib.sh` (shared helpers: `apt_install`, `brew_install`, `brew_ensure`, `download_script`, `json_*`, `ctx_get`, `cmd_exists`), `cli/modules/*.sh`
+- Installer: `install.sh`
 
-Use `Grep` aggressively — search for the function names, signatures, and patterns the diff introduces. If an inline regex/parse/path helper is added, see if a util already does it.
+**v1 (deprecated — do not flag drift from v1 as a reuse issue):**
+- `devlair/` Python package — frozen, no new work. Ignore it unless the PR touches it directly.
+
+Use `Grep` aggressively — search for the function names, signatures, and patterns the diff introduces. If an inline regex/parse/path helper is added, see if a util already does it. Pay special attention to `_lib.sh`: new shell modules often reinvent helpers that are already there.
 
 ## What counts as a finding
 

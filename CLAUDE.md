@@ -7,6 +7,16 @@ A CLI tool for provisioning and managing development machines. Currently Python 
 - **Never approve PRs.** Claude may review and post comments (`event=COMMENT`) but must never submit approvals (`event=APPROVE`) or merge PRs. Only the human maintainer approves and merges.
 - **Never force-push to main.**
 
+## Agentic coding rails
+
+These apply to every coding task in this repo, regardless of how the task was framed:
+
+- **State before touching.** Before editing any file, say which files you will change and why. Don't start typing code while still reasoning about the approach.
+- **Verify, don't assume.** If a platform feature is load-bearing (a config directive is sourced, a service name is correct, a file path exists), verify it rather than assuming it. Assumption errors in provisioning code are silent and dangerous.
+- **Surgical scope.** One concern per commit. No drive-by refactoring, no opportunistic cleanup. If you notice unrelated debt, file it as a separate issue.
+- **Gates before human review.** Automated gates (tests, lint, typecheck) must pass before a PR is ready. Don't ask the human to review code that hasn't cleared the gates.
+- **Report what you actually verified.** Don't claim a feature works if you only confirmed it compiles. Distinguish between "automated gate passed" and "manually verified on the target platform."
+
 ## Dev commands
 
 ```bash
