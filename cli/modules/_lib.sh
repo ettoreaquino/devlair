@@ -99,6 +99,32 @@ apt_install() {
   apt-get install -y -qq "$@" >&2
 }
 
+# brew_install PKG... -- install Homebrew packages quietly with a progress event.
+brew_install() {
+  json_progress "installing $*"
+  brew install --quiet "$@" >&2
+}
+
+# brew_ensure -- ensure Homebrew is on PATH, installing it if absent.
+# Uses download-then-execute to avoid piping curl to bash directly.
+# After install, sources brew shellenv so subsequent brew calls work.
+brew_ensure() {
+  if cmd_exists brew; then
+    return 0
+  fi
+  json_progress "installing Homebrew"
+  local tmp
+  tmp=$(download_script "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh")
+  NONINTERACTIVE=1 bash "$tmp" >&2
+  rm -f "$tmp"
+  # Add brew to PATH for the remainder of this script session
+  if [[ -x /opt/homebrew/bin/brew ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+  elif [[ -x /usr/local/bin/brew ]]; then
+    eval "$(/usr/local/bin/brew shellenv)"
+  fi
+}
+
 # run_as USER CMD... -- run a command as another user via sudo.
 run_as() {
   local user=$1; shift

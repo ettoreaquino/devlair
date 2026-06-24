@@ -28,7 +28,22 @@ ESSENTIALS=(
 # bare Linux already.
 LINUX_ESSENTIALS=( openssh-server ufw fail2ban avahi-daemon )
 
+# macOS package list — net-tools/build-essential/ca-certificates/locales are
+# Linux-specific; Keychain handles CAs, Xcode CLT handles build tooling.
+MACOS_ESSENTIALS=( git curl wget vim htop tmux unzip jq tree rsync zsh bat fzf gnupg )
+
 do_run() {
+  if [[ "$PLATFORM" == "macos" ]]; then
+    brew_ensure
+    json_progress "updating Homebrew"
+    brew update --quiet >&2
+    json_progress "upgrading packages"
+    brew upgrade --quiet >&2
+    brew_install "${MACOS_ESSENTIALS[@]}"
+    json_result "ok" "packages up to date"
+    return
+  fi
+
   json_progress "updating package lists"
   apt-get update -qq >&2
   json_progress "upgrading packages"
