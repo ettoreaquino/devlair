@@ -89,7 +89,6 @@ verify_checksum() {
 for arg in "$@"; do
   case "$arg" in
     --v1)    CHANNEL="v1" ;;
-    --stable) CHANNEL="v1" ;;  # --stable used to mean v1; kept for compat
     --pre)   ;;                # no-op: v2 is now the default
     -h|--help)
       sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
@@ -261,7 +260,7 @@ if [[ "$CHANNEL" != "v1" ]]; then
       $MAYBE_SUDO apt-get install -y -qq jq >/dev/null
       ok "jq installed"
     elif command -v brew >/dev/null 2>&1; then
-      brew install --quiet jq >/dev/null
+      brew install --quiet jq >/dev/null  # brew must not run as root — no $MAYBE_SUDO
       ok "jq installed"
     else
       warn "jq is required by devlair modules but no package manager found"
