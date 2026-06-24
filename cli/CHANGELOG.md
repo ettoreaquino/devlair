@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.9.0](https://github.com/ettoreaquino/devlair/compare/v2.8.0...v2.9.0) (2026-06-24)
+
+
+### Features
+
+* **init:** add --brand flag to customise the init banner ([4c471ca](https://github.com/ettoreaquino/devlair/commit/4c471ca7a84893f6ebb5ccc83c2ee64a6f001513))
+* **init:** add --brand flag to customise the init banner ([37fa5be](https://github.com/ettoreaquino/devlair/commit/37fa5be223e8db44f2803e7cc50855bb73360c5e))
+
+
+### Bug Fixes
+
+* **init:** brand sanitisation, ANSI strip, consistent fallback, string | undefined ([2d5a581](https://github.com/ettoreaquino/devlair/commit/2d5a5812ae4ebdc96d615b9ec70aeb7f6aa078de))
+* **init:** make brand optional in InitFlags (string | undefined → brand?: string) ([acc988b](https://github.com/ettoreaquino/devlair/commit/acc988bf12681e9c6ef51531360000cd3f35bc27))
+
 ## [2.8.0](https://github.com/ettoreaquino/devlair/compare/v2.7.0...v2.8.0) (2026-06-24)
 
 
