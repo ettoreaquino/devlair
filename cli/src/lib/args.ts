@@ -5,6 +5,7 @@ export interface InitFlags {
   skip: Set<string>;
   group: Set<string> | null;
   config: string | null;
+  brand: string | null;
 }
 
 export interface DoctorFlags {
@@ -16,14 +17,14 @@ export interface UpgradeFlags {
 }
 
 const SET_FLAGS = new Set(["--only", "--skip", "--group"]);
-const STRING_FLAGS = new Set(["--config"]);
+const STRING_FLAGS = new Set(["--config", "--brand"]);
 
 /**
  * Parse init-specific flags from argv (after the "init" command is consumed).
  * Splits comma-separated values for --only, --skip, --group.
  */
 export function parseInitFlags(args: readonly string[]): InitFlags {
-  const flags: InitFlags = { only: null, skip: new Set(), group: null, config: null };
+  const flags: InitFlags = { only: null, skip: new Set(), group: null, config: null, brand: null };
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -44,6 +45,10 @@ export function parseInitFlags(args: readonly string[]): InitFlags {
         continue;
       }
       if (arg === "--config") flags.config = value;
+      else if (arg === "--brand") flags.brand = value;
+    } else if (arg.startsWith("--")) {
+      process.stderr.write(`Unknown flag: ${arg}\nRun 'devlair init --help' for usage.\n`);
+      process.exit(1);
     }
   }
 
