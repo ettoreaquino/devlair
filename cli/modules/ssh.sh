@@ -25,14 +25,28 @@ do_run() {
     listen="# ListenAddress <set after tailscale connects>"
   fi
 
+  # Back up existing config on all platforms before any writes
+  if [[ -f /etc/ssh/sshd_config ]]; then
+    cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak
+    chmod 600 /etc/ssh/sshd_config.bak
+  fi
+
   if [[ "$PLATFORM" == "macos" ]]; then
     json_progress "enabling remote login"
     systemsetup -setremotelogin on >&2
-  else
-    # Back up existing config
-    if [[ -f /etc/ssh/sshd_config ]]; then
-      cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak
+
+    # Ensure sshd reads the drop-in directory on macOS
+    local base_conf="/etc/ssh/sshd_config"
+    if ! grep -q 'Include /etc/ssh/sshd_config.d/' "$base_conf" 2>/dev/null; then
+      json_progress "enabling sshd drop-in includes"
+      printf '\nInclude /etc/ssh/sshd_config.d/*.conf\n' >> "$base_conf"
     fi
+  fi
+
+  # Validate USERNAME before interpolating into sed
+  if [[ ! "$USERNAME" =~ ^[a-z_][a-z0-9_-]*$ ]]; then
+    json_result "fail" "invalid username: $USERNAME"
+    exit 1
   fi
 
   # Write hardened sshd config from template (portable across Linux and macOS)
@@ -73,7 +87,8 @@ do_run() {
   # Restart sshd — launchctl on macOS, systemctl on Linux
   json_progress "restarting sshd"
   if [[ "$PLATFORM" == "macos" ]]; then
-    launchctl kickstart -k system/com.openssh.sshd >&2 || true
+    sshd -t >&2
+    launchctl kickstart -k system/com.openssh.sshd >&2
   else
     systemctl restart ssh >&2 || true
   fi
@@ -87,7 +102,7 @@ do_run() {
 
 do_check() {
   if [[ "$PLATFORM" == "macos" ]]; then
-    if launchctl list com.openssh.sshd 2>/dev/null | grep -q '"PID"'; then
+    if launchctl print system/com.openssh.sshd 2>/dev/null | grep -q 'state = running'; then
       json_check "sshd running" "ok"
     else
       json_check "sshd running" "fail"
