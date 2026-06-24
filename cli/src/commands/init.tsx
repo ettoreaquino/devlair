@@ -11,7 +11,7 @@ import { useApp } from "ink";
 import { Box, Text } from "ink";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { Logo } from "../components/Logo.js";
+import { BRAND, Logo } from "../components/Logo.js";
 import { type ModuleRun, Progress } from "../components/Progress.js";
 import { OptionalHint, Summary } from "../components/Summary.js";
 import type { InitFlags } from "../lib/args.js";
@@ -54,7 +54,7 @@ function InitHeader({
       <Box marginBottom={1}>
         <Text>{"  "}</Text>
         <Text color={D_PURPLE} bold>
-          {brand ?? "devlair"}
+          {brand ?? BRAND}
         </Text>
         <Text color={D_PINK} bold>
           {"  init"}
@@ -311,7 +311,7 @@ function NonInteractiveInit({ flags }: { flags: InitFlags }) {
       </Box>
     );
   }
-  return <NonInteractiveInitView state={initState} brand={flags.brand ?? undefined} />;
+  return <NonInteractiveInitView state={initState} brand={flags.brand} />;
 }
 
 function NonInteractiveInitView({ state, brand }: { state: InitState; brand?: string }) {
@@ -443,5 +443,5 @@ export function InitView({ flags }: { flags: InitFlags }) {
   if (hasExplicitFlags(flags)) {
     return <NonInteractiveInit flags={flags} />;
   }
-  return <WizardInit brand={flags.brand ?? undefined} />;
+  return <WizardInit brand={flags.brand} />;
 }

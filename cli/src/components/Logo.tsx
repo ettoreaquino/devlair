@@ -1,7 +1,8 @@
 import { Box, Text } from "ink";
+import stripAnsi from "strip-ansi";
 import { D_COMMENT, D_FG, D_PINK, D_PURPLE } from "../lib/theme.js";
 
-const BRAND = "d e v l a i r";
+export const BRAND = "d e v l a i r";
 const INNER_WIDTH = 48;
 const MIN_W_SHORT = 16;
 
@@ -52,8 +53,8 @@ function Border({ W, left, right }: { W: number; left: string; right: string }) 
 function ContentRow({ W, children }: { W: number; children: string }) {
   const innerLen = [...children].length;
   const pad = W - innerLen;
-  const padL = Math.floor(pad / 2);
-  const padR = pad - padL;
+  const padL = Math.max(0, Math.floor(pad / 2));
+  const padR = Math.max(0, pad - padL);
   return (
     <Text>
       <Text color={D_PURPLE}>{"  │"}</Text>
@@ -67,11 +68,11 @@ function ContentRow({ W, children }: { W: number; children: string }) {
 
 function FullLogo({ W, grad, brand }: { W: number; grad: string; brand: string }) {
   const gradR = [...grad].reverse().join("");
-  const gap = W - grad.length - gradR.length - 4;
-  const iw = brand.length + 4;
-  const ib = "═".repeat(iw - 2);
-  const pt = Math.floor((W - iw) / 2);
-  const pr = W - iw - pt;
+  const gap = Math.max(0, W - grad.length - gradR.length - 4);
+  const iw = [...brand].length + 4;
+  const ib = "═".repeat(Math.max(0, iw - 2));
+  const pt = Math.max(0, Math.floor((W - iw) / 2));
+  const pr = Math.max(0, W - iw - pt);
 
   const GradRow = () => (
     <Text>
@@ -120,10 +121,10 @@ function FullLogo({ W, grad, brand }: { W: number; grad: string; brand: string }
 
 function MediumLogo({ W, grad, brand }: { W: number; grad: string; brand: string }) {
   const gradR = [...grad].reverse().join("");
-  const innerLen = grad.length + 2 + brand.length + 2 + gradR.length;
+  const innerLen = grad.length + 2 + [...brand].length + 2 + gradR.length;
   const pad = W - innerLen;
-  const padL = Math.floor(pad / 2);
-  const padR = pad - padL;
+  const padL = Math.max(0, Math.floor(pad / 2));
+  const padR = Math.max(0, pad - padL);
 
   return (
     <Box flexDirection="column">
@@ -159,7 +160,7 @@ function ShortLogo({ W, brand }: { W: number; brand: string }) {
 export function Logo({ cols, brand }: { cols?: number; brand?: string }) {
   const termCols = cols ?? process.stdout.columns ?? 80;
   const { W, grad, innerBox } = resolveDecoration(termCols);
-  const b = brand ?? BRAND;
+  const b = stripAnsi(brand ?? BRAND).slice(0, 40);
 
   if (grad && innerBox) return <FullLogo W={W} grad={grad} brand={b} />;
   if (grad) return <MediumLogo W={W} grad={grad} brand={b} />;

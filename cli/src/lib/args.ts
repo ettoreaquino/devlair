@@ -5,7 +5,7 @@ export interface InitFlags {
   skip: Set<string>;
   group: Set<string> | null;
   config: string | null;
-  brand: string | null;
+  brand: string | undefined;
 }
 
 export interface DoctorFlags {
@@ -24,7 +24,7 @@ const STRING_FLAGS = new Set(["--config", "--brand"]);
  * Splits comma-separated values for --only, --skip, --group.
  */
 export function parseInitFlags(args: readonly string[]): InitFlags {
-  const flags: InitFlags = { only: null, skip: new Set(), group: null, config: null, brand: null };
+  const flags: InitFlags = { only: null, skip: new Set(), group: null, config: null, brand: undefined };
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
