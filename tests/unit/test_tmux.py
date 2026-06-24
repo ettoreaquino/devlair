@@ -135,4 +135,4 @@ def test_check_reports_tpm_plugins_and_clipboard(mocker, tmp_path):
     items = tmux.check()
     labels = [i.label for i in items]
     assert "TPM plugins (resurrect + continuum)" in labels
-    assert "Clipboard tool (wl-copy / xclip)" in labels
+    assert "Clipboard tool (pbcopy / wl-copy / xclip)" in labels

@@ -7,12 +7,18 @@ LABEL = "Shell aliases"
 
 ZSHRC_ALIASES = """
 # ── devlair aliases ───────────────────────────────────────────────────────────
-alias ll='ls -lah --color=auto'
+if [[ "$(uname)" == "Darwin" ]]; then
+  alias ll='ls -lah -G'
+  alias ports='sudo lsof -i -P | grep LISTEN'
+  alias update='brew update && brew upgrade'
+else
+  alias ll='ls -lah --color=auto'
+  alias ports='sudo ss -tulnp'
+  alias update='sudo apt update && sudo apt upgrade -y'
+fi
 alias ..='cd ..'
 alias ...='cd ../..'
-alias ports='sudo ss -tulnp'
 alias dps='docker ps --format "table {{.Names}}\\t{{.Status}}\\t{{.Ports}}"'
-alias update='sudo apt update && sudo apt upgrade -y'
 alias ts='tailscale status'
 alias t='tmux new-session -A -s dev'
 alias bcat='bat --paging=never'
@@ -44,10 +50,11 @@ export PATH="$BUN_INSTALL/bin:$PATH"
 # ── fzf ───────────────────────────────────────────────────────────────────────
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
-# ── WSL browser ──────────────────────────────────────────────────────────────
-# Redirect xdg-open / BROWSER to the Windows default browser via wslview
+# ── Browser ───────────────────────────────────────────────────────────────────
 if [ -n "$WSL_DISTRO_NAME" ] && command -v wslview &>/dev/null; then
   export BROWSER=wslview
+elif [[ "$(uname)" == "Darwin" ]]; then
+  export BROWSER=open
 fi
 
 # ── Claude Code ───────────────────────────────────────────────────────────────
@@ -64,7 +71,11 @@ if [ -t 0 ]; then
   _dl_host=${HOST:-$(hostname)}
   _dl_ip=$(tailscale ip -4 2>/dev/null || echo "TS off")
   _dl_disk=$(df -h / | awk 'NR==2{print $3"/"$2}')
-  _dl_mem=$(free -h | awk 'NR==2{gsub(/i/,"",$3); gsub(/i/,"",$2); print $3"/"$2}')
+  if [[ "$(uname)" == "Darwin" ]]; then
+    _dl_mem="$(( $(sysctl -n hw.memsize) / 1073741824 ))G"
+  else
+    _dl_mem=$(free -h | awk 'NR==2{gsub(/i/,"",$3); gsub(/i/,"",$2); print $3"/"$2}')
+  fi
   _dl_dashes=${(l:_dl_IW::─:)}
 
   # row helper — prints │ content padded to inner width │
@@ -110,8 +121,8 @@ if [ -t 0 ]; then
     _dl_row "  no sessions — type 't' to start"
   fi
 
-  # synced drives
-  _dl_svcs=(~/.config/systemd/user/rclone-*.service(N))
+  # synced drives (systemd-based; not applicable on macOS)
+  [[ "$(uname)" == "Darwin" ]] && _dl_svcs=() || _dl_svcs=(~/.config/systemd/user/rclone-*.service(N))
   if [ ${#_dl_svcs[@]} -gt 0 ]; then
     _dl_row ""
     _dl_row "  syncs:"
@@ -200,6 +211,7 @@ def _clean_zshrc(text: str) -> str:
 
 def run(ctx: SetupContext) -> ModuleResult:
     zshrc = ctx.user_home / ".zshrc"
+    group = None if ctx.platform == "macos" else ctx.username
 
     existing = zshrc.read_text() if zshrc.exists() else ""
 
@@ -208,13 +220,13 @@ def run(ctx: SetupContext) -> ModuleResult:
         header = existing[: existing.index(MARKER)]
         header = _clean_zshrc(header)
         zshrc.write_text(header + ZSHRC_ALIASES.lstrip("\n"))
-        shutil.chown(zshrc, ctx.username, ctx.username)
+        shutil.chown(zshrc, ctx.username, group)
         return ModuleResult(status="ok", detail="aliases refreshed in .zshrc")
 
     # Clean any junk before appending
     cleaned = _clean_zshrc(existing)
     zshrc.write_text(cleaned + ZSHRC_ALIASES)
-    shutil.chown(zshrc, ctx.username, ctx.username)
+    shutil.chown(zshrc, ctx.username, group)
 
     return ModuleResult(status="ok", detail="aliases added to .zshrc")
 
