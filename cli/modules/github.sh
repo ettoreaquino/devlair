@@ -33,7 +33,7 @@ do_run() {
   json_progress "generating SSH key"
   mkdir -p "$USER_HOME/.ssh"
   chmod 700 "$USER_HOME/.ssh"
-  _is_root && chown_user "$USER_HOME/.ssh"
+  chown_user "$USER_HOME/.ssh"
   if _is_root; then
     run_as "$USERNAME" ssh-keygen -t ed25519 -C "$email" -f "$gh_key" -N "" >&2
   else
@@ -68,7 +68,7 @@ Host github.com
 EOF
     fi
     chmod 600 "$ssh_conf"
-    _is_root && chown_user "$ssh_conf"
+    chown_user "$ssh_conf"
   fi
 
   # Add key to macOS Keychain so it persists across reboots

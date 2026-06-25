@@ -193,13 +193,23 @@ download_script() {
   printf '%s' "$tmp"
 }
 
-# chown_user FILE -- chown a file to the module's target user.
+# chown_user FILE -- chown a file to the module's target user, owner only.
 # Reads USERNAME from the caller's scope (set after read_context).
-# Owner only (no group): macOS primary group is "staff", not the username.
-chown_user() { chown "${USERNAME:?USERNAME not set}" "$1"; }
+# No-op (and returns success) when not running as root, so the guard cannot
+# poison a caller's exit status under `set -e` — e.g. a function whose last
+# statement is a chown_user call would otherwise return 1 on a non-root host
+# and silently abort the script. Owner only (no group): macOS primary group
+# is "staff", not the username.
+chown_user() {
+  _is_root || return 0
+  chown "${USERNAME:?USERNAME not set}" "$1"
+}
 
-# chown_user_r DIR -- recursive chown to the target user.
-chown_user_r() { chown -R "${USERNAME:?USERNAME not set}" "$1"; }
+# chown_user_r DIR -- recursive chown to the target user (root only; else no-op).
+chown_user_r() {
+  _is_root || return 0
+  chown -R "${USERNAME:?USERNAME not set}" "$1"
+}
 
 # update_json FILE PATCH_JSON -- shallow-merge a JSON patch into a file.
 # Creates the file with the patch content if it does not exist.
