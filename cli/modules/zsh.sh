@@ -62,7 +62,7 @@ do_run() {
   # Write .zimrc
   json_progress "writing .zimrc"
   cp "$SCRIPT_DIR/configs/zimrc" "$zimrc"
-  _is_root && chown_user "$zimrc"
+  chown_user "$zimrc"
 
   # Prevent system /etc/zsh/zshrc from calling compinit before zimfw
   if [[ ! -f "$zshenv" ]] || ! grep -q "skip_global_compinit" "$zshenv"; then
@@ -70,13 +70,13 @@ do_run() {
 # devlair — skip system compinit so zimfw completion module handles it
 skip_global_compinit=1
 EOF
-    _is_root && chown_user "$zshenv"
+    chown_user "$zshenv"
   fi
 
   # Write .zshrc header (only if not already managed by devlair)
   if [[ ! -f "$zshrc" ]] || ! grep -q "devlair" "$zshrc"; then
     cp "$SCRIPT_DIR/configs/zshrc-header.sh" "$zshrc"
-    _is_root && chown_user "$zshrc"
+    chown_user "$zshrc"
   fi
 
   # Bootstrap zimfw and install modules as the user
@@ -90,7 +90,7 @@ EOF
     zsh -c 'source \"\$ZIM_HOME/zimfw.zsh\" install' 2>&1 || true
   " >&2 || true
 
-  _is_root && chown_user "$zim_home"
+  chown_user "$zim_home"
 
   json_result "ok" "zsh with Dracula via zimfw"
 }

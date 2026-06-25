@@ -352,6 +352,24 @@ json_install "awscli" "aws.amazon.com" true`);
     expect(out.stdout).toBe("yes\nno\n");
   });
 
+  // Regression: a helper whose last statement is `chown_user` is called as a
+  // bare command under `set -euo pipefail`. When not root, chown_user must
+  // return success — otherwise the helper inherits exit 1 and `set -e` aborts
+  // the whole module silently (the macOS non-root failure of the claude module).
+  test("chown_user is a no-op returning success when not root", () => {
+    const { stdout, code } = runLibScript(`export USERNAME=tester
+_is_root() { return 1; }   # force the non-root (macOS) path deterministically
+f=$(mktemp)
+install_like() {
+  : > "$f"
+  chown_user "$f"          # last statement of a bare-called helper
+}
+install_like
+printf 'REACHED\\n'`);
+    expect(code).toBe(0);
+    expect(stdout).toContain("REACHED");
+  });
+
   test("update_json creates file if missing", () => {
     const jsonFile = join(tmpDir, "new-settings.json");
     const scriptPath = join(tmpDir, "update-json-create.sh");

@@ -20,8 +20,8 @@ _install_script() {
   mkdir -p "$bin_dir"
   cp "$src" "$bin_dir/$name"
   chmod 755 "$bin_dir/$name"
-  _is_root && chown_user "$bin_dir/$name"
-  _is_root && chown_user "$bin_dir"
+  chown_user "$bin_dir/$name"
+  chown_user "$bin_dir"
 }
 
 _ensure_telegram_plugin() {
@@ -46,7 +46,7 @@ do_run() {
   # Recover ownership if a previous sudo run left the directory root-owned.
   [[ -d "$claude_dir" && ! -w "$claude_dir" ]] && sudo -n chown "$USERNAME" "$claude_dir" 2>/dev/null || true
   mkdir -p "$claude_dir"
-  _is_root && chown_user "$claude_dir"
+  chown_user "$claude_dir"
 
   # Install Claude Code CLI if not present
   local install_detail=""
@@ -66,7 +66,7 @@ do_run() {
   local patch
   patch=$(cat "$SCRIPT_DIR/configs/claude-settings.json")
   update_json "$settings_path" "$patch"
-  _is_root && chown_user "$settings_path"
+  chown_user "$settings_path"
 
   # Install helper scripts
   local bin_dir="$USER_HOME/.devlair/bin"
