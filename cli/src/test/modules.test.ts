@@ -139,12 +139,12 @@ describe("resolveOrder", () => {
 
   test("produces correct topological ordering", () => {
     const expectedOrder = [
+      "homebrew",
       "system",
       "timezone",
       "tailscale",
       "ssh",
       "firewall",
-      "homebrew",
       "zsh",
       "tmux",
       "devtools",

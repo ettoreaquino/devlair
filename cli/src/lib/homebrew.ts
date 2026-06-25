@@ -65,8 +65,7 @@ export function ensureHomebrew(): void {
 
   if (install.status !== 0) {
     process.stderr.write(
-      "\nError: Homebrew installation failed.\n" +
-        "Visit https://brew.sh for manual installation instructions.\n",
+      "\nError: Homebrew installation failed.\n" + "Visit https://brew.sh for manual installation instructions.\n",
     );
     process.exit(1);
   }
