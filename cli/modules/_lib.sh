@@ -140,12 +140,23 @@ run_shell_as() {
   sudo -u "$user" bash -c "$script"
 }
 
+# _run_as_user SCRIPT -- run a shell script as the module's target user on
+# Linux, or directly in the current shell on macOS (where sudo is not needed).
+# Requires USERNAME and PLATFORM to be set (done after read_context).
+_run_as_user() {
+  if [[ "${PLATFORM:-}" == "macos" ]]; then
+    bash -c "$1"
+  else
+    run_shell_as "${USERNAME:?USERNAME not set}" "$1"
+  fi
+}
+
 # download_script URL -- download an installer script to a temp file.
 # Prints the temp file path; caller is responsible for cleanup.
 download_script() {
   local url=$1
   local tmp
-  tmp=$(mktemp --suffix=.sh)
+  tmp=$(mktemp /tmp/devlair.XXXXXX.sh 2>/dev/null || mktemp)
   curl -fsSL "$url" -o "$tmp" >&2
   printf '%s' "$tmp"
 }
