@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.11.2](https://github.com/ettoreaquino/devlair/compare/v2.11.1...v2.11.2) (2026-06-25)
+
+
+### Bug Fixes
+
+* **cli:** address PR review findings on fix/macos-sudo-init ([a0a4ec2](https://github.com/ettoreaquino/devlair/commit/a0a4ec2d466e9fb4bde1b82469e6bb89aec8fba4))
+* **macos:** improve CLI UX — sudo install, chsh, SSH label ([138136d](https://github.com/ettoreaquino/devlair/commit/138136dd4fb69558acb1125a593f8fc8c5aefda1))
+* **macos:** improve UX for macOS users and clarify SSH module label ([9b26d6e](https://github.com/ettoreaquino/devlair/commit/9b26d6e63b80a463183d15fc5af1804aa37a73fb))
+
 ## [2.11.1](https://github.com/ettoreaquino/devlair/compare/v2.11.0...v2.11.1) (2026-06-25)
 
 
