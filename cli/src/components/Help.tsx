@@ -20,6 +20,7 @@ const HELP_SECTIONS: HelpSection[] = [
       { cmd: "doctor [--fix]", desc: "Check system health & fix drift" },
       { cmd: "upgrade [--no-self]", desc: "Upgrade tools & re-apply configs" },
       { cmd: "disable-password [--yes]", desc: "Lock SSH to key-only auth" },
+      { cmd: "uninstall [--yes]", desc: "Remove everything devlair installed" },
     ],
   },
   {
