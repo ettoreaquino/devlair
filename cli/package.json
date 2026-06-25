@@ -1,6 +1,6 @@
 {
   "name": "@devlair/cli",
-  "version": "2.11.2",
+  "version": "2.11.3",
   "description": "Dev machine provisioning CLI — interactive wizards, module groups, enterprise onboarding",
   "type": "module",
   "private": true,
