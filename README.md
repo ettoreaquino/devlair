@@ -23,12 +23,19 @@ and wiring up dev toolchains. Run it once on a fresh machine or re-run anytime t
 
 ## Quick start
 
+**macOS**
+```bash
+curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | bash
+devlair init
+```
+
+**Linux / WSL**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | sudo bash
 devlair init
 ```
 
-That's it. The installer downloads the v2 (TypeScript + Ink) binary for your architecture and places it in `/usr/local/bin`. `devlair init` takes care of the rest.
+The installer auto-elevates only when `/usr/local/bin` is not writable — on macOS with Homebrew that's usually not needed. `devlair init` takes care of the rest.
 
 ## Why devlair
 
@@ -353,10 +360,14 @@ uv run ruff check devlair/ tests/
 **Install v2 (default):**
 
 ```bash
+# macOS
+curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | bash
+
+# Linux / WSL
 curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | sudo bash
 ```
 
-The installer downloads the latest `devlair-cli-linux-{arch}` binary and places it at `/usr/local/bin/devlair`. The companion `modules.tar.gz` (shell scripts invoked by the wizard) is verified against `checksums.txt` and extracted to `/usr/local/share/devlair/modules/`. To install the legacy v1 (Python) instead, pass `--v1`.
+The installer downloads the latest `devlair-cli-{os}-{arch}` binary and places it at `/usr/local/bin/devlair`. The companion `modules.tar.gz` (shell scripts invoked by the wizard) is verified against `checksums.txt` and extracted to `/usr/local/share/devlair/modules/`. To install the legacy v1 (Python) instead, pass `--v1`.
 
 **Removed in v2** (vs. v1):
 
