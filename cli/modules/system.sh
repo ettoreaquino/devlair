@@ -34,8 +34,6 @@ MACOS_ESSENTIALS=( git curl wget vim htop tmux unzip jq tree rsync zsh bat fzf g
 
 do_run() {
   if [[ "$PLATFORM" == "macos" ]]; then
-    # brew is guaranteed by the pre-flight in index.tsx (ensureHomebrew) and
-    # the homebrew module which runs before system. brew_ensure configures PATH.
     brew_ensure
     json_progress "updating Homebrew"
     brew update --quiet >&2
