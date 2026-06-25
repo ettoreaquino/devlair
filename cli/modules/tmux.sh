@@ -17,7 +17,6 @@ do_run() {
   local conf="$USER_HOME/.tmux.conf"
 
   if [[ "$PLATFORM" == "macos" ]]; then
-    brew_ensure
     cmd_exists tmux || brew_install tmux
     # pbcopy/pbpaste are built-in on macOS — no clipboard helper needed
   else
