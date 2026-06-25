@@ -211,7 +211,7 @@ Installs [Tailscale](https://tailscale.com) and walks you through browser-based 
 </details>
 
 <details>
-<summary><b>SSH</b> — hardened configuration + key setup</summary>
+<summary><b>SSH server</b> — hardened configuration + key setup</summary>
 
 Creates `/etc/ssh/sshd_config.d/99-hardened.conf` with:
 - Root login disabled
