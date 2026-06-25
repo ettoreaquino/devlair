@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.12.0](https://github.com/ettoreaquino/devlair/compare/v2.11.4...v2.12.0) (2026-06-25)
+
+
+### Features
+
+* **cli:** add devlair uninstall command ([ef24b5c](https://github.com/ettoreaquino/devlair/commit/ef24b5cfc1df01af6a2851a7bdb78aa0dccfcde7))
+
+
+### Bug Fixes
+
+* **cli:** address PR review findings on fix/macos-brew-preflight ([7f5817b](https://github.com/ettoreaquino/devlair/commit/7f5817b9d633337aa832f8faf8eb54fa0e45af12))
+* **macos:** detect non-admin user before attempting Homebrew installation ([e43a8b5](https://github.com/ettoreaquino/devlair/commit/e43a8b54bdabc301c461d3978af196e5c3e70952))
+* **macos:** init failures + add devlair uninstall command ([da6cca8](https://github.com/ettoreaquino/devlair/commit/da6cca8708f98dcd34f732330fd7705bf1e1cee7))
+
 ## [2.11.4](https://github.com/ettoreaquino/devlair/compare/v2.11.3...v2.11.4) (2026-06-25)
 
 
