@@ -33,10 +33,11 @@ do_run() {
   json_progress "generating SSH key"
   mkdir -p "$USER_HOME/.ssh"
   chmod 700 "$USER_HOME/.ssh"
-  if [[ "$PLATFORM" == "macos" ]]; then
-    ssh-keygen -t ed25519 -C "$email" -f "$gh_key" -N "" >&2
-  else
+  _is_root && chown_user "$USER_HOME/.ssh"
+  if _is_root; then
     run_as "$USERNAME" ssh-keygen -t ed25519 -C "$email" -f "$gh_key" -N "" >&2
+  else
+    ssh-keygen -t ed25519 -C "$email" -f "$gh_key" -N "" >&2
   fi
 
   # SSH config entry (idempotent)
@@ -67,32 +68,36 @@ Host github.com
 EOF
     fi
     chmod 600 "$ssh_conf"
-    [[ "$PLATFORM" != "macos" ]] && chown_user "$ssh_conf"
+    _is_root && chown_user "$ssh_conf"
   fi
 
   # Add key to macOS Keychain so it persists across reboots
   if [[ "$PLATFORM" == "macos" ]]; then
-    ssh-add --apple-use-keychain "$gh_key" >&2 || true
+    if _is_root; then
+      run_as "$USERNAME" ssh-add --apple-use-keychain "$gh_key" >&2 || true
+    else
+      ssh-add --apple-use-keychain "$gh_key" >&2 || true
+    fi
   fi
 
-  if [[ "$PLATFORM" == "macos" ]]; then
-    git config --global user.email "$email" >&2
-  else
+  if _is_root; then
     run_as "$USERNAME" git config --global user.email "$email" >&2
+  else
+    git config --global user.email "$email" >&2
   fi
   local git_name
   git_name=$(ctx_get_config github_name)
   if [[ -n "$git_name" ]]; then
-    if [[ "$PLATFORM" == "macos" ]]; then
-      git config --global user.name "$git_name" >&2
-    else
+    if _is_root; then
       run_as "$USERNAME" git config --global user.name "$git_name" >&2
+    else
+      git config --global user.name "$git_name" >&2
     fi
   fi
-  if [[ "$PLATFORM" == "macos" ]]; then
-    git config --global init.defaultBranch main >&2
-  else
+  if _is_root; then
     run_as "$USERNAME" git config --global init.defaultBranch main >&2
+  else
+    git config --global init.defaultBranch main >&2
   fi
 
   # Surface the public key and wait for the user to add it to GitHub.

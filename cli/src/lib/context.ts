@@ -8,16 +8,17 @@ import type { ModuleContext, Platform } from "./types.js";
 const VALID_USERNAME_RE = /^[a-z_][a-z0-9_-]{0,31}$/;
 
 function isSafeHome(path: string, username: string): boolean {
-  return path === `/home/${username}` || path === `/Users/${username}`;
+  return path === (process.platform === "darwin" ? `/Users/${username}` : `/home/${username}`);
 }
 
 export function resolveInvokingUser(): [username: string, homeDir: string] {
   const sudoUser = process.env.SUDO_USER;
   if (sudoUser && sudoUser !== "root" && VALID_USERNAME_RE.test(sudoUser)) {
     // SUDO_HOME is non-standard; only honor it when it points to a conventional
-    // user home for the same name. Otherwise derive /home/<user>.
+    // user home for the same name. Otherwise derive the platform default.
     const claimed = process.env.SUDO_HOME;
-    const home = claimed && isSafeHome(claimed, sudoUser) ? claimed : `/home/${sudoUser}`;
+    const defaultHome = process.platform === "darwin" ? `/Users/${sudoUser}` : `/home/${sudoUser}`;
+    const home = claimed && isSafeHome(claimed, sudoUser) ? claimed : defaultHome;
     return [sudoUser, home];
   }
   const info = userInfo({ encoding: "utf8" });
