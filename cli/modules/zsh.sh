@@ -32,7 +32,12 @@ do_run() {
   fi
   if [[ "$current_shell" != "$zsh_bin" ]]; then
     json_progress "setting zsh as default shell"
-    chsh -s "$zsh_bin" "$USERNAME" >&2
+    if [[ "$PLATFORM" == "macos" ]] && ! _is_root; then
+      # chsh <user> requires root; without it, macOS authenticates via PAM
+      chsh -s "$zsh_bin" >&2
+    else
+      chsh -s "$zsh_bin" "$USERNAME" >&2
+    fi
   fi
 
   local zim_home="$USER_HOME/.zim"

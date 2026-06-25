@@ -41,7 +41,7 @@ export const MODULE_SPECS: readonly ModuleSpec[] = [
   spec("system", "System update", "core", { platforms: ["linux", "wsl", "macos"] }),
   spec("timezone", "Timezone", "core", { platforms: ["linux"] }),
   spec("tailscale", "Tailscale", "network", { defaultOn: ["linux"] }),
-  spec("ssh", "SSH", "network", { deps: ["tailscale"], platforms: ["linux"] }),
+  spec("ssh", "SSH server", "network", { deps: ["tailscale"], platforms: ["linux"] }),
   spec("firewall", "Firewall + Fail2Ban", "network", { deps: ["ssh"], platforms: ["linux"] }),
   spec("homebrew", "Homebrew", "core", { platforms: ["macos"] }),
   spec("zsh", "Zsh + Dracula", "core", { reapply: true, deps: ["homebrew"], platforms: ["linux", "wsl", "macos"] }),
