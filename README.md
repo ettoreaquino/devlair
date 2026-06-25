@@ -17,7 +17,7 @@
 
 ---
 
-devlair automates the setup of a fresh Ubuntu server, workstation, or WSL instance — installing tools,
+devlair automates the setup of a fresh Ubuntu server, workstation, WSL instance, or macOS machine — installing tools,
 hardening security, configuring shell and terminal with the [Dracula](https://draculatheme.com) theme,
 and wiring up dev toolchains. Run it once on a fresh machine or re-run anytime to converge.
 
