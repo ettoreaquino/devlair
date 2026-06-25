@@ -100,22 +100,39 @@ apt_install() {
 }
 
 # brew_install PKG... -- install Homebrew packages quietly with a progress event.
+# When running as root (sudo devlair init on macOS), drops to the target user
+# because Homebrew refuses to run as root.
 brew_install() {
   json_progress "installing $*"
-  brew install --quiet "$@" >&2
+  if [[ "$(id -u)" == "0" ]]; then
+    sudo -u "${USERNAME:?USERNAME not set}" brew install --quiet "$@" >&2
+  else
+    brew install --quiet "$@" >&2
+  fi
 }
 
 # brew_ensure -- ensure Homebrew is on PATH, installing it if absent.
 # Uses download-then-execute to avoid piping curl to bash directly.
 # After install, sources brew shellenv so subsequent brew calls work.
+# When running as root, installs and invokes brew as the target user.
 brew_ensure() {
+  # Check if brew is accessible (either as root or as the target user)
   if cmd_exists brew; then
+    return 0
+  fi
+  if [[ "$(id -u)" == "0" ]] && sudo -u "${USERNAME:?USERNAME not set}" command -v brew >/dev/null 2>&1; then
+    # brew is installed for the target user; PATH just isn't set for root
+    eval "$(sudo -u "$USERNAME" brew shellenv 2>/dev/null)" || true
     return 0
   fi
   json_progress "installing Homebrew"
   local tmp
   tmp=$(download_script "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh")
-  NONINTERACTIVE=1 bash "$tmp" >&2
+  if [[ "$(id -u)" == "0" ]]; then
+    sudo -u "${USERNAME:?USERNAME not set}" NONINTERACTIVE=1 bash "$tmp" >&2
+  else
+    NONINTERACTIVE=1 bash "$tmp" >&2
+  fi
   rm -f "$tmp"
   # Add brew to PATH for the remainder of this script session
   if [[ -x /opt/homebrew/bin/brew ]]; then
@@ -140,14 +157,15 @@ run_shell_as() {
   sudo -u "$user" bash -c "$script"
 }
 
-# _run_as_user SCRIPT -- run a shell script as the module's target user on
-# Linux, or directly in the current shell on macOS (where sudo is not needed).
-# Requires USERNAME and PLATFORM to be set (done after read_context).
+# _run_as_user SCRIPT -- run a shell script as the module's target user.
+# When already running as that user (no sudo), executes directly.
+# When running as root (sudo devlair init), drops privileges via sudo -u.
+# Requires USERNAME to be set (done after read_context).
 _run_as_user() {
-  if [[ "${PLATFORM:-}" == "macos" ]]; then
-    bash -c "$1"
-  else
+  if [[ "$(id -u)" == "0" ]]; then
     run_shell_as "${USERNAME:?USERNAME not set}" "$1"
+  else
+    bash -c "$1"
   fi
 }
 
