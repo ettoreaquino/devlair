@@ -84,6 +84,7 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
     doctor [--fix]                      Check system health & fix drift
     upgrade [--no-self]                 Upgrade tools & re-apply configs
     disable-password                    Lock SSH to key-only auth
+    uninstall [--yes]                   Remove everything devlair installed
 
   AI Agents & Channels
     claude [--plan TIER] [--1m on|off]  Usage dashboard & config
@@ -194,7 +195,7 @@ devlair hooks into Claude Code to track session usage and display a dashboard:
 
 ## What gets installed
 
-`devlair init` runs these modules in order. Some modules are **opt-in** and not included in a default run — use `devlair init --only <module>` or `--group` to enable them. Opt-in modules: `claude`; `tailscale` is opt-in on WSL and macOS. Portable modules (supported on Linux, WSL, and macOS): `system`, `tailscale`, `zsh`, `tmux`, `rclone`, `github`, `shell`, `claude`, `devtools`. macOS-only modules (auto-skipped on Linux/WSL): `homebrew` (Homebrew preamble — on macOS, `macOsPreFlight()` runs before the Ink UI starts; if Homebrew is already installed it adds brew to PATH, otherwise it caches sudo credentials via `sudo -v` so the `homebrew` module can run the installer non-interactively as step [1/8]; the `homebrew` module is a dependency of `system`, `zsh`, `tmux`, and `devtools` on macOS). Linux-only modules (auto-skipped elsewhere): `firewall`, `gnome_terminal`, `ssh`, `timezone`.
+`devlair init` runs these modules in order. Some modules are **opt-in** and not included in a default run — use `devlair init --only <module>` or `--group` to enable them. Opt-in modules: `claude`; `tailscale` is opt-in on WSL and macOS. Portable modules (supported on Linux, WSL, and macOS): `system`, `tailscale`, `zsh`, `tmux`, `rclone`, `github`, `shell`, `claude`, `devtools`. macOS-only modules (auto-skipped on Linux/WSL): `homebrew` (Homebrew preamble — on macOS, `macOsPreFlight()` runs before the Ink UI starts; it first checks that the user is a local admin (`isMacAdmin()`) and exits with an error if not; if Homebrew is already installed it adds brew to PATH, otherwise it caches sudo credentials via `sudo -v` so the `homebrew` module can run the installer non-interactively as step [1/8]; the `homebrew` module is a dependency of `system`, `zsh`, `tmux`, and `devtools` on macOS). Linux-only modules (auto-skipped elsewhere): `firewall`, `gnome_terminal`, `ssh`, `timezone`.
 
 <details>
 <summary><b>System</b> — OS packages and essentials</summary>
@@ -383,6 +384,7 @@ The installer downloads the latest `devlair-cli-{os}-{arch}` binary and places i
 |---------|-------|
 | `devlair disable-password [--yes]` | Linux-only, auto-elevates via sudo. `--yes` skips the interactive confirmation. |
 | `devlair claude [--plan TIER\|--1m on\|off\|--channels]` | Configures the local Claude Code install. No dashboard (see above). |
+| `devlair uninstall [--yes]` | Removes the devlair binary, share directory, `~/.devlair/`, `~/.zim/`, `~/.zimrc`, `~/.zshenv` (if managed), the devlair block from `~/.zshrc`, `~/.tmux.conf`, and `~/.tmux/plugins/`. Auto-elevates via sudo. `--yes` skips the interactive confirmation. |
 
 **v2 wizard behavior notes:**
 
@@ -417,7 +419,7 @@ devlair/                # v1 Python CLI (stable)
 cli/                    # v2 TypeScript CLI (stable)
   src/
     index.tsx           # Ink app entrypoint
-    commands/           # init, doctor, upgrade, claude, disable-password
+    commands/           # init, doctor, upgrade, claude, disable-password, uninstall
     components/         # Ink UI components (Logo, Help, Progress, Summary)
     wizard/             # interactive wizard (GroupSelect, ModuleSelect, Confirmation, GithubConfig)
     lib/                # theme, types, runner, modules, platform detection,
