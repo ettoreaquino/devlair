@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.11.4](https://github.com/ettoreaquino/devlair/compare/v2.11.3...v2.11.4) (2026-06-25)
+
+
+### Bug Fixes
+
+* **cli:** address PR review findings on fix/macos-brew-preflight ([2376f9e](https://github.com/ettoreaquino/devlair/commit/2376f9e987e82d156c0562614ea0bf483430c033))
+* **macos:** clean init UX — homebrew as step [1/8], dscl shell change, permission recovery ([87421b8](https://github.com/ettoreaquino/devlair/commit/87421b8201f3faee7a9d27aaf18ecddbb3d52dc1))
+* **macos:** improve homebrew preflight and fix shell-change failures ([195ac86](https://github.com/ettoreaquino/devlair/commit/195ac86abc259dc3cec61f32361d94bdf07a0753))
+
 ## [2.11.3](https://github.com/ettoreaquino/devlair/compare/v2.11.2...v2.11.3) (2026-06-25)
 
 
