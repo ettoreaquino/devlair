@@ -8,7 +8,7 @@ import type { ModuleContext, Platform } from "./types.js";
 const VALID_USERNAME_RE = /^[a-z_][a-z0-9_-]{0,31}$/;
 
 function isSafeHome(path: string, username: string): boolean {
-  return path === `/home/${username}` || path === `/Users/${username}`;
+  return path === (process.platform === "darwin" ? `/Users/${username}` : `/home/${username}`);
 }
 
 export function resolveInvokingUser(): [username: string, homeDir: string] {

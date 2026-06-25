@@ -29,12 +29,12 @@ do_run() {
 
   json_progress "writing tmux config"
   cp "$SCRIPT_DIR/configs/tmux.conf" "$conf"
-  [[ "$(id -u)" == "0" ]] && chown_user "$conf"
+  _is_root && chown_user "$conf"
 
   # TPM (tmux plugin manager)
   local plugins_dir="$USER_HOME/.tmux/plugins"
   mkdir -p "$plugins_dir"
-  if [[ "$(id -u)" == "0" ]]; then
+  if _is_root; then
     chown_user "$USER_HOME/.tmux"
     chown_user "$plugins_dir"
   fi
@@ -42,7 +42,7 @@ do_run() {
   local tpm_path="$plugins_dir/tpm"
   if [[ ! -d "$tpm_path" ]]; then
     json_progress "installing TPM"
-    if [[ "$(id -u)" == "0" ]]; then
+    if _is_root; then
       run_as "$USERNAME" git clone https://github.com/tmux-plugins/tpm "$tpm_path" >&2
     else
       git clone https://github.com/tmux-plugins/tpm "$tpm_path" >&2
@@ -53,7 +53,7 @@ do_run() {
   local install_script="$tpm_path/bin/install_plugins"
   if [[ -x "$install_script" ]]; then
     json_progress "installing TPM plugins"
-    if [[ "$(id -u)" == "0" ]]; then
+    if _is_root; then
       run_as "$USERNAME" "$install_script" >&2 || true
     else
       "$install_script" >&2 || true

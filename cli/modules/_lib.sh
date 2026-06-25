@@ -93,6 +93,20 @@ ctx_get_config() {
 # cmd_exists NAME -- check if a command is available on PATH.
 cmd_exists() { command -v "$1" >/dev/null 2>&1; }
 
+# _is_root -- true when the effective UID is 0.
+# Caches the result in a string to avoid repeated subshell forks.
+_IS_ROOT_CACHED=""
+_is_root() {
+  if [[ -z "$_IS_ROOT_CACHED" ]]; then
+    if [[ "$(id -u)" == "0" ]]; then
+      _IS_ROOT_CACHED="true"
+    else
+      _IS_ROOT_CACHED="false"
+    fi
+  fi
+  [[ "$_IS_ROOT_CACHED" == "true" ]]
+}
+
 # apt_install PKG... -- install packages quietly with a progress event.
 apt_install() {
   json_progress "installing $*"
@@ -104,7 +118,7 @@ apt_install() {
 # because Homebrew refuses to run as root.
 brew_install() {
   json_progress "installing $*"
-  if [[ "$(id -u)" == "0" ]]; then
+  if _is_root; then
     sudo -u "${USERNAME:?USERNAME not set}" brew install --quiet "$@" >&2
   else
     brew install --quiet "$@" >&2
@@ -120,7 +134,7 @@ brew_ensure() {
   if cmd_exists brew; then
     return 0
   fi
-  if [[ "$(id -u)" == "0" ]] && sudo -u "${USERNAME:?USERNAME not set}" command -v brew >/dev/null 2>&1; then
+  if _is_root && sudo -u "${USERNAME:?USERNAME not set}" command -v brew >/dev/null 2>&1; then
     # brew is installed for the target user; PATH just isn't set for root
     eval "$(sudo -u "$USERNAME" brew shellenv 2>/dev/null)" || true
     return 0
@@ -128,7 +142,7 @@ brew_ensure() {
   json_progress "installing Homebrew"
   local tmp
   tmp=$(download_script "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh")
-  if [[ "$(id -u)" == "0" ]]; then
+  if _is_root; then
     sudo -u "${USERNAME:?USERNAME not set}" NONINTERACTIVE=1 bash "$tmp" >&2
   else
     NONINTERACTIVE=1 bash "$tmp" >&2
@@ -162,7 +176,7 @@ run_shell_as() {
 # When running as root (sudo devlair init), drops privileges via sudo -u.
 # Requires USERNAME to be set (done after read_context).
 _run_as_user() {
-  if [[ "$(id -u)" == "0" ]]; then
+  if _is_root; then
     run_shell_as "${USERNAME:?USERNAME not set}" "$1"
   else
     bash -c "$1"
