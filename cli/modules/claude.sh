@@ -20,30 +20,30 @@ _install_script() {
   mkdir -p "$bin_dir"
   cp "$src" "$bin_dir/$name"
   chmod 755 "$bin_dir/$name"
-  chown_user "$bin_dir/$name"
-  chown_user "$bin_dir"
+  _is_root && chown_user "$bin_dir/$name"
+  _is_root && chown_user "$bin_dir"
 }
 
 _ensure_telegram_plugin() {
   # Add marketplace if not present
   local marketplaces
-  marketplaces=$(run_as "$USERNAME" claude plugin marketplace list --json 2>/dev/null || echo "[]")
+  marketplaces=$(_run_as_user "claude plugin marketplace list --json 2>/dev/null || echo '[]'")
   if ! echo "$marketplaces" | jq -e '.[] | select(.name=="claude-plugins-official")' >/dev/null 2>&1; then
-    run_as "$USERNAME" claude plugin marketplace add "$TELEGRAM_MARKETPLACE" >&2 || true
+    _run_as_user "claude plugin marketplace add \"$TELEGRAM_MARKETPLACE\"" >&2 || true
   fi
 
   # Install plugin if not present
   local plugins
-  plugins=$(run_as "$USERNAME" claude plugin list --json 2>/dev/null || echo "[]")
+  plugins=$(_run_as_user "claude plugin list --json 2>/dev/null || echo '[]'")
   if ! echo "$plugins" | jq -e '.[] | select(.name=="telegram" and .marketplace=="claude-plugins-official")' >/dev/null 2>&1; then
-    run_as "$USERNAME" claude plugin install "$TELEGRAM_PLUGIN" >&2 || true
+    _run_as_user "claude plugin install \"$TELEGRAM_PLUGIN\"" >&2 || true
   fi
 }
 
 do_run() {
   local claude_dir="$USER_HOME/.claude"
   mkdir -p "$claude_dir"
-  chown_user "$claude_dir"
+  _is_root && chown_user "$claude_dir"
 
   # Install Claude Code CLI if not present
   local install_detail=""
@@ -51,7 +51,7 @@ do_run() {
     json_progress "installing claude code"
     local script
     script=$(download_script "https://claude.ai/install.sh")
-    run_shell_as "$USERNAME" "bash \"$script\"" >&2
+    _run_as_user "bash \"$script\"" >&2
     rm -f "$script"
     json_install "claude" "claude.ai" false
     install_detail="claude code installed"
@@ -63,7 +63,7 @@ do_run() {
   local patch
   patch=$(cat "$SCRIPT_DIR/configs/claude-settings.json")
   update_json "$settings_path" "$patch"
-  chown_user "$settings_path"
+  _is_root && chown_user "$settings_path"
 
   # Install helper scripts
   local bin_dir="$USER_HOME/.devlair/bin"
