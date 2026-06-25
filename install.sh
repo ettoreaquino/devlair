@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 # devlair installer
 #
-# Usage:
+# Usage (Linux / WSL):
 #   curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | sudo bash
 #   curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | sudo bash -s -- --v1
+#
+# Usage (macOS):
+#   curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | bash
+#
+# The script auto-elevates only when /usr/local/bin is not writable.
+# On macOS with Homebrew, sudo is usually not required.
 #
 # Channels:
 #   (default)  Latest v2 release (TypeScript + Ink).
@@ -283,4 +289,9 @@ if [[ "$CHANNEL" != "v1" ]]; then
 fi
 
 printf "%sNext step:%s\n" "$C_BOLD" "$C_RESET"
-printf "  %sdevlair init%s\n\n" "$C_PURPLE" "$C_RESET"
+if [[ "$OS_SUFFIX" == "darwin" ]]; then
+  printf "  %sdevlair init%s\n\n" "$C_PURPLE" "$C_RESET"
+else
+  printf "  %sdevlair init%s  %s(will prompt for sudo if needed)%s\n\n" \
+    "$C_PURPLE" "$C_RESET" "$C_COMMENT" "$C_RESET"
+fi

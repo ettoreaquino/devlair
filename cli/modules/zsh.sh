@@ -26,13 +26,22 @@ do_run() {
   # Set as default shell for the user
   local current_shell
   if [[ "$PLATFORM" == "macos" ]]; then
+    if [[ ! "$USERNAME" =~ ^[A-Za-z0-9._-]+$ ]]; then
+      json_result "fail" "invalid username: $USERNAME"
+      exit 1
+    fi
     current_shell=$(dscl . -read "/Users/$USERNAME" UserShell 2>/dev/null | awk '{print $2}')
   else
     current_shell=$(getent passwd "$USERNAME" | cut -d: -f7)
   fi
   if [[ "$current_shell" != "$zsh_bin" ]]; then
     json_progress "setting zsh as default shell"
-    chsh -s "$zsh_bin" "$USERNAME" >&2
+    if [[ "$PLATFORM" == "macos" ]] && ! _is_root; then
+      # On macOS as non-root, omit the username arg so chsh uses PAM for the invoking user. As root, pass USERNAME explicitly to target the correct account.
+      chsh -s "$zsh_bin" >&2
+    else
+      chsh -s "$zsh_bin" "$USERNAME" >&2
+    fi
   fi
 
   local zim_home="$USER_HOME/.zim"
