@@ -34,6 +34,7 @@ _clean_zshrc() {
 }
 
 do_run() {
+  [[ "$USERNAME" =~ ^[A-Za-z0-9._-]+$ ]] || { json_result "fail" "invalid username: $USERNAME"; exit 1; }
   local zshrc="$USER_HOME/.zshrc"
   local existing=""
   local aliases
@@ -41,6 +42,8 @@ do_run() {
 
   if [[ -f "$zshrc" ]]; then
     existing=$(cat "$zshrc")
+    # Recover ownership if a previous sudo run left the file root-owned.
+    [[ -w "$zshrc" ]] || sudo -n chown "$USERNAME" "$zshrc" 2>/dev/null || true
   fi
 
   if [[ "$existing" == *"$MARKER"* ]]; then

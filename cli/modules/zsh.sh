@@ -22,6 +22,7 @@ do_run() {
 
   local zsh_bin
   zsh_bin=$(which zsh)
+  [[ "$zsh_bin" =~ ^(/opt/homebrew|/usr/local|/bin|/usr/bin)/ ]] || { json_result "fail" "unexpected zsh path: $zsh_bin"; exit 1; }
 
   # Set as default shell for the user
   local current_shell
@@ -36,9 +37,18 @@ do_run() {
   fi
   if [[ "$current_shell" != "$zsh_bin" ]]; then
     json_progress "setting zsh as default shell"
-    if [[ "$PLATFORM" == "macos" ]] && ! _is_root; then
-      # On macOS as non-root, omit the username arg so chsh uses PAM for the invoking user. As root, pass USERNAME explicitly to target the correct account.
-      chsh -s "$zsh_bin" >&2
+    if [[ "$PLATFORM" == "macos" ]]; then
+      # chsh on macOS requires PAM auth even in a subprocess with piped stdin,
+      # causing a credential failure. dscl avoids PAM and works without a TTY.
+      # As root: call directly. As non-root: use sudo with cached creds (-n
+      # prevents prompting; credentials should be cached from the pre-flight
+      # sudo -v call that ran before Ink started).
+      if _is_root; then
+        dscl . -create "/Users/$USERNAME" UserShell "$zsh_bin" >&2
+      else
+        sudo -n dscl . -create "/Users/$USERNAME" UserShell "$zsh_bin" 2>/dev/null \
+          || json_progress "note: could not set default shell; run 'chsh -s $zsh_bin' to set it manually"
+      fi
     else
       chsh -s "$zsh_bin" "$USERNAME" >&2
     fi
