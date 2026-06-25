@@ -13,14 +13,6 @@ USER_HOME=$(ctx_get userHome)
 PLATFORM=$(ctx_get platform)
 MODE=${1:-run}
 
-_run_as_user() {
-  if [[ "$PLATFORM" == "macos" ]]; then
-    bash -c "$1"
-  else
-    run_shell_as "$USERNAME" "$1"
-  fi
-}
-
 do_run() {
   local gh_key="$USER_HOME/.ssh/id_ed25519_github"
   local ssh_conf="$USER_HOME/.ssh/config"
@@ -84,7 +76,7 @@ EOF
   fi
 
   if [[ "$PLATFORM" == "macos" ]]; then
-    bash -c "git config --global user.email \"$email\"" >&2
+    git config --global user.email "$email" >&2
   else
     run_as "$USERNAME" git config --global user.email "$email" >&2
   fi
@@ -92,13 +84,13 @@ EOF
   git_name=$(ctx_get_config github_name)
   if [[ -n "$git_name" ]]; then
     if [[ "$PLATFORM" == "macos" ]]; then
-      bash -c "git config --global user.name \"$git_name\"" >&2
+      git config --global user.name "$git_name" >&2
     else
       run_as "$USERNAME" git config --global user.name "$git_name" >&2
     fi
   fi
   if [[ "$PLATFORM" == "macos" ]]; then
-    bash -c "git config --global init.defaultBranch main" >&2
+    git config --global init.defaultBranch main >&2
   else
     run_as "$USERNAME" git config --global init.defaultBranch main >&2
   fi

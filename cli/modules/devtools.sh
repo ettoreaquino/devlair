@@ -15,14 +15,6 @@ MODE=${1:-run}
 
 _AWS_CLI_GPG_KEY_URL="https://awscli.amazonaws.com/awscli-exe-linux-public-key.asc"
 
-_run_as_user() {
-  if [[ "$PLATFORM" == "macos" ]]; then
-    bash -c "$1"
-  else
-    run_shell_as "$USERNAME" "$1"
-  fi
-}
-
 do_run() {
   local -a installed=() skipped=()
 
@@ -70,7 +62,11 @@ do_run() {
       pyenv install -s 3.12
       pyenv global 3.12
     " >&2
-    json_install "pyenv" "${PLATFORM:-linux}" false
+    if [[ "$PLATFORM" == "macos" ]]; then
+      json_install "pyenv" "brew:pyenv" false
+    else
+      json_install "pyenv" "github.com/pyenv/pyenv" false
+    fi
     installed+=(pyenv)
   fi
 
@@ -106,7 +102,11 @@ do_run() {
         \"$fzf_dir/install\" --all --no-update-rc
       " >&2
     fi
-    json_install "fzf" "${PLATFORM:-linux}" true
+    if [[ "$PLATFORM" == "macos" ]]; then
+      json_install "fzf" "brew:fzf" true
+    else
+      json_install "fzf" "github.com/junegunn/fzf" true
+    fi
     installed+=(fzf)
   fi
 
@@ -158,7 +158,11 @@ do_run() {
       apt-get update -qq >&2
       apt-get install -y -qq gh >&2
     fi
-    json_install "gh" "${PLATFORM:-linux}" true
+    if [[ "$PLATFORM" == "macos" ]]; then
+      json_install "gh" "brew:gh" true
+    else
+      json_install "gh" "apt:cli.github.com" true
+    fi
     installed+=(gh)
   fi
 

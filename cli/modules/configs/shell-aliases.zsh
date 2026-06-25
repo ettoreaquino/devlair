@@ -1,7 +1,8 @@
 # ── devlair aliases ───────────────────────────────────────────────────────────
+_dl_uname=$(uname)
 
 # macOS: ensure Homebrew is on PATH first
-if [[ "$(uname)" == "Darwin" ]]; then
+if [[ "$_dl_uname" == "Darwin" ]]; then
   if [[ -x /opt/homebrew/bin/brew ]]; then
     export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
   elif [[ -x /usr/local/bin/brew ]]; then
@@ -12,7 +13,7 @@ fi
 alias ll='ls -lah --color=auto'
 alias ..='cd ..'
 alias ...='cd ../..'
-if [[ "$(uname)" == "Darwin" ]]; then
+if [[ "$_dl_uname" == "Darwin" ]]; then
   alias ports='sudo lsof -iTCP -iUDP -nP | grep LISTEN'
   alias update='brew update && brew upgrade'
 else
@@ -49,7 +50,7 @@ export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
 # ── fzf ───────────────────────────────────────────────────────────────────────
-if [[ "$(uname)" == "Darwin" ]]; then
+if [[ "$_dl_uname" == "Darwin" ]]; then
   # fzf installed via Homebrew
   _fzf_prefix=$(brew --prefix fzf 2>/dev/null || true)
   [[ -n "$_fzf_prefix" ]] && source "$_fzf_prefix/shell/key-bindings.zsh" 2>/dev/null || true
@@ -79,7 +80,7 @@ if [ -t 0 ]; then
   _dl_host=${HOST:-$(hostname)}
   _dl_ip=$(tailscale ip -4 2>/dev/null || echo "TS off")
   _dl_disk=$(df -h / | awk 'NR==2{print $3"/"$2}')
-  if [[ "$(uname)" == "Darwin" ]]; then
+  if [[ "$_dl_uname" == "Darwin" ]]; then
     _dl_mem=$(vm_stat | awk '/Pages active/{a=$3} /Pages wired/{w=$4} END{printf "%.1fG used", (a+w)*4096/1073741824}' 2>/dev/null || echo "n/a")
   else
     _dl_mem=$(free -h | awk 'NR==2{gsub(/i/,"",$3); gsub(/i/,"",$2); print $3"/"$2}')

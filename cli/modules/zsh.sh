@@ -13,14 +13,6 @@ USER_HOME=$(ctx_get userHome)
 PLATFORM=$(ctx_get platform)
 MODE=${1:-run}
 
-_run_as_user() {
-  if [[ "$PLATFORM" == "macos" ]]; then
-    bash -c "$1"
-  else
-    run_shell_as "$USERNAME" "$1"
-  fi
-}
-
 do_run() {
   if [[ "$PLATFORM" == "macos" ]]; then
     brew_ensure
