@@ -20,7 +20,7 @@ import {
   parseUpgradeFlags,
 } from "./lib/args.js";
 import { elevateIfNeeded } from "./lib/elevate.js";
-import { ensureHomebrew } from "./lib/homebrew.js";
+import { macOsPreFlight } from "./lib/homebrew.js";
 import { D_FG } from "./lib/theme.js";
 
 const VERSION = pkg.version;
@@ -93,7 +93,7 @@ async function main() {
     // access for its sudo password prompt. All subsequent brew calls in modules
     // assume brew is on PATH — this is the single point of installation.
     if (process.platform === "darwin") {
-      ensureHomebrew();
+      macOsPreFlight();
     }
   }
 

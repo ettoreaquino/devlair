@@ -42,6 +42,8 @@ _ensure_telegram_plugin() {
 
 do_run() {
   local claude_dir="$USER_HOME/.claude"
+  # Recover ownership if a previous sudo run left the directory root-owned.
+  [[ -d "$claude_dir" && ! -w "$claude_dir" ]] && sudo -n chown "$USERNAME" "$claude_dir" 2>/dev/null || true
   mkdir -p "$claude_dir"
   _is_root && chown_user "$claude_dir"
 
