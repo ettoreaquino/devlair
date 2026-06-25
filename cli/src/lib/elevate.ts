@@ -7,6 +7,9 @@
 import { spawnSync } from "node:child_process";
 
 export function elevateIfNeeded(): void {
+  // macOS: Homebrew refuses to run as root, and all macOS modules install to
+  // user space via brew/curl. Elevation is neither needed nor safe on macOS.
+  if (process.platform === "darwin") return;
   if (process.getuid?.() === 0) return;
 
   // Preserve only the env vars we need — blanket -E would forward secrets
