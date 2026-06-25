@@ -12,9 +12,15 @@
  * runs as step [1/8] with NONINTERACTIVE=1 and the cached credentials.
  */
 
-import { execSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 
 const BREW_PATHS = ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"];
+
+function isMacAdmin(): boolean {
+  const r = spawnSync("id", ["-Gn"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+  if (r.status !== 0 || !r.stdout) return false;
+  return r.stdout.trim().split(/\s+/).includes("admin");
+}
 
 function brewBinDir(brewBin: string): string {
   return brewBin.replace(/\/brew$/, "");
@@ -22,11 +28,8 @@ function brewBinDir(brewBin: string): string {
 
 function brewPath(): string | null {
   for (const p of BREW_PATHS) {
-    try {
-      execSync(`test -x "${p}"`, { stdio: "ignore" });
+    if (spawnSync("test", ["-x", p], { stdio: "ignore" }).status === 0) {
       return p;
-    } catch {
-      // ignore
     }
   }
   return null;
@@ -34,7 +37,10 @@ function brewPath(): string | null {
 
 function setupBrewPath(existing: string): void {
   try {
-    const shellenv = execSync(`"${existing}" shellenv`, { encoding: "utf8" });
+    const shellenv = spawnSync(existing, ["shellenv"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).stdout;
     const SAFE_BREW_VARS = new Set(["PATH", "HOMEBREW_PREFIX", "HOMEBREW_CELLAR", "HOMEBREW_REPOSITORY"]);
     for (const line of shellenv.split("\n")) {
       const m = line.match(/^export ([A-Z_]+)="(.*)"/);
@@ -54,9 +60,27 @@ export function macOsPreFlight(): void {
     return;
   }
 
-  // Homebrew not installed — cache sudo credentials before Ink starts.
-  // The homebrew module (step [1/8]) will run the actual installer using
-  // NONINTERACTIVE=1 and these cached credentials, without needing a TTY.
+  // Homebrew not installed. The Homebrew installer requires the user to be
+  // in the macOS admin group (it checks via dseditgroup before trying sudo).
+  // Detect this early so we can give a clear error instead of a cryptic
+  // module failure deep in the init flow.
+  if (!isMacAdmin()) {
+    process.stderr.write(
+      [
+        "",
+        "Error: Homebrew is not installed and your account is not a macOS Administrator.",
+        "       devlair init requires Homebrew. Ask your IT admin to install it first:",
+        '         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"',
+        "       Then re-run: devlair init",
+        "",
+      ].join("\n"),
+    );
+    process.exit(1);
+  }
+
+  // Admin user — cache sudo credentials before Ink starts so the homebrew
+  // module installer script can call sudo in its piped subprocess without
+  // needing interactive input.
   process.stdout.write("\nHomebrew will be installed as the first step.\n");
   process.stdout.write("Your password is needed now to prepare the installation.\n\n");
 
