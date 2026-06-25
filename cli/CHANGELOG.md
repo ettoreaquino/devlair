@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.10.0](https://github.com/ettoreaquino/devlair/compare/v2.9.0...v2.10.0) (2026-06-25)
+
+
+### Features
+
+* **macos:** add macOS module support via Homebrew + fix brand header leak ([4af3f8b](https://github.com/ettoreaquino/devlair/commit/4af3f8b09a3d822205460c86365a3fac10827463))
+* **macos:** Homebrew-based macOS module support + scope --brand to logo ([d3f155b](https://github.com/ettoreaquino/devlair/commit/d3f155b5b38501b89f525bcdc62567e17bf0441d))
+
+
+### Bug Fixes
+
+* **devlair:** address PR review findings on feat/brand-flag ([8b7f7e3](https://github.com/ettoreaquino/devlair/commit/8b7f7e33ffad5c24fe822696294b0070882f84be))
+
 ## [2.9.0](https://github.com/ettoreaquino/devlair/compare/v2.8.0...v2.9.0) (2026-06-24)
 
 
