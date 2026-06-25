@@ -1,20 +1,9 @@
 /**
  * devlair uninstall — remove everything devlair installed and configured.
- *
- * Removes (in order):
- *   - /usr/local/bin/devlair        binary
- *   - /usr/local/share/devlair/     module scripts
- *   - ~/.devlair/                   state, logs, helper scripts
- *   - ~/.zim/                       zimfw (installed by zsh module)
- *   - ~/.zimrc                      zsh module config
- *   - ~/.zshenv                     zsh module env (if devlair-managed)
- *   - ~/.zshrc  (devlair block)     strip from marker to EOF
- *   - ~/.tmux.conf                  tmux module config
- *   - ~/.tmux/plugins/              tmux plugin manager plugins
  */
 
 import { spawnSync } from "node:child_process";
-import { readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Box, Text, useApp, useInput } from "ink";
 import { useCallback, useEffect, useState } from "react";
@@ -71,15 +60,6 @@ function buildItems(userHome: string): RemovalItem[] {
   ];
 }
 
-function pathExists(p: string): boolean {
-  try {
-    statSync(p);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 function isDevlairZshenv(p: string): boolean {
   try {
     return readFileSync(p, "utf8").includes(ZSHENV_MARKER);
@@ -110,7 +90,6 @@ function stripZshrcBlock(p: string): { ok: boolean; detail: string } {
 }
 
 function removePrivileged(p: string): { ok: boolean; detail: string } {
-  // Try direct removal first; fall back to sudo -n (non-interactive, uses cached creds).
   try {
     const stat = statSync(p);
     if (stat.isDirectory()) {
@@ -127,7 +106,7 @@ function removePrivileged(p: string): { ok: boolean; detail: string } {
 }
 
 function removeItem(item: RemovalItem): Pick<RemovalItem, "status" | "detail"> {
-  if (!pathExists(item.path)) {
+  if (!existsSync(item.path)) {
     return { status: "skip", detail: "not found" };
   }
 
@@ -185,8 +164,6 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
   const runRemoval = useCallback(() => {
     setPhase("running");
 
-    // Run synchronously then update state in one batch — avoids partial renders
-    // while the (fast) fs operations complete.
     const results = items.map((item) => {
       const update = removeItem(item);
       return { ...item, ...update };
@@ -219,7 +196,7 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
   );
 
   const presentItems = items.filter((item) => {
-    if (!pathExists(item.path)) return false;
+    if (!existsSync(item.path)) return false;
     if (item.type === "zshrc-strip") return hasDevlairZshrcBlock(item.path);
     if (item.type === "file" && item.path.endsWith(".zshenv")) return isDevlairZshenv(item.path);
     return true;
@@ -317,8 +294,6 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
           <Text color={D_COMMENT}>{"  Aborted."}</Text>
         </Box>
       )}
-
-      <Text>{""}</Text>
     </Box>
   );
 }

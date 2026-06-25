@@ -12,7 +12,7 @@
  * runs as step [1/8] with NONINTERACTIVE=1 and the cached credentials.
  */
 
-import { execSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 
 const BREW_PATHS = ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"];
 
@@ -28,11 +28,8 @@ function brewBinDir(brewBin: string): string {
 
 function brewPath(): string | null {
   for (const p of BREW_PATHS) {
-    try {
-      execSync(`test -x "${p}"`, { stdio: "ignore" });
+    if (spawnSync("test", ["-x", p], { stdio: "ignore" }).status === 0) {
       return p;
-    } catch {
-      // ignore
     }
   }
   return null;
@@ -40,7 +37,10 @@ function brewPath(): string | null {
 
 function setupBrewPath(existing: string): void {
   try {
-    const shellenv = execSync(`"${existing}" shellenv`, { encoding: "utf8" });
+    const shellenv = spawnSync(existing, ["shellenv"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).stdout;
     const SAFE_BREW_VARS = new Set(["PATH", "HOMEBREW_PREFIX", "HOMEBREW_CELLAR", "HOMEBREW_REPOSITORY"]);
     for (const line of shellenv.split("\n")) {
       const m = line.match(/^export ([A-Z_]+)="(.*)"/);
