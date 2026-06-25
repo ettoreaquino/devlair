@@ -92,7 +92,7 @@ describe("resolveProfileKeys", () => {
 
   test("groups expand to module keys", () => {
     const { want } = resolveProfileKeys(parseProfile("version: 1\ngroups: [core]\n"));
-    expect(want).toEqual(new Set(["system", "timezone", "zsh", "shell"]));
+    expect(want).toEqual(new Set(["system", "timezone", "homebrew", "zsh", "shell"]));
   });
 
   test("no selection returns null want", () => {

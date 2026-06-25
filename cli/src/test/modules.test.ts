@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { GROUPS, MODULE_SPECS, REAPPLY_KEYS, keysForGroups, resolveOrder, validateDag } from "../lib/modules.js";
 
 describe("MODULE_SPECS", () => {
-  test("has 12 modules", () => {
-    expect(MODULE_SPECS).toHaveLength(12);
+  test("has 13 modules", () => {
+    expect(MODULE_SPECS).toHaveLength(13);
   });
 
   test("all keys are unique", () => {
@@ -41,7 +41,7 @@ describe("REAPPLY_KEYS", () => {
 describe("keysForGroups", () => {
   test("returns core modules", () => {
     const keys = keysForGroups(new Set(["core"]));
-    expect(keys).toEqual(new Set(["system", "timezone", "zsh", "shell"]));
+    expect(keys).toEqual(new Set(["system", "timezone", "homebrew", "zsh", "shell"]));
   });
 
   test("returns network modules", () => {
@@ -51,7 +51,7 @@ describe("keysForGroups", () => {
 
   test("returns multiple groups", () => {
     const keys = keysForGroups(new Set(["core", "coding"]));
-    expect(keys).toEqual(new Set(["system", "timezone", "zsh", "shell", "tmux", "devtools", "github"]));
+    expect(keys).toEqual(new Set(["system", "timezone", "homebrew", "zsh", "shell", "tmux", "devtools", "github"]));
   });
 
   test("returns empty set for unknown group", () => {
@@ -60,9 +60,9 @@ describe("keysForGroups", () => {
 });
 
 describe("resolveOrder", () => {
-  test("returns all 12 modules when no keys are specified", () => {
+  test("returns all 13 modules when no keys are specified", () => {
     const specs = resolveOrder();
-    expect(specs).toHaveLength(12);
+    expect(specs).toHaveLength(13);
   });
 
   test("preserves topological order", () => {
@@ -111,6 +111,7 @@ describe("resolveOrder", () => {
     const macosSpecs = resolveOrder(undefined, "macos");
     const macosKeys = macosSpecs.map((s) => s.key);
     expect(macosKeys).toContain("system");
+    expect(macosKeys).toContain("homebrew");
     expect(macosKeys).toContain("zsh");
     expect(macosKeys).toContain("devtools");
     // Linux-only modules are excluded on macOS
@@ -136,14 +137,14 @@ describe("resolveOrder", () => {
     expect(specs).toHaveLength(0);
   });
 
-  test("produces identical ordering to Python version", () => {
-    // The Python MODULE_SPECS order is the canonical topological sort.
+  test("produces correct topological ordering", () => {
     const expectedOrder = [
       "system",
       "timezone",
       "tailscale",
       "ssh",
       "firewall",
+      "homebrew",
       "zsh",
       "tmux",
       "devtools",
