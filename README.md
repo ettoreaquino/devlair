@@ -194,12 +194,12 @@ devlair hooks into Claude Code to track session usage and display a dashboard:
 
 ## What gets installed
 
-`devlair init` runs these modules in order. Some modules are **opt-in** and not included in a default run — use `devlair init --only <module>` or `--group` to enable them. Opt-in modules: `claude`; `tailscale` is opt-in on WSL and macOS. Portable modules (supported on Linux, WSL, and macOS): `system`, `tailscale`, `zsh`, `tmux`, `rclone`, `github`, `shell`, `claude`, `devtools`. macOS-only modules (auto-skipped on Linux/WSL): `homebrew` (Homebrew preamble — installed automatically as a dependency of `zsh`, `tmux`, and `devtools` on macOS). Linux-only modules (auto-skipped elsewhere): `firewall`, `gnome_terminal`, `ssh`, `timezone`.
+`devlair init` runs these modules in order. Some modules are **opt-in** and not included in a default run — use `devlair init --only <module>` or `--group` to enable them. Opt-in modules: `claude`; `tailscale` is opt-in on WSL and macOS. Portable modules (supported on Linux, WSL, and macOS): `system`, `tailscale`, `zsh`, `tmux`, `rclone`, `github`, `shell`, `claude`, `devtools`. macOS-only modules (auto-skipped on Linux/WSL): `homebrew` (Homebrew preamble — on macOS, `ensureHomebrew()` runs before the Ink UI starts so the installer has full TTY access for sudo prompts; the `homebrew` module is a dependency of `system`, `zsh`, `tmux`, and `devtools` on macOS). Linux-only modules (auto-skipped elsewhere): `firewall`, `gnome_terminal`, `ssh`, `timezone`.
 
 <details>
 <summary><b>System</b> — OS packages and essentials</summary>
 
-Runs `apt update && upgrade` and installs core packages: `git`, `curl`, `vim`, `htop`, `tmux`, `zsh`, `bat`, `fzf`, `build-essential`, and more. On bare Linux it also installs `openssh-server`, `ufw`, `fail2ban`, and `avahi-daemon`; these are skipped on WSL because they ship systemd-managed postinst scripts that don't work under WSL's systemd-less default (the dedicated `ssh` and `firewall` modules are also Linux-only). On macOS, the module ensures Homebrew is installed, runs `brew update && brew upgrade`, and installs a set of macOS essentials via `brew install` (`git`, `curl`, `wget`, `vim`, `htop`, `tmux`, `unzip`, `jq`, `tree`, `rsync`, `zsh`, `bat`, `fzf`, `gnupg`).
+Runs `apt update && upgrade` and installs core packages: `git`, `curl`, `vim`, `htop`, `tmux`, `zsh`, `bat`, `fzf`, `build-essential`, and more. On bare Linux it also installs `openssh-server`, `ufw`, `fail2ban`, and `avahi-daemon`; these are skipped on WSL because they ship systemd-managed postinst scripts that don't work under WSL's systemd-less default (the dedicated `ssh` and `firewall` modules are also Linux-only). On macOS, Homebrew is guaranteed to be on PATH before this module runs (installed by the pre-flight `ensureHomebrew()` call in `index.tsx`). The module runs `brew update && brew upgrade` and installs a set of macOS essentials via `brew install` (`git`, `curl`, `wget`, `vim`, `htop`, `tmux`, `unzip`, `jq`, `tree`, `rsync`, `zsh`, `bat`, `fzf`, `gnupg`).
 
 </details>
 
@@ -421,7 +421,7 @@ cli/                    # v2 TypeScript CLI (stable)
     components/         # Ink UI components (Logo, Help, Progress, Summary)
     wizard/             # interactive wizard (GroupSelect, ModuleSelect, Confirmation, GithubConfig)
     lib/                # theme, types, runner, modules, platform detection,
-                        # args, selection, profiles, jsonConfig, elevate
+                        # args, selection, profiles, jsonConfig, elevate, homebrew
   modules/              # shell modules executed by the v2 binary
                         # (packaged into modules.tar.gz on release)
 assets/
