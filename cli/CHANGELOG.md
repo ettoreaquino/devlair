@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.11.0](https://github.com/ettoreaquino/devlair/compare/v2.10.0...v2.11.0) (2026-06-25)
+
+
+### Features
+
+* **macos:** homebrew preamble module + brew-first installs ([bf13005](https://github.com/ettoreaquino/devlair/commit/bf130053c5b60fc05e3d699fe62d41bcdf9afb18))
+* **macos:** homebrew preamble module + brew-first installs for uv and bun ([e809fb3](https://github.com/ettoreaquino/devlair/commit/e809fb36c020b02daf01cc8d67cfdcb7b926e3c8))
+
+
+### Bug Fixes
+
+* **ci:** bump bun to 1.3.12 and stabilise pruneOldRuns sort ([4d69007](https://github.com/ettoreaquino/devlair/commit/4d69007ed5764620d0bbc85aa705804f98ab859a))
+* **ci:** bump bun to 1.3.12 and stabilise pruneOldRuns sort ([877174c](https://github.com/ettoreaquino/devlair/commit/877174c2f60461f71bac2f8ecdbb57e405c0ca01))
+* **cli:** address PR [#186](https://github.com/ettoreaquino/devlair/issues/186) review findings on fix/macos-sudo-root ([8bfd142](https://github.com/ettoreaquino/devlair/commit/8bfd14220c0570327136276feba84b96f379f003))
+* **homebrew:** emit audit log entry after brew_ensure ([dcea040](https://github.com/ettoreaquino/devlair/commit/dcea04082e3d9adf021624694bf731dd8fa73cc2))
+* **macos:** root-aware module execution + home dir + remove unsafe system modules ([8a5e86f](https://github.com/ettoreaquino/devlair/commit/8a5e86f75f8c5ea94c976db36ff8c305a346fbdf))
+* **macos:** root-aware modules, home dir, remove FDA-gated system modules ([9719a83](https://github.com/ettoreaquino/devlair/commit/9719a83539b7c3e2e908006be6a1d9bfa267b8f5))
+
 ## [2.10.0](https://github.com/ettoreaquino/devlair/compare/v2.9.0...v2.10.0) (2026-06-25)
 
 
