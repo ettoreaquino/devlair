@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.11.4](https://github.com/ettoreaquino/devlair/compare/v2.11.3...v2.11.4) (2026-06-25)
+
+
+### Bug Fixes
+
+* **cli:** address PR review findings on fix/macos-brew-preflight ([2376f9e](https://github.com/ettoreaquino/devlair/commit/2376f9e987e82d156c0562614ea0bf483430c033))
+* **macos:** clean init UX — homebrew as step [1/8], dscl shell change, permission recovery ([87421b8](https://github.com/ettoreaquino/devlair/commit/87421b8201f3faee7a9d27aaf18ecddbb3d52dc1))
+* **macos:** improve homebrew preflight and fix shell-change failures ([195ac86](https://github.com/ettoreaquino/devlair/commit/195ac86abc259dc3cec61f32361d94bdf07a0753))
+
+## [2.11.3](https://github.com/ettoreaquino/devlair/compare/v2.11.2...v2.11.3) (2026-06-25)
+
+
+### Bug Fixes
+
+* **cli:** address PR review findings on fix/macos-brew-preflight ([e67847d](https://github.com/ettoreaquino/devlair/commit/e67847d9b3fdbf8e96c3edc65bd94104e4e14d33))
+* **cli:** address PR review findings on fix/macos-brew-preflight ([5b61189](https://github.com/ettoreaquino/devlair/commit/5b61189a735d45713485630f549a964390cdb3ed))
+* **macos:** fix claude module for non-root macOS operation ([ba221da](https://github.com/ettoreaquino/devlair/commit/ba221da16ee4660956e6529b3f1f19398fee7e9f))
+* **macos:** fix claude module for non-root macOS operation ([08e2301](https://github.com/ettoreaquino/devlair/commit/08e2301ad5d6b3797b36e03695973960c71eafdb))
+* **macos:** fix lint format and update topological order test ([bda338f](https://github.com/ettoreaquino/devlair/commit/bda338fda1858ce043deb5a692644bfaa877d017))
+* **macos:** run Homebrew pre-flight before Ink starts for TTY access ([70143d3](https://github.com/ettoreaquino/devlair/commit/70143d33eca78dbaa7e3cc815e4b9858531010b1))
+* **macos:** run Homebrew pre-flight before Ink starts for TTY access ([705fc1c](https://github.com/ettoreaquino/devlair/commit/705fc1cc2f50db890c093570bfb8ee7076625019))
+
 ## [2.11.2](https://github.com/ettoreaquino/devlair/compare/v2.11.1...v2.11.2) (2026-06-25)
 
 
