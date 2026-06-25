@@ -52,7 +52,7 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
 
 **Composable**
 
-12 modules you can run individually with `--only` or skip with `--skip`. Each module is self-contained and does one thing well.
+13 modules you can run individually with `--only` or skip with `--skip`. Each module is self-contained and does one thing well.
 
 </td>
 </tr>
@@ -187,7 +187,7 @@ devlair hooks into Claude Code to track session usage and display a dashboard:
 
 ## What gets installed
 
-`devlair init` runs these modules in order. Some modules are **opt-in** and not included in a default run — use `devlair init --only <module>` or `--group` to enable them. Opt-in modules: `claude`; `tailscale` is opt-in on WSL and macOS. Portable modules (supported on Linux, WSL, and macOS): `system`, `tailscale`, `zsh`, `tmux`, `rclone`, `github`, `shell`, `claude`, `devtools`. Linux-only modules (auto-skipped elsewhere): `firewall`, `gnome_terminal`, `ssh`, `timezone`.
+`devlair init` runs these modules in order. Some modules are **opt-in** and not included in a default run — use `devlair init --only <module>` or `--group` to enable them. Opt-in modules: `claude`; `tailscale` is opt-in on WSL and macOS. Portable modules (supported on Linux, WSL, and macOS): `system`, `tailscale`, `zsh`, `tmux`, `rclone`, `github`, `shell`, `claude`, `devtools`. macOS-only modules (auto-skipped on Linux/WSL): `homebrew` (Homebrew preamble — installed automatically as a dependency of `zsh`, `tmux`, and `devtools` on macOS). Linux-only modules (auto-skipped elsewhere): `firewall`, `gnome_terminal`, `ssh`, `timezone`.
 
 <details>
 <summary><b>System</b> — OS packages and essentials</summary>
@@ -264,7 +264,7 @@ Installs (skipping any that already exist):
 | [aws](https://aws.amazon.com/cli/) | AWS CLI v2 |
 | [Bun](https://bun.sh/) | JavaScript runtime (required for Claude Code channels) |
 
-On macOS, `pyenv`, `gh`, and `aws` are installed via `brew` instead of apt/curl. Build dependencies for pyenv (openssl, readline, sqlite3, xz, zlib) are also installed via brew. Docker is not installed on macOS — the module prints guidance to install Docker Desktop for Mac and continues without error.
+On macOS, `uv`, `bun`, `pyenv`, `gh`, and `aws` are installed via `brew` instead of apt/curl. Build dependencies for pyenv (openssl, readline, sqlite3, xz, zlib) are also installed via brew. Docker is not installed on macOS — the module prints guidance to install Docker Desktop for Mac and continues without error.
 
 </details>
 
@@ -401,7 +401,7 @@ devlair/                # v1 Python CLI (stable)
   runner.py             # subprocess helpers
   context.py            # shared types, user resolution, JSON config helpers
   console.py            # Rich console + Dracula color tokens
-  modules/              # one file per init module (12 modules)
+  modules/              # one file per init module (13 modules)
   features/             # doctor, upgrade, disable-password, filesystem, claude, sync, audit, profile
 cli/                    # v2 TypeScript CLI (stable)
   src/
