@@ -114,3 +114,12 @@ export interface DisablePasswordFlags {
 export function parseDisablePasswordFlags(args: readonly string[]): DisablePasswordFlags {
   return { yes: args.includes("--yes") || args.includes("-y") };
 }
+
+export interface UninstallFlags {
+  /** Skip the interactive confirmation prompt. */
+  yes: boolean;
+}
+
+export function parseUninstallFlags(args: readonly string[]): UninstallFlags {
+  return { yes: args.includes("--yes") || args.includes("-y") };
+}

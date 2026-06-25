@@ -5,6 +5,7 @@ import { ClaudeView } from "./commands/claude.js";
 import { DisablePasswordView } from "./commands/disable-password.js";
 import { DoctorView } from "./commands/doctor.js";
 import { InitView } from "./commands/init.js";
+import { UninstallView } from "./commands/uninstall.js";
 import { UpgradeView } from "./commands/upgrade.js";
 import { Help } from "./components/Help.js";
 import {
@@ -12,11 +13,13 @@ import {
   type DisablePasswordFlags,
   type DoctorFlags,
   type InitFlags,
+  type UninstallFlags,
   type UpgradeFlags,
   parseClaudeFlags,
   parseDisablePasswordFlags,
   parseDoctorFlags,
   parseInitFlags,
+  parseUninstallFlags,
   parseUpgradeFlags,
 } from "./lib/args.js";
 import { elevateIfNeeded } from "./lib/elevate.js";
@@ -32,7 +35,8 @@ type Command =
   | { type: "doctor"; flags: DoctorFlags }
   | { type: "upgrade"; flags: UpgradeFlags }
   | { type: "claude"; flags: ClaudeFlags }
-  | { type: "disable-password"; flags: DisablePasswordFlags };
+  | { type: "disable-password"; flags: DisablePasswordFlags }
+  | { type: "uninstall"; flags: UninstallFlags };
 
 function parseCommand(args: string[]): Command {
   if (args.includes("--version") || args.includes("-V")) {
@@ -57,6 +61,9 @@ function parseCommand(args: string[]): Command {
   if (firstArg === "disable-password") {
     return { type: "disable-password", flags: parseDisablePasswordFlags(args.slice(1)) };
   }
+  if (firstArg === "uninstall") {
+    return { type: "uninstall", flags: parseUninstallFlags(args.slice(1)) };
+  }
   return { type: "help" };
 }
 
@@ -79,10 +86,13 @@ function App({ command }: { command: Command }) {
   if (command.type === "disable-password") {
     return <DisablePasswordView flags={command.flags} />;
   }
+  if (command.type === "uninstall") {
+    return <UninstallView flags={command.flags} />;
+  }
   return <Help version={VERSION} />;
 }
 
-const ELEVATED_COMMANDS = new Set(["init", "doctor", "upgrade", "disable-password"]);
+const ELEVATED_COMMANDS = new Set(["init", "doctor", "upgrade", "disable-password", "uninstall"]);
 
 async function main() {
   const command = parseCommand(process.argv.slice(2));
