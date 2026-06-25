@@ -50,8 +50,6 @@ function setupBrewPath(existing: string): void {
 export function macOsPreFlight(): void {
   const existing = brewPath();
   if (existing) {
-    // Already installed — add to PATH for the current process so child
-    // module scripts inherit it via the environment.
     setupBrewPath(existing);
     return;
   }

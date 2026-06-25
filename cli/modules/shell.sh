@@ -34,6 +34,7 @@ _clean_zshrc() {
 }
 
 do_run() {
+  [[ "$USERNAME" =~ ^[A-Za-z0-9._-]+$ ]] || { json_result "fail" "invalid username: $USERNAME"; exit 1; }
   local zshrc="$USER_HOME/.zshrc"
   local existing=""
   local aliases

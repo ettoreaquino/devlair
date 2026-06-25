@@ -22,6 +22,7 @@ do_run() {
 
   local zsh_bin
   zsh_bin=$(which zsh)
+  [[ "$zsh_bin" =~ ^(/opt/homebrew|/usr/local|/bin|/usr/bin)/ ]] || { json_result "fail" "unexpected zsh path: $zsh_bin"; exit 1; }
 
   # Set as default shell for the user
   local current_shell
@@ -45,7 +46,7 @@ do_run() {
       if _is_root; then
         dscl . -create "/Users/$USERNAME" UserShell "$zsh_bin" >&2
       else
-        sudo -n dscl . -create "/Users/$USERNAME" UserShell "$zsh_bin" >&2 2>/dev/null \
+        sudo -n dscl . -create "/Users/$USERNAME" UserShell "$zsh_bin" 2>/dev/null \
           || json_progress "note: could not set default shell; run 'chsh -s $zsh_bin' to set it manually"
       fi
     else
