@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.11.1](https://github.com/ettoreaquino/devlair/compare/v2.11.0...v2.11.1) (2026-06-25)
+
+
+### Bug Fixes
+
+* **init:** skip sudo elevation on macOS, fix chown group format ([151ecad](https://github.com/ettoreaquino/devlair/commit/151ecaded1e08f7bd81ac834b0748f80c546a0e9))
+* **init:** skip sudo elevation on macOS, fix chown group format ([575cfa2](https://github.com/ettoreaquino/devlair/commit/575cfa205a8b4db28059c4b69e884627f9c3fef1))
+
 ## [2.11.0](https://github.com/ettoreaquino/devlair/compare/v2.10.0...v2.11.0) (2026-06-25)
 
 
