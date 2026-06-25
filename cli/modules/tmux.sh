@@ -33,10 +33,8 @@ do_run() {
   # TPM (tmux plugin manager)
   local plugins_dir="$USER_HOME/.tmux/plugins"
   mkdir -p "$plugins_dir"
-  if _is_root; then
-    chown_user "$USER_HOME/.tmux"
-    chown_user "$plugins_dir"
-  fi
+  chown_user "$USER_HOME/.tmux"
+  chown_user "$plugins_dir"
 
   local tpm_path="$plugins_dir/tpm"
   if [[ ! -d "$tpm_path" ]]; then
