@@ -17,6 +17,7 @@ do_run() {
     exit 2
   fi
   brew_ensure
+  json_install "homebrew" "raw.githubusercontent.com/Homebrew/install" false
   json_result "ok" "Homebrew ready"
 }
 
