@@ -38,12 +38,12 @@ function spec(
 }
 
 export const MODULE_SPECS: readonly ModuleSpec[] = [
-  spec("system", "System update", "core", { platforms: ["linux", "wsl", "macos"] }),
+  spec("homebrew", "Homebrew", "core", { platforms: ["macos"] }),
+  spec("system", "System update", "core", { deps: ["homebrew"], platforms: ["linux", "wsl", "macos"] }),
   spec("timezone", "Timezone", "core", { platforms: ["linux"] }),
   spec("tailscale", "Tailscale", "network", { defaultOn: ["linux"] }),
   spec("ssh", "SSH server", "network", { deps: ["tailscale"], platforms: ["linux"] }),
   spec("firewall", "Firewall + Fail2Ban", "network", { deps: ["ssh"], platforms: ["linux"] }),
-  spec("homebrew", "Homebrew", "core", { platforms: ["macos"] }),
   spec("zsh", "Zsh + Dracula", "core", { reapply: true, deps: ["homebrew"], platforms: ["linux", "wsl", "macos"] }),
   spec("tmux", "tmux", "coding", { reapply: true, deps: ["homebrew"], platforms: ["linux", "wsl", "macos"] }),
   spec("devtools", "Dev tools", "coding", { reapply: true, deps: ["homebrew"], platforms: ["linux", "wsl", "macos"] }),

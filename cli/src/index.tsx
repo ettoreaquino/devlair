@@ -20,6 +20,7 @@ import {
   parseUpgradeFlags,
 } from "./lib/args.js";
 import { elevateIfNeeded } from "./lib/elevate.js";
+import { ensureHomebrew } from "./lib/homebrew.js";
 import { D_FG } from "./lib/theme.js";
 
 const VERSION = pkg.version;
@@ -88,6 +89,12 @@ async function main() {
 
   if (ELEVATED_COMMANDS.has(command.type)) {
     elevateIfNeeded();
+    // macOS: install Homebrew before Ink starts so the installer has full TTY
+    // access for its sudo password prompt. All subsequent brew calls in modules
+    // assume brew is on PATH — this is the single point of installation.
+    if (process.platform === "darwin") {
+      ensureHomebrew();
+    }
   }
 
   if (command.type === "help" || command.type === "version") {
