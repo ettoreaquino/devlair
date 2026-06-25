@@ -19,7 +19,6 @@ do_run() {
   local -a installed=() skipped=()
 
   if [[ "$PLATFORM" == "macos" ]]; then
-    brew_ensure
     ARCH=$(uname -m)
   else
     ARCH=$(dpkg --print-architecture 2>/dev/null || echo "amd64")
@@ -30,11 +29,16 @@ do_run() {
     skipped+=(uv)
   else
     json_progress "installing uv"
-    local script
-    script=$(download_script "https://astral.sh/uv/install.sh")
-    _run_as_user "INSTALLER_NO_MODIFY_PATH=1 bash \"$script\"" >&2
-    rm -f "$script"
-    json_install "uv" "astral.sh" false
+    if [[ "$PLATFORM" == "macos" ]]; then
+      brew_install uv
+      json_install "uv" "brew:uv" true
+    else
+      local script
+      script=$(download_script "https://astral.sh/uv/install.sh")
+      _run_as_user "INSTALLER_NO_MODIFY_PATH=1 bash \"$script\"" >&2
+      rm -f "$script"
+      json_install "uv" "astral.sh" false
+    fi
     installed+=(uv)
   fi
 
@@ -202,11 +206,16 @@ do_run() {
     skipped+=(bun)
   else
     json_progress "installing bun"
-    local script
-    script=$(download_script "https://bun.sh/install")
-    _run_as_user "bash \"$script\"" >&2
-    rm -f "$script"
-    json_install "bun" "bun.sh" false
+    if [[ "$PLATFORM" == "macos" ]]; then
+      brew_install bun
+      json_install "bun" "brew:bun" true
+    else
+      local script
+      script=$(download_script "https://bun.sh/install")
+      _run_as_user "bash \"$script\"" >&2
+      rm -f "$script"
+      json_install "bun" "bun.sh" false
+    fi
     installed+=(bun)
   fi
 

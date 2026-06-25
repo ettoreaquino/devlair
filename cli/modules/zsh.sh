@@ -15,7 +15,6 @@ MODE=${1:-run}
 
 do_run() {
   if [[ "$PLATFORM" == "macos" ]]; then
-    brew_ensure
     cmd_exists zsh || brew_install zsh
   else
     cmd_exists zsh || apt_install zsh
@@ -44,7 +43,7 @@ do_run() {
   # Write .zimrc
   json_progress "writing .zimrc"
   cp "$SCRIPT_DIR/configs/zimrc" "$zimrc"
-  [[ "$PLATFORM" != "macos" ]] && chown_user "$zimrc"
+  _is_root && chown_user "$zimrc"
 
   # Prevent system /etc/zsh/zshrc from calling compinit before zimfw
   if [[ ! -f "$zshenv" ]] || ! grep -q "skip_global_compinit" "$zshenv"; then
@@ -52,13 +51,13 @@ do_run() {
 # devlair — skip system compinit so zimfw completion module handles it
 skip_global_compinit=1
 EOF
-    [[ "$PLATFORM" != "macos" ]] && chown_user "$zshenv"
+    _is_root && chown_user "$zshenv"
   fi
 
   # Write .zshrc header (only if not already managed by devlair)
   if [[ ! -f "$zshrc" ]] || ! grep -q "devlair" "$zshrc"; then
     cp "$SCRIPT_DIR/configs/zshrc-header.sh" "$zshrc"
-    [[ "$PLATFORM" != "macos" ]] && chown_user "$zshrc"
+    _is_root && chown_user "$zshrc"
   fi
 
   # Bootstrap zimfw and install modules as the user
@@ -72,7 +71,7 @@ EOF
     zsh -c 'source \"\$ZIM_HOME/zimfw.zsh\" install' 2>&1 || true
   " >&2 || true
 
-  [[ "$PLATFORM" != "macos" ]] && chown_user "$zim_home"
+  _is_root && chown_user "$zim_home"
 
   json_result "ok" "zsh with Dracula via zimfw"
 }

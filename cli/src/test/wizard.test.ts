@@ -187,8 +187,8 @@ describe("wizard flow helpers", () => {
     // shell depends on zsh — selecting shell without zsh should auto-expand
     expect(findAutoExpanded(new Set(["shell"]))).toContain("zsh");
 
-    // Selecting both should expand nothing
-    expect(findAutoExpanded(new Set(["shell", "zsh"]))).toEqual([]);
+    // Selecting both should only expand homebrew (transitive dep of zsh, macos-only)
+    expect(findAutoExpanded(new Set(["shell", "zsh"]))).toEqual(["homebrew"]);
 
     // firewall -> ssh -> tailscale
     const expanded = findAutoExpanded(new Set(["firewall"]));

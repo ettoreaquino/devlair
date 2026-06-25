@@ -25,8 +25,11 @@ describe("selectModules", () => {
     // Optional should contain opt-in modules
     const optKeys = optional.map((s) => s.key);
     expect(optKeys).toContain("claude");
-    // No platform-skipped on linux
-    expect(platformSkipped).toHaveLength(0);
+    // homebrew is macos-only, so it is platform-skipped on linux
+    const skippedKeys = platformSkipped.map((s) => s.key);
+    expect(skippedKeys).toContain("homebrew");
+    expect(skippedKeys).not.toContain("system");
+    expect(skippedKeys).not.toContain("zsh");
   });
 
   test("filters linux-only modules on WSL", () => {
