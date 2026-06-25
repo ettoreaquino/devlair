@@ -93,7 +93,7 @@ function pruneOldRuns(logsRoot: string, keep: number): void {
     return;
   }
   if (entries.length <= keep) return;
-  entries.sort((a, b) => b.mtimeMs - a.mtimeMs);
+  entries.sort((a, b) => b.mtimeMs - a.mtimeMs || b.name.localeCompare(a.name));
   for (const stale of entries.slice(keep)) {
     const path = join(logsRoot, stale.name);
     try {
