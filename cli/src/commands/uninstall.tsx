@@ -268,19 +268,29 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
     return abort;
   }, [buildContext, teardown]);
 
-  // Auto-start for non-interactive paths handled via initialPhase + this effect.
+  // Start the teardown exactly once. The AbortController is kept in a ref and
+  // only fired on real unmount — NOT tied to a phase-dependent effect, because
+  // runTeardown() calls setPhase("running"), and an effect that re-ran on
+  // `phase` would fire its cleanup and SIGTERM the in-flight run immediately.
   const startedRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const start = useCallback(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    abortRef.current = runTeardown();
+  }, [runTeardown]);
+
+  // Nothing-to-remove fast path, and non-interactive auto-start (--yes/--purge).
   useEffect(() => {
-    if (!installed && phase === "done") {
+    if (!installed) {
       setTimeout(() => exitRef.current(), 0);
       return;
     }
-    if ((flags.yes || flags.purge) && phase === "confirm" && !startedRef.current) {
-      startedRef.current = true;
-      const abort = runTeardown();
-      return () => abort.abort();
-    }
-  }, [flags.yes, flags.purge, phase, installed, runTeardown]);
+    if (flags.yes || flags.purge) start();
+  }, [installed, flags.yes, flags.purge, start]);
+
+  // Abort the run only when the component truly unmounts.
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   // Prompt-phase input: y = destroy, n/Enter = keep (default).
   useInput(
@@ -304,10 +314,7 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
   useInput(
     (input, key) => {
       if (key.return || input === "y" || input === "Y") {
-        const abort = runTeardown();
-        // Abort handler is wired through the component lifecycle via runTeardown's
-        // own AbortController; nothing else to do here.
-        void abort;
+        start();
       } else if (key.escape || input === "n" || input === "N" || input === "q") {
         setAborted(true);
         setPhase("done");
