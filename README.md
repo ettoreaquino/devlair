@@ -184,7 +184,6 @@ devlair hooks into Claude Code to track session usage and display a dashboard:
 - **All models** — weekly usage against total budget, resets every Friday 09:00; session count
 - **Sonnet only** — weekly Sonnet usage tracked separately, resets every Monday 09:00
 - **Plan-aware** — supports `pro`, `max5x`, and `max20x` tiers (`devlair claude --plan <tier>`)
-- **Automatic hooks** — `SessionStart` and `Stop` hooks in `~/.claude/settings.json` track sessions for the tmux status bar
 
 ## What gets installed
 
