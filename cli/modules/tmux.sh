@@ -97,8 +97,31 @@ do_check() {
   fi
 }
 
+do_uninstall() {
+  local removed=()
+  rm_user_path "$USER_HOME/.tmux.conf"
+  rm_user_path "$USER_HOME/.tmux/plugins"
+  rm_user_path "$USER_HOME/.tmux"
+
+  if [[ "$(cfg_bool remove_packages false)" == "true" ]]; then
+    if [[ "$PLATFORM" == "macos" ]]; then
+      brew_uninstall tmux
+    else
+      apt_purge tmux wl-clipboard
+    fi
+    removed+=("tmux package")
+  fi
+
+  if [[ ${#removed[@]} -eq 0 ]]; then
+    json_result "skip" "nothing to remove"
+    exit 2
+  fi
+  json_result "ok" "removed: $(IFS=', '; echo "${removed[*]}")"
+}
+
 case "$MODE" in
-  run)   do_run ;;
-  check) do_check ;;
-  *)     json_result "fail" "unknown mode: $MODE"; exit 1 ;;
+  run)       do_run ;;
+  check)     do_check ;;
+  uninstall) do_uninstall ;;
+  *)         json_result "fail" "unknown mode: $MODE"; exit 1 ;;
 esac

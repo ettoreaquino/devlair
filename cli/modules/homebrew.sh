@@ -29,8 +29,16 @@ do_check() {
   fi
 }
 
+do_uninstall() {
+  # Homebrew is shared infrastructure used by software well beyond devlair;
+  # uninstalling it would be destructive and surprising. Never touch it.
+  json_result "skip" "Homebrew left installed"
+  exit 2
+}
+
 case "$MODE" in
-  run)   do_run ;;
-  check) do_check ;;
-  *)     json_result "fail" "unknown mode: $MODE"; exit 1 ;;
+  run)       do_run ;;
+  check)     do_check ;;
+  uninstall) do_uninstall ;;
+  *)         json_result "fail" "unknown mode: $MODE"; exit 1 ;;
 esac

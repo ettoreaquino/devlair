@@ -42,8 +42,16 @@ do_check() {
   json_check "timezone" "$status" "$tz"
 }
 
+do_uninstall() {
+  # Timezone is a benign system setting; reverting it (to what?) is riskier than
+  # leaving it. No-op.
+  json_result "skip" "timezone left unchanged"
+  exit 2
+}
+
 case "$MODE" in
-  run)   do_run ;;
-  check) do_check ;;
-  *)     json_result "fail" "unknown mode: $MODE"; exit 1 ;;
+  run)       do_run ;;
+  check)     do_check ;;
+  uninstall) do_uninstall ;;
+  *)         json_result "fail" "unknown mode: $MODE"; exit 1 ;;
 esac

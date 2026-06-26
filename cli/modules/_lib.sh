@@ -223,3 +223,44 @@ update_json() {
     printf '%s\n' "$patch" | jq '.' > "$file"
   fi
 }
+
+# ── Uninstall helpers ──────────────────────────────────────────────────────────
+
+# cfg_bool KEY DEFAULT -- echo a boolean config value ("true"/"false"),
+# falling back to DEFAULT when the key is unset. Used by do_uninstall to read
+# the keep/destroy decisions passed in ModuleContext.config.
+cfg_bool() {
+  local v
+  v=$(ctx_get_config "$1")
+  [[ -z "$v" ]] && v=$2
+  echo "$v"
+}
+
+# apt_purge PKG... -- purge packages quietly with a progress event (best-effort;
+# never aborts uninstall if a package is already gone or apt is unhappy).
+apt_purge() {
+  json_progress "removing $*"
+  apt-get purge -y -qq "$@" >&2 2>&1 || true
+  apt-get autoremove -y -qq >&2 2>&1 || true
+}
+
+# brew_uninstall PKG... -- uninstall Homebrew packages (best-effort). Drops to
+# the target user when running as root, since brew refuses to run as root.
+brew_uninstall() {
+  json_progress "removing $*"
+  if _is_root; then
+    sudo -u "${USERNAME:?USERNAME not set}" brew uninstall "$@" >&2 2>&1 || true
+  else
+    brew uninstall "$@" >&2 2>&1 || true
+  fi
+}
+
+# rm_user_path PATH -- rm -rf a path (best-effort). Appends the basename to the
+# caller's `removed` array when the path existed. Caller must declare `removed`.
+rm_user_path() {
+  local p=$1
+  if [[ -e "$p" || -L "$p" ]]; then
+    rm -rf "$p" 2>/dev/null || true
+    removed+=("$(basename "$p")")
+  fi
+}

@@ -113,10 +113,20 @@ export function parseDisablePasswordFlags(args: readonly string[]): DisablePassw
 }
 
 export interface UninstallFlags {
-  /** Skip the interactive confirmation prompt. */
+  /** Skip interactive prompts; keep all sensitive items, remove everything else. */
   yes: boolean;
+  /** Non-interactive; destroy ALL sensitive items too (keys, identity, auth). */
+  purge: boolean;
+  /** Skip removal of apt/brew packages devlair installed. */
+  keepPackages: boolean;
 }
 
 export function parseUninstallFlags(args: readonly string[]): UninstallFlags {
-  return { yes: args.includes("--yes") || args.includes("-y") };
+  const purge = args.includes("--purge");
+  return {
+    // --purge implies non-interactive, so it also satisfies --yes semantics.
+    yes: args.includes("--yes") || args.includes("-y") || purge,
+    purge,
+    keepPackages: args.includes("--keep-packages"),
+  };
 }

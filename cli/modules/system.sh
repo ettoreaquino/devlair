@@ -85,8 +85,32 @@ do_check() {
   done
 }
 
+# Packages safe to purge on uninstall — clearly "extra" tooling devlair adds.
+# Deliberately conservative: base packages (curl, git, ca-certificates, gnupg,
+# build-essential, jq, openssh-server, …) are PROTECTED and never purged, since
+# apt and the uninstall process itself depend on them.
+SAFE_PURGE=( htop tree bat net-tools )
+MACOS_SAFE_PURGE=( htop tree bat )
+
+do_uninstall() {
+  if [[ "$(cfg_bool remove_packages false)" != "true" ]]; then
+    json_result "skip" "base packages left installed (protected)"
+    exit 2
+  fi
+
+  if [[ "$PLATFORM" == "macos" ]]; then
+    brew_uninstall "${MACOS_SAFE_PURGE[@]}"
+  else
+    apt_purge "${SAFE_PURGE[@]}"
+    [[ "$PLATFORM" == "wsl" ]] && apt_purge wslu
+  fi
+
+  json_result "ok" "removed extra packages (base packages preserved)"
+}
+
 case "$MODE" in
-  run)   do_run ;;
-  check) do_check ;;
-  *)     json_result "fail" "unknown mode: $MODE"; exit 1 ;;
+  run)       do_run ;;
+  check)     do_check ;;
+  uninstall) do_uninstall ;;
+  *)         json_result "fail" "unknown mode: $MODE"; exit 1 ;;
 esac

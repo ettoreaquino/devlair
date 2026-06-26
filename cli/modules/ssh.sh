@@ -124,8 +124,59 @@ do_check() {
   fi
 }
 
+do_uninstall() {
+  local removed=() kept=()
+
+  # Remove the hardened drop-in.
+  if [[ -f "$SSHD_CONF" ]]; then
+    rm -f "$SSHD_CONF"
+    removed+=("99-hardened.conf")
+  fi
+
+  # Restore the original sshd_config from the backup we made at install time.
+  # The backup predates the macOS `Include` line, so restoring it also undoes that.
+  if [[ -f /etc/ssh/sshd_config.bak ]]; then
+    json_progress "restoring sshd_config from backup"
+    mv /etc/ssh/sshd_config.bak /etc/ssh/sshd_config
+    chmod 644 /etc/ssh/sshd_config
+    removed+=("sshd_config restored")
+  fi
+
+  # authorized_keys — sensitive, default keep (may contain keys devlair didn't add).
+  local auth_keys="$USER_HOME/.ssh/authorized_keys"
+  if [[ "$(cfg_bool keep_authorized_keys true)" == "true" ]]; then
+    [[ -f "$auth_keys" ]] && kept+=("authorized_keys")
+  else
+    rm_user_path "$auth_keys"
+  fi
+
+  # Restart / disable remote login so the relaxed config takes effect.
+  json_progress "restarting sshd"
+  if [[ "$PLATFORM" == "macos" ]]; then
+    systemsetup -setremotelogin off >&2 2>&1 || true
+  else
+    systemctl restart ssh >&2 2>&1 || true
+  fi
+
+  # NOTE: openssh-server is intentionally never purged, even with --remove
+  # packages — doing so on a remote machine would lock the operator out.
+  if [[ "$(cfg_bool remove_packages false)" == "true" ]]; then
+    kept+=("openssh-server (lockout-safe)")
+  fi
+
+  local parts=()
+  [[ ${#removed[@]} -gt 0 ]] && parts+=("removed: $(IFS=', '; echo "${removed[*]}")")
+  [[ ${#kept[@]} -gt 0 ]] && parts+=("kept: $(IFS=', '; echo "${kept[*]}")")
+  if [[ ${#parts[@]} -eq 0 ]]; then
+    json_result "skip" "nothing to remove"
+    exit 2
+  fi
+  json_result "ok" "$(IFS=' | '; echo "${parts[*]}")"
+}
+
 case "$MODE" in
-  run)   do_run ;;
-  check) do_check ;;
-  *)     json_result "fail" "unknown mode: $MODE"; exit 1 ;;
+  run)       do_run ;;
+  check)     do_check ;;
+  uninstall) do_uninstall ;;
+  *)         json_result "fail" "unknown mode: $MODE"; exit 1 ;;
 esac

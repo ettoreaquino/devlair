@@ -96,8 +96,51 @@ do_check() {
   fi
 }
 
+do_uninstall() {
+  local removed=()
+  local claude_dir="$USER_HOME/.claude"
+  local settings_path="$claude_dir/settings.json"
+  local bin_dir="$USER_HOME/.devlair/bin"
+
+  # Strip devlair-managed keys from settings.json (current + legacy channel keys).
+  if [[ -f "$settings_path" ]]; then
+    json_progress "cleaning settings.json"
+    local cleaned
+    cleaned=$(jq 'del(.model, .effortLevel, .channelsEnabled, .allowedChannelPlugins, .hooks)' \
+      "$settings_path" 2>/dev/null || echo "")
+    if [[ -z "$cleaned" || "$cleaned" == "{}" ]]; then
+      rm -f "$settings_path"
+      removed+=("settings.json")
+    else
+      printf '%s\n' "$cleaned" > "$settings_path"
+      chown_user "$settings_path"
+      removed+=("settings.json keys")
+    fi
+  fi
+
+  # Remove devlair helper scripts and legacy channel/session-tracking artifacts.
+  rm_user_path "$bin_dir/tmx-new"
+  rm_user_path "$bin_dir/claude-status.sh"
+  rm_user_path "$bin_dir/claude-telegram"
+  rm_user_path "$claude_dir/channels"
+  rm_user_path "$claude_dir/devlair-active"
+  rm_user_path "$claude_dir/devlair-sessions.jsonl"
+
+  # The Claude Code CLI itself is removed only when packages are being purged.
+  if [[ "$(cfg_bool remove_packages false)" == "true" ]]; then
+    rm_user_path "$USER_HOME/.local/bin/claude"
+  fi
+
+  if [[ ${#removed[@]} -eq 0 ]]; then
+    json_result "skip" "nothing to remove"
+    exit 2
+  fi
+  json_result "ok" "removed: $(IFS=', '; echo "${removed[*]}")"
+}
+
 case "$MODE" in
-  run)   do_run ;;
-  check) do_check ;;
-  *)     json_result "fail" "unknown mode: $MODE"; exit 1 ;;
+  run)       do_run ;;
+  check)     do_check ;;
+  uninstall) do_uninstall ;;
+  *)         json_result "fail" "unknown mode: $MODE"; exit 1 ;;
 esac

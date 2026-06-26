@@ -132,8 +132,65 @@ do_check() {
   fi
 }
 
+do_uninstall() {
+  local removed=() kept=()
+  local gh_key="$USER_HOME/.ssh/id_ed25519_github"
+  local ssh_conf="$USER_HOME/.ssh/config"
+
+  # GitHub SSH key — sensitive, default keep.
+  if [[ "$(cfg_bool keep_github_key true)" == "true" ]]; then
+    [[ -f "$gh_key" ]] && kept+=("github ssh key")
+  else
+    rm_user_path "$gh_key"
+    rm_user_path "${gh_key}.pub"
+    # Drop the "Host github.com" block we appended to ~/.ssh/config.
+    if [[ -f "$ssh_conf" ]] && grep -q "Host github.com" "$ssh_conf"; then
+      json_progress "removing github host from ssh config"
+      # Delete the "# GitHub" comment + the Host github.com stanza (until the
+      # next blank line or EOF).
+      awk '
+        /^# GitHub$/ { skip=1; next }
+        skip && /^Host github\.com$/ { skip=2; next }
+        skip==2 && (/^$/ || /^Host /) { skip=0 }
+        skip==2 { next }
+        skip==1 { skip=0 }
+        { print }
+      ' "$ssh_conf" > "${ssh_conf}.tmp" && mv "${ssh_conf}.tmp" "$ssh_conf"
+      chown_user "$ssh_conf"
+      removed+=("ssh config github host")
+    fi
+    if [[ "$PLATFORM" == "macos" ]]; then
+      run_shell_as "$USERNAME" "ssh-add -d \"$gh_key\" 2>/dev/null" >&2 || true
+    fi
+  fi
+
+  # git identity — sensitive, default keep.
+  if [[ "$(cfg_bool keep_git_identity true)" == "true" ]]; then
+    kept+=("git identity")
+  else
+    json_progress "unsetting git identity"
+    run_shell_as "$USERNAME" "
+      git config --global --unset user.email 2>/dev/null
+      git config --global --unset user.name 2>/dev/null
+      git config --global --unset init.defaultBranch 2>/dev/null
+      true
+    " >&2 || true
+    removed+=("git identity")
+  fi
+
+  local parts=()
+  [[ ${#removed[@]} -gt 0 ]] && parts+=("removed: $(IFS=', '; echo "${removed[*]}")")
+  [[ ${#kept[@]} -gt 0 ]] && parts+=("kept: $(IFS=', '; echo "${kept[*]}")")
+  if [[ ${#parts[@]} -eq 0 ]]; then
+    json_result "skip" "nothing to remove"
+    exit 2
+  fi
+  json_result "ok" "$(IFS=' | '; echo "${parts[*]}")"
+}
+
 case "$MODE" in
-  run)   do_run ;;
-  check) do_check ;;
-  *)     json_result "fail" "unknown mode: $MODE"; exit 1 ;;
+  run)       do_run ;;
+  check)     do_check ;;
+  uninstall) do_uninstall ;;
+  *)         json_result "fail" "unknown mode: $MODE"; exit 1 ;;
 esac

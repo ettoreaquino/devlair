@@ -35,6 +35,18 @@ do_run() {
   else
     current_shell=$(getent passwd "$USERNAME" | cut -d: -f7)
   fi
+  # Record the original login shell (once) so `devlair uninstall` can restore it.
+  if [[ "$current_shell" != "$zsh_bin" ]]; then
+    local state_dir="$USER_HOME/.devlair"
+    local state_file="$state_dir/state.json"
+    mkdir -p "$state_dir"
+    chown_user "$state_dir"
+    if [[ ! -f "$state_file" ]] || ! jq -e '.original_shell' "$state_file" >/dev/null 2>&1; then
+      update_json "$state_file" "$(jq -n --arg s "$current_shell" '{original_shell:$s}')"
+      chown_user "$state_file"
+    fi
+  fi
+
   if [[ "$current_shell" != "$zsh_bin" ]]; then
     json_progress "setting zsh as default shell"
     if [[ "$PLATFORM" == "macos" ]]; then
@@ -109,8 +121,82 @@ do_check() {
   fi
 }
 
+do_uninstall() {
+  local removed=()
+  local zshrc="$USER_HOME/.zshrc"
+
+  # Restore the original login shell BEFORE removing zsh, so the user is never
+  # left with a missing login shell. Prefer the recorded original; fall back to
+  # /bin/bash on Linux. On macOS, only act when we have a recorded value.
+  local orig_shell=""
+  local state_file="$USER_HOME/.devlair/state.json"
+  [[ -f "$state_file" ]] && orig_shell=$(jq -r '.original_shell // empty' "$state_file" 2>/dev/null || true)
+
+  local target_shell=""
+  if [[ -n "$orig_shell" && -x "$orig_shell" ]]; then
+    target_shell="$orig_shell"
+  elif [[ "$PLATFORM" != "macos" && -x /bin/bash ]]; then
+    target_shell="/bin/bash"
+  fi
+
+  if [[ -n "$target_shell" ]]; then
+    json_progress "restoring login shell to $target_shell"
+    if [[ "$PLATFORM" == "macos" ]]; then
+      if _is_root; then
+        dscl . -create "/Users/$USERNAME" UserShell "$target_shell" >&2 2>&1 || true
+      else
+        sudo -n dscl . -create "/Users/$USERNAME" UserShell "$target_shell" >&2 2>&1 || true
+      fi
+    else
+      chsh -s "$target_shell" "$USERNAME" >&2 2>&1 || true
+    fi
+    removed+=("login shell → $target_shell")
+  fi
+
+  # Strip the devlair-managed header block from .zshrc (re-downloads zimfw and
+  # sources ~/.zim/init.zsh, which we are about to delete). Only touch it when
+  # the distinctive devlair header is present.
+  if [[ -f "$zshrc" ]] && head -1 "$zshrc" | grep -q "devlair — managed zsh config"; then
+    json_progress "removing devlair header from .zshrc"
+    # Drop lines from the header marker through the final `source "$ZIM_HOME/init.zsh"`.
+    awk '
+      /devlair — managed zsh config/ { skip=1; next }
+      skip && /source "\$ZIM_HOME\/init\.zsh"/ { skip=0; next }
+      skip { next }
+      { print }
+    ' "$zshrc" > "${zshrc}.tmp" && mv "${zshrc}.tmp" "$zshrc"
+    chown_user "$zshrc"
+    # If nothing meaningful remains, drop the file entirely.
+    [[ -n "$(tr -d '[:space:]' < "$zshrc")" ]] || rm -f "$zshrc"
+    removed+=("zsh header")
+  fi
+
+  rm_user_path "$USER_HOME/.zim"
+  rm_user_path "$USER_HOME/.zimrc"
+  # Only remove .zshenv if it's the devlair-managed one.
+  if [[ -f "$USER_HOME/.zshenv" ]] && grep -q "skip_global_compinit" "$USER_HOME/.zshenv"; then
+    rm_user_path "$USER_HOME/.zshenv"
+  fi
+
+  if [[ "$(cfg_bool remove_packages false)" == "true" ]]; then
+    if [[ "$PLATFORM" == "macos" ]]; then
+      brew_uninstall zsh
+    else
+      apt_purge zsh
+    fi
+    removed+=("zsh package")
+  fi
+
+  if [[ ${#removed[@]} -eq 0 ]]; then
+    json_result "skip" "nothing to remove"
+    exit 2
+  fi
+  json_result "ok" "removed: $(IFS=', '; echo "${removed[*]}")"
+}
+
 case "$MODE" in
-  run)   do_run ;;
-  check) do_check ;;
-  *)     json_result "fail" "unknown mode: $MODE"; exit 1 ;;
+  run)       do_run ;;
+  check)     do_check ;;
+  uninstall) do_uninstall ;;
+  *)         json_result "fail" "unknown mode: $MODE"; exit 1 ;;
 esac
