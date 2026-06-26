@@ -22,7 +22,9 @@ function AuthPanel({ url, message }: { url: string; message: string }) {
     <Box flexDirection="column" marginLeft={4} marginY={1} paddingX={2} borderStyle="round" borderColor={D_PURPLE}>
       <Text color={D_PINK}>{message}</Text>
       <Text color={D_CYAN}>{url}</Text>
-      <Text color={D_COMMENT}>Waiting for authentication…</Text>
+      <Text color={D_COMMENT}>
+        Add the key above, then return here — devlair checks every few seconds and continues automatically.
+      </Text>
     </Box>
   );
 }
@@ -53,8 +55,8 @@ function ModuleLine({ mod, index, total }: { mod: ModuleRun; index: number; tota
         </Box>
         {mod.progressHistory.length > 0 && (
           <Box flexDirection="column" marginLeft={6}>
-            {mod.progressHistory.map((msg) => (
-              <Text key={msg} color={D_COMMENT}>
+            {mod.progressHistory.map((msg, i) => (
+              <Text key={`${i}-${msg}`} color={D_COMMENT}>
                 {"✓ "}
                 {msg}
               </Text>

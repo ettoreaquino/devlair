@@ -174,7 +174,13 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
                     ? {
                         ...m,
                         progressMsg: value.message,
-                        progressHistory: m.progressMsg ? [...m.progressHistory, m.progressMsg] : m.progressHistory,
+                        // Only archive the previous message when it differs from
+                        // the incoming one — modules sometimes emit the same step
+                        // twice (e.g. devtools + brew_install both say "installing uv").
+                        progressHistory:
+                          m.progressMsg && m.progressMsg !== value.message
+                            ? [...m.progressHistory, m.progressMsg]
+                            : m.progressHistory,
                       }
                     : m,
                 ),

@@ -105,9 +105,14 @@ EOF
   pub=$(cat "${gh_key}.pub")
   json_auth_url "https://github.com/settings/ssh/new" "$pub"
 
-  local poll_interval=3
+  # Poll until the key is accepted. `ssh -T git@github.com` always exits 1
+  # (GitHub provides no shell), so capture its output with `|| true` and grep
+  # the variable — piping straight to grep would, under `set -o pipefail`,
+  # propagate ssh's non-zero exit and the loop would never break.
+  local poll_interval=3 out
   while true; do
-    if _run_as_user "ssh -T git@github.com -o StrictHostKeyChecking=accept-new 2>&1" | grep -q "successfully authenticated"; then
+    out=$(_run_as_user "ssh -T git@github.com -o StrictHostKeyChecking=accept-new 2>&1" || true)
+    if grep -q "successfully authenticated" <<<"$out"; then
       break
     fi
     sleep "$poll_interval"
@@ -125,7 +130,10 @@ do_check() {
     return
   fi
 
-  if _run_as_user "ssh -T git@github.com -o StrictHostKeyChecking=accept-new 2>&1" | grep -q "successfully authenticated"; then
+  # See do_run: ssh -T always exits 1, so capture-then-grep to avoid pipefail.
+  local out
+  out=$(_run_as_user "ssh -T git@github.com -o StrictHostKeyChecking=accept-new 2>&1" || true)
+  if grep -q "successfully authenticated" <<<"$out"; then
     json_check "github connection" "ok"
   else
     json_check "github connection" "fail"
