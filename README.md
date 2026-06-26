@@ -287,7 +287,7 @@ Generates an `ed25519` SSH key for GitHub, configures `~/.ssh/config`, tests the
 <details>
 <summary><b>Shell</b> — aliases + login banner</summary>
 
-Appends aliases to `.zshrc` and a `tmx` command for session management. Aliases are platform-aware: `ll`, `ports`, and `update` expand differently on macOS (`ls -G`, `lsof`, `brew`) vs Linux/WSL (`ls --color`, `ss`, `apt`). The `BROWSER` env var is set to `open` on macOS and `wslview` on WSL. The login banner shows live tmux sessions and named channel sessions:
+Appends aliases to `.zshrc` and a `tmx` command for session management. Aliases are platform-aware: `ll`, `ports`, and `update` expand differently on macOS (`ls -G`, `lsof`, `brew`) vs Linux/WSL (`ls --color`, `ss`, `apt`). The `BROWSER` env var is set to `open` on macOS and `wslview` on WSL. The login banner title defaults to `devlair` but reflects the `--brand NAME` value when one is set (persisted to `~/.devlair/brand` and reused automatically on subsequent runs). The banner shows live tmux sessions and named channel sessions:
 
 ```
 ╭─ myhost ──────────────────────────────────────╮
@@ -423,7 +423,7 @@ cli/                    # v2 TypeScript CLI (stable)
     components/         # Ink UI components (Logo, Help, Progress, Summary)
     wizard/             # interactive wizard (GroupSelect, ModuleSelect, Confirmation, GithubConfig)
     lib/                # theme, types, runner, modules, platform detection,
-                        # args, selection, profiles, jsonConfig, elevate, homebrew
+                        # args, selection, profiles, jsonConfig, elevate, homebrew, brand
   modules/              # shell modules executed by the v2 binary
                         # (packaged into modules.tar.gz on release)
 assets/
