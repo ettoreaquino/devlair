@@ -27,6 +27,6 @@ function readPersistedBrand(userHome: string): string | undefined {
  */
 export function resolveBrand(flagBrand: string | undefined, userHome: string): string {
   const flag = flagBrand?.trim();
-  if (flag) return flag;
-  return readPersistedBrand(userHome) ?? DEFAULT_BRAND;
+  if (flag) return flag.slice(0, 40);
+  return (readPersistedBrand(userHome) ?? DEFAULT_BRAND).slice(0, 40);
 }

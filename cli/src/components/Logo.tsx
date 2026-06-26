@@ -3,7 +3,6 @@ import stripAnsi from "strip-ansi";
 import { DEFAULT_BRAND } from "../lib/brand.js";
 import { D_COMMENT, D_FG, D_PINK, D_PURPLE } from "../lib/theme.js";
 
-export const BRAND = DEFAULT_BRAND;
 const INNER_WIDTH = 48;
 const MIN_W_SHORT = 16;
 
@@ -161,7 +160,7 @@ function ShortLogo({ W, brand }: { W: number; brand: string }) {
 export function Logo({ cols, brand }: { cols?: number; brand?: string }) {
   const termCols = cols ?? process.stdout.columns ?? 80;
   const { W, grad, innerBox } = resolveDecoration(termCols);
-  const b = stripAnsi(brand ?? BRAND).slice(0, 40);
+  const b = stripAnsi(brand ?? DEFAULT_BRAND).slice(0, 40);
 
   if (grad && innerBox) return <FullLogo W={W} grad={grad} brand={b} />;
   if (grad) return <MediumLogo W={W} grad={grad} brand={b} />;

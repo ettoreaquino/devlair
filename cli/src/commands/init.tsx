@@ -11,7 +11,7 @@ import { useApp } from "ink";
 import { Box, Text } from "ink";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { BRAND, Logo } from "../components/Logo.js";
+import { Logo } from "../components/Logo.js";
 import { type ModuleRun, Progress } from "../components/Progress.js";
 import { OptionalHint, Summary } from "../components/Summary.js";
 import type { InitFlags } from "../lib/args.js";
@@ -45,7 +45,7 @@ function InitHeader({
   host: string;
   platform: string;
   profileName?: string;
-  brand?: string;
+  brand: string;
 }) {
   const suffix = platform === "wsl" ? " (WSL)" : platform === "macos" ? " (macOS)" : "";
 
@@ -55,7 +55,7 @@ function InitHeader({
       <Box marginBottom={1}>
         <Text>{"  "}</Text>
         <Text color={D_PURPLE} bold>
-          {brand ?? BRAND}
+          {brand}
         </Text>
         <Text color={D_PINK} bold>
           {"  init"}

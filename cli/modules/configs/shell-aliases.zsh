@@ -94,7 +94,7 @@ if [ -t 0 ]; then
   _dl_g=$'\e[38;2;98;114;164m'
   # Brand is white-labelable via `devlair init --brand NAME`, persisted to
   # ~/.devlair/brand; fall back to the default when unset.
-  _dl_brand=$(cat "$HOME/.devlair/brand" 2>/dev/null || true)
+  IFS= read -r _dl_brand < "$HOME/.devlair/brand" 2>/dev/null || _dl_brand=""
   [[ -z "$_dl_brand" ]] && _dl_brand='d e v l a i r'
   # decoration width = gradient(4) + space(2) + brand + space(2) + gradient(4)
   _dl_deco=$(( 12 + ${#_dl_brand} ))
