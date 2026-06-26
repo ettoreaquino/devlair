@@ -1,5 +1,27 @@
 # Changelog
 
+## [3.0.0](https://github.com/ettoreaquino/devlair/compare/v2.12.1...v3.0.0) (2026-06-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cli:** devlair no longer installs the Telegram channel plugin or the `devlair claude --channels` view. Existing channel state under ~/.claude/channels/ is left in place (cleaned by `devlair uninstall`).
+
+### Features
+
+* **cli:** full interactive devlair uninstall ([aec3296](https://github.com/ettoreaquino/devlair/commit/aec329618927d5fa94803e2ceb3e58fd01fcff3a))
+* **cli:** full interactive devlair uninstall ([9b9f51d](https://github.com/ettoreaquino/devlair/commit/9b9f51d5b6a9dc9c1d74dfe4ece3570217f72bf2))
+* **cli:** retire Claude/Telegram channels feature ([e88ecc3](https://github.com/ettoreaquino/devlair/commit/e88ecc35c2c5fdb2935946be7e74e3fd05d12bf1))
+* **shell:** render --brand in the login banner and persist it ([a45838f](https://github.com/ettoreaquino/devlair/commit/a45838fc1e7f856cfedc2de839c4afc63523685e))
+* **shell:** render --brand in the login banner and persist it ([00a8bec](https://github.com/ettoreaquino/devlair/commit/00a8becde71de431cee8edf9760518def680f617))
+
+
+### Bug Fixes
+
+* **claude:** drop legacy channel/hook keys from settings on re-init ([63b6f5a](https://github.com/ettoreaquino/devlair/commit/63b6f5a42372dd58b221f20f0273d5568ea0dd51))
+* **uninstall:** address PR review — validate restored shell, harden dconf path, batch autoremove ([034bc54](https://github.com/ettoreaquino/devlair/commit/034bc542a98306620779884d7ddbdbf73cebc5ca))
+* **uninstall:** don't self-abort the teardown in non-interactive mode ([b8e0998](https://github.com/ettoreaquino/devlair/commit/b8e099845f60fcb2f39d20004dfd2bc3ab51d01f))
+
 ## [2.12.1](https://github.com/ettoreaquino/devlair/compare/v2.12.0...v2.12.1) (2026-06-25)
 
 
