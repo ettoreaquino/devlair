@@ -86,7 +86,7 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
     disable-password                    Lock SSH to key-only auth
     uninstall [--yes]                   Remove everything devlair installed
 
-  AI Agents & Channels
+  AI Agents
     claude [--plan TIER] [--1m on|off]  Usage dashboard & config
 
   tmux Sessions
@@ -94,7 +94,6 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
     tmx <name>                          Attach to a named session
     tmx new --name N                    Create a plain session
     tmx new --name N --claude           Session with Claude Code
-    tmx new --name N --claude-telegram  Create Telegram channel
     Ctrl+A  y                           Claude Code popup (any session)
 
   Options:  --version -v  Show version    --help  Show this screen
@@ -141,9 +140,6 @@ devlair claude
 
 # Set your Claude Max plan tier
 devlair claude --plan max5x
-
-# Show Telegram channel configuration
-devlair claude --channels
 ```
 
 </details>
@@ -163,9 +159,6 @@ tmx new --name work
 
 # Create session with Claude Code running
 tmx new --name work --claude
-
-# Create a Telegram bot session
-tmx new --name support --claude-telegram
 ```
 
 </details>
@@ -191,7 +184,6 @@ devlair hooks into Claude Code to track session usage and display a dashboard:
 - **All models** — weekly usage against total budget, resets every Friday 09:00; session count
 - **Sonnet only** — weekly Sonnet usage tracked separately, resets every Monday 09:00
 - **Plan-aware** — supports `pro`, `max5x`, and `max20x` tiers (`devlair claude --plan <tier>`)
-- **Automatic hooks** — `SessionStart` and `Stop` hooks in `~/.claude/settings.json` track sessions for the tmux status bar
 
 ## What gets installed
 
@@ -270,7 +262,7 @@ Installs (skipping any that already exist):
 | [Docker](https://www.docker.com/) | Containers + Compose |
 | [gh](https://cli.github.com/) | GitHub CLI |
 | [aws](https://aws.amazon.com/cli/) | AWS CLI v2 |
-| [Bun](https://bun.sh/) | JavaScript runtime (required for Claude Code channels) |
+| [Bun](https://bun.sh/) | JavaScript runtime |
 
 On macOS, `uv`, `bun`, `pyenv`, `gh`, and `aws` are installed via `brew` instead of apt/curl. Build dependencies for pyenv (openssl, readline, sqlite3, xz, zlib) are also installed via brew. Docker is not installed on macOS — the module prints guidance to install Docker Desktop for Mac and continues without error.
 
@@ -287,7 +279,7 @@ Generates an `ed25519` SSH key for GitHub, configures `~/.ssh/config`, tests the
 <details>
 <summary><b>Shell</b> — aliases + login banner</summary>
 
-Appends aliases to `.zshrc` and a `tmx` command for session management. Aliases are platform-aware: `ll`, `ports`, and `update` expand differently on macOS (`ls -G`, `lsof`, `brew`) vs Linux/WSL (`ls --color`, `ss`, `apt`). The `BROWSER` env var is set to `open` on macOS and `wslview` on WSL. The login banner title defaults to `devlair` but reflects the `--brand NAME` value when one is set (persisted to `~/.devlair/brand` and reused automatically on subsequent runs). The banner shows live tmux sessions and named channel sessions:
+Appends aliases to `.zshrc` and a `tmx` command for session management. Aliases are platform-aware: `ll`, `ports`, and `update` expand differently on macOS (`ls -G`, `lsof`, `brew`) vs Linux/WSL (`ls --color`, `ss`, `apt`). The `BROWSER` env var is set to `open` on macOS and `wslview` on WSL. The login banner title defaults to `devlair` but reflects the `--brand NAME` value when one is set (persisted to `~/.devlair/brand` and reused automatically on subsequent runs). The banner shows live tmux sessions:
 
 ```
 ╭─ myhost ──────────────────────────────────────╮
@@ -296,14 +288,8 @@ Appends aliases to `.zshrc` and a `tmx` command for session management. Aliases 
 │  tmux:                                        │
 │    dev                       → tmx dev        │
 │    work                      → tmx work       │
-│                                               │
-│  channels:                                    │
-│    ● work-bot                → tmx work-bot   │
-│    ○ staging-bot             → tmx staging-bot│
 ╰───────────────────────────────────────────────╯
 ```
-
-`●` = token configured and at least one user authenticated; `○` = session exists but not yet ready.
 
 </details>
 
@@ -315,9 +301,9 @@ Applies the full 16-color Dracula palette to your default GNOME Terminal profile
 </details>
 
 <details>
-<summary><b>Claude Code</b> — hooks, settings, channels, and status bar</summary>
+<summary><b>Claude Code</b> — install + settings</summary>
 
-Merges devlair-managed keys into `~/.claude/settings.json` (model, effort level, session hooks, channels). Enables Claude Code [channels](https://docs.anthropic.com/en/docs/claude-code/channels) with the Telegram plugin — deploys `claude-telegram` and `tmx-new` commands. The tmux status bar shows the active model and channel count (`CC:sonnet CH:1`). Named Telegram sessions are created via `tmx new --name <n> --claude-telegram`; each gets an isolated bot state dir and appears in the login banner. Use `devlair claude --channels` to view configuration.
+Installs Claude Code (if absent) and merges devlair-managed keys into `~/.claude/settings.json` (model, effort level). Deploys the `tmx-new` helper for launching named tmux sessions (`tmx new --name <n> [--claude]`). Use `devlair claude` to view the current plan/model, `--plan TIER` to set the subscription tier, and `--1m on|off` to toggle 1M-token context.
 
 </details>
 
@@ -376,14 +362,14 @@ The installer downloads the latest `devlair-cli-{os}-{arch}` binary and places i
 |---------|-------------|
 | `devlair filesystem` | Removed — not ported |
 | `devlair sync` / rclone | Removed — not ported |
-| `devlair claude` usage dashboard | Pin to v1 for the dashboard. v2 `devlair claude` prints a short status panel only (plan + model); `--plan`, `--1m on\|off`, and `--channels` still work for configuration. |
+| `devlair claude` usage dashboard | Pin to v1 for the dashboard. v2 `devlair claude` prints a short status panel only (plan + model); `--plan` and `--1m on\|off` still work for configuration. |
 
 **Ported in v2:**
 
 | Command | Notes |
 |---------|-------|
 | `devlair disable-password [--yes]` | Linux-only, auto-elevates via sudo. `--yes` skips the interactive confirmation. |
-| `devlair claude [--plan TIER\|--1m on\|off\|--channels]` | Configures the local Claude Code install. No dashboard (see above). |
+| `devlair claude [--plan TIER\|--1m on\|off]` | Configures the local Claude Code install. No dashboard (see above). |
 | `devlair uninstall [--yes]` | Removes the devlair binary, share directory, `~/.devlair/`, `~/.zim/`, `~/.zimrc`, `~/.zshenv` (if managed), the devlair block from `~/.zshrc`, `~/.tmux.conf`, and `~/.tmux/plugins/`. Auto-elevates via sudo. `--yes` skips the interactive confirmation. |
 
 **v2 wizard behavior notes:**

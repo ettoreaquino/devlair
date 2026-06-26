@@ -24,10 +24,8 @@ const HELP_SECTIONS: HelpSection[] = [
     ],
   },
   {
-    title: "AI Agents & Channels",
-    entries: [
-      { cmd: "claude [--plan TIER] [--1m on|off] [--channels]", desc: "Status & config (dashboard moved to v1)" },
-    ],
+    title: "AI Agents",
+    entries: [{ cmd: "claude [--plan TIER] [--1m on|off]", desc: "Status & config (dashboard moved to v1)" }],
   },
   {
     title: "tmux Sessions",
@@ -36,7 +34,6 @@ const HELP_SECTIONS: HelpSection[] = [
       { cmd: "tmx <name>", desc: "Attach to a named session" },
       { cmd: "tmx new --name N", desc: "Create a plain session" },
       { cmd: "tmx new --name N --claude", desc: "Session with Claude Code" },
-      { cmd: "tmx new --name N --claude-telegram", desc: "Create Telegram channel" },
       { cmd: "Ctrl+A  y", desc: "Claude Code popup (any session)" },
     ],
   },

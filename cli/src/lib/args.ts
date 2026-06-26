@@ -72,18 +72,15 @@ export type ToggleValue = "on" | "off";
 export interface ClaudeFlags {
   plan: ClaudePlan | null;
   toggle1m: ToggleValue | null;
-  channels: boolean;
   error: string | null;
 }
 
 /** Parse claude-specific flags from argv (after the "claude" command). */
 export function parseClaudeFlags(args: readonly string[]): ClaudeFlags {
-  const flags: ClaudeFlags = { plan: null, toggle1m: null, channels: false, error: null };
+  const flags: ClaudeFlags = { plan: null, toggle1m: null, error: null };
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    if (arg === "--channels") {
-      flags.channels = true;
-    } else if (arg === "--plan") {
+    if (arg === "--plan") {
       const value = args[++i];
       if (!value || value.startsWith("--")) {
         flags.error = "Missing value for --plan";

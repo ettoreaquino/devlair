@@ -135,31 +135,6 @@ if [ -t 0 ]; then
     _dl_row "  no sessions — type 't' to start"
   fi
 
-  # channels (named claude-telegram sessions from manifest)
-  _dl_manifest="$HOME/.claude/channels/manifest.json"
-  if [ -f "$_dl_manifest" ] && command -v jq &>/dev/null; then
-    _dl_ch_count=$(jq '.sessions | length' "$_dl_manifest" 2>/dev/null || echo 0)
-    if [ "$_dl_ch_count" -gt 0 ]; then
-      _dl_row ""
-      _dl_row "  channels:"
-      while IFS=$'\t' read -r _dl_ch_name _dl_ch_state; do
-        [ -z "$_dl_ch_name" ] && continue
-        _dl_ch_dot="○"
-        if [ -d "$_dl_ch_state" ]; then
-          grep -sq "TELEGRAM_BOT_TOKEN=." "$_dl_ch_state/.env" 2>/dev/null && _dl_ch_token=yes || _dl_ch_token=no
-          jq -e '.allowFrom | length > 0' "$_dl_ch_state/access.json" >/dev/null 2>&1 && _dl_ch_allow=yes || _dl_ch_allow=no
-          [ "$_dl_ch_token" = "yes" ] && [ "$_dl_ch_allow" = "yes" ] && _dl_ch_dot="●"
-        fi
-        [ ${#_dl_ch_name} -gt 12 ] && _dl_ch_name="${_dl_ch_name:0:11}…"
-        _dl_left="    ${_dl_ch_dot} ${_dl_ch_name}"
-        _dl_right="→ tmx ${_dl_ch_name} "
-        _dl_gap=$(( _dl_IW - ${#_dl_left} - ${#_dl_right} ))
-        [ "$_dl_gap" -lt 1 ] && _dl_gap=1
-        _dl_row "${_dl_left}${(l:_dl_gap:: :)}${_dl_right}"
-      done < <(jq -r '.sessions[] | [.name, .state_dir] | @tsv' "$_dl_manifest" 2>/dev/null)
-    fi
-  fi
-
   # bottom border
   printf '%s╰%s╯%s\n' "$_dl_p" "$_dl_dashes" "$_dl_r"
 fi

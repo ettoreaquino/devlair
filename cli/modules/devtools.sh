@@ -250,7 +250,7 @@ do_check() {
   if cmd_exists bun || [[ -x "$USER_HOME/.bun/bin/bun" ]]; then
     json_check "bun" "ok" "installed"
   else
-    json_check "bun" "warn" "missing — required for Claude Code channels"
+    json_check "bun" "warn" "missing"
   fi
 }
 

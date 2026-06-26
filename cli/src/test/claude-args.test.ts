@@ -6,12 +6,7 @@ describe("parseClaudeFlags", () => {
     const f = parseClaudeFlags([]);
     expect(f.plan).toBeNull();
     expect(f.toggle1m).toBeNull();
-    expect(f.channels).toBe(false);
     expect(f.error).toBeNull();
-  });
-
-  test("--channels", () => {
-    expect(parseClaudeFlags(["--channels"]).channels).toBe(true);
   });
 
   test("--plan valid", () => {
