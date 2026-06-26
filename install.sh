@@ -152,8 +152,12 @@ if [[ "$CHANNEL" == "v1" ]]; then
   fi
 else
   ASSET_PREFIX="devlair-cli"
+  # Default channel = the latest non-v1 release (v2, v3, …). Don't hardcode a
+  # major here, or the installer silently pins to the previous line after a
+  # major bump (e.g. v3.0.0 ships but `v2\.` keeps resolving the old v2.x).
   LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases?per_page=30" \
-    | grep -o '"tag_name": *"v2\.[^"]*"' \
+    | grep -oE '"tag_name": *"v[0-9]+\.[^"]*"' \
+    | grep -v '"tag_name": *"v1\.' \
     | head -1 \
     | grep -o '"v[^"]*"' | tr -d '"')
   if [[ -n "${LATEST:-}" && ! "$LATEST" =~ ^v[0-9]+\.[0-9]+\.[0-9] ]]; then
