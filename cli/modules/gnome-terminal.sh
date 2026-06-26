@@ -90,6 +90,7 @@ do_uninstall() {
     json_result "skip" "no default terminal profile found"
     exit 2
   }
+  [[ "$path" =~ ^/org/gnome/terminal/legacy/profiles:/:[-a-f0-9]+/$ ]] || { json_result "skip" "unexpected profile path"; exit 2; }
 
   json_progress "resetting Gnome Terminal profile"
   local dbus_export
@@ -98,7 +99,7 @@ do_uninstall() {
   # stock GNOME Terminal colors / theme behavior.
   run_shell_as "$USERNAME" "
     $dbus_export
-    dconf reset -f ${path}
+    dconf reset -f \"${path}\"
   " >&2 || true
 
   json_result "ok" "Gnome Terminal profile reset to defaults"

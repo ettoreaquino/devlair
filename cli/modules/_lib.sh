@@ -241,7 +241,6 @@ cfg_bool() {
 apt_purge() {
   json_progress "removing $*"
   apt-get purge -y -qq "$@" >&2 2>&1 || true
-  apt-get autoremove -y -qq >&2 2>&1 || true
 }
 
 # brew_uninstall PKG... -- uninstall Homebrew packages (best-effort). Drops to

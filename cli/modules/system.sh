@@ -103,6 +103,7 @@ do_uninstall() {
   else
     apt_purge "${SAFE_PURGE[@]}"
     [[ "$PLATFORM" == "wsl" ]] && apt_purge wslu
+    apt-get autoremove -y -qq >&2 2>&1 || true
   fi
 
   json_result "ok" "removed extra packages (base packages preserved)"

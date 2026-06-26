@@ -146,12 +146,9 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
   const installed = anythingInstalled(userHome);
 
   // --yes / --purge skip prompts; otherwise ask per present category, then confirm.
-  const initialPhase: Phase = !installed
-    ? "done"
-    : flags.yes || flags.purge || categories.length === 0
-      ? "confirm"
-      : "prompt";
-  const [phase, setPhase] = useState<Phase>(initialPhase);
+  const [phase, setPhase] = useState<Phase>(() =>
+    !installed ? "done" : flags.yes || flags.purge || categories.length === 0 ? "confirm" : "prompt",
+  );
   const [promptIdx, setPromptIdx] = useState(0);
   const [aborted, setAborted] = useState(false);
 

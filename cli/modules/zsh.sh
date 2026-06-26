@@ -132,6 +132,10 @@ do_uninstall() {
   local state_file="$USER_HOME/.devlair/state.json"
   [[ -f "$state_file" ]] && orig_shell=$(jq -r '.original_shell // empty' "$state_file" 2>/dev/null || true)
 
+  # Validate that the recorded shell is listed in /etc/shells to prevent an
+  # attacker-controlled state.json from pointing chsh/dscl at an arbitrary binary.
+  if [[ -n "$orig_shell" ]] && ! grep -qxF "$orig_shell" /etc/shells 2>/dev/null; then orig_shell=""; fi
+
   local target_shell=""
   if [[ -n "$orig_shell" && -x "$orig_shell" ]]; then
     target_shell="$orig_shell"

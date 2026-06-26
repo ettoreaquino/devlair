@@ -108,7 +108,7 @@ do_uninstall() {
   rm_user_path "$USER_HOME/.devlair/brand"
 
   if [[ ${#removed[@]} -eq 0 ]]; then
-    json_result "skip" "no devlair block found"
+    json_result "skip" "nothing to remove"
     exit 2
   fi
   json_result "ok" "removed: $(IFS=', '; echo "${removed[*]}")"
