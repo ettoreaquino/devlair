@@ -79,8 +79,35 @@ do_check() {
   fi
 }
 
+do_uninstall() {
+  if ! cmd_exists gsettings; then
+    json_result "skip" "gsettings not available"
+    exit 2
+  fi
+
+  local path
+  path=$(_default_profile_path) || {
+    json_result "skip" "no default terminal profile found"
+    exit 2
+  }
+  [[ "$path" =~ ^/org/gnome/terminal/legacy/profiles:/:[-a-f0-9]+/$ ]] || { json_result "skip" "unexpected profile path"; exit 2; }
+
+  json_progress "resetting Gnome Terminal profile"
+  local dbus_export
+  dbus_export=$(_dbus_env "$USERNAME")
+  # `dconf reset -f` drops the keys back to their defaults, restoring the
+  # stock GNOME Terminal colors / theme behavior.
+  run_shell_as "$USERNAME" "
+    $dbus_export
+    dconf reset -f \"${path}\"
+  " >&2 || true
+
+  json_result "ok" "Gnome Terminal profile reset to defaults"
+}
+
 case "$MODE" in
-  run)   do_run ;;
-  check) do_check ;;
-  *)     json_result "fail" "unknown mode: $MODE"; exit 1 ;;
+  run)       do_run ;;
+  check)     do_check ;;
+  uninstall) do_uninstall ;;
+  *)         json_result "fail" "unknown mode: $MODE"; exit 1 ;;
 esac

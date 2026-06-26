@@ -85,8 +85,38 @@ do_check() {
   fi
 }
 
+do_uninstall() {
+  local removed=()
+  local zshrc="$USER_HOME/.zshrc"
+
+  # Strip the devlair aliases block (from MARKER to EOF) from .zshrc.
+  if [[ -f "$zshrc" ]] && grep -qF "$MARKER" "$zshrc"; then
+    json_progress "removing aliases from .zshrc"
+    local before
+    before="$(awk -v marker="$MARKER" 'index($0, marker){exit} {print}' "$zshrc")"
+    # Trim trailing blank lines, then write back (empty file if nothing remains).
+    before="${before%$'\n'}"
+    if [[ -n "${before//[$'\n\t ']/}" ]]; then
+      printf '%s\n' "$before" > "$zshrc"
+    else
+      : > "$zshrc"
+    fi
+    chown_user "$zshrc"
+    removed+=("aliases block")
+  fi
+
+  rm_user_path "$USER_HOME/.devlair/brand"
+
+  if [[ ${#removed[@]} -eq 0 ]]; then
+    json_result "skip" "nothing to remove"
+    exit 2
+  fi
+  json_result "ok" "removed: $(IFS=', '; echo "${removed[*]}")"
+}
+
 case "$MODE" in
-  run)   do_run ;;
-  check) do_check ;;
-  *)     json_result "fail" "unknown mode: $MODE"; exit 1 ;;
+  run)       do_run ;;
+  check)     do_check ;;
+  uninstall) do_uninstall ;;
+  *)         json_result "fail" "unknown mode: $MODE"; exit 1 ;;
 esac

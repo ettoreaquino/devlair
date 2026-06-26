@@ -1,206 +1,328 @@
 /**
- * devlair uninstall — remove everything devlair installed and configured.
+ * devlair uninstall — reverse everything devlair installed and configured,
+ * returning the machine to a state where a fresh install can run cleanly.
+ *
+ * Each module owns its own teardown (the `uninstall` mode in cli/modules/<key>.sh);
+ * this command orchestrates them in reverse dependency order, then removes the
+ * devlair-core artifacts (binary, share dir, ~/.devlair) that no module owns.
+ *
+ * Sensitive items (SSH keys, git identity, authorized_keys, tailscale auth) are
+ * kept by default. Interactively, the user is asked per-category whether to
+ * destroy each. `--yes` keeps all of them non-interactively; `--purge` destroys
+ * all of them non-interactively.
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, rmSync, statSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { Box, Text, useApp, useInput } from "ink";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { type ModuleRun, Progress } from "../components/Progress.js";
 import type { UninstallFlags } from "../lib/args.js";
-import { resolveInvokingUser } from "../lib/context.js";
+import { buildModuleContext, resolveInvokingUser } from "../lib/context.js";
+import { createInitLogDir, invokerOwnership, moduleLogPath } from "../lib/logs.js";
+import { resolveTeardownOrder } from "../lib/modules.js";
+import { moduleScriptPath } from "../lib/paths.js";
+import { detectPlatform, detectWslVersion } from "../lib/platform.js";
+import { runModule } from "../lib/runner.js";
 import { D_COMMENT, D_FG, D_GREEN, D_ORANGE, D_PURPLE, D_RED } from "../lib/theme.js";
+import type { ModuleContext, Status } from "../lib/types.js";
 
-const ZSHRC_MARKER = "# ── devlair aliases ─";
-const ZSHENV_MARKER = "skip_global_compinit";
+// ── Sensitive categories (default keep) ────────────────────────────────────
 
-type ItemStatus = "pending" | "ok" | "skip" | "fail";
-
-interface RemovalItem {
+interface SensitiveCategory {
+  /** Config key passed to module scripts (read via ctx_get_config). */
+  configKey: string;
   label: string;
-  path: string;
-  type: "file" | "dir" | "zshrc-strip";
-  /** True when the path needs root to remove (binary / modules dir). */
-  privileged?: boolean;
-  status: ItemStatus;
-  detail: string;
+  /** What gets destroyed if the user opts in. */
+  destroys: string;
+  present: (home: string) => boolean;
 }
 
-function buildItems(userHome: string): RemovalItem[] {
+function commandExists(cmd: string): boolean {
+  return spawnSync("command", ["-v", cmd], { shell: "/bin/bash", stdio: "ignore" }).status === 0;
+}
+
+function nonEmptyFile(path: string): boolean {
+  try {
+    return statSync(path).size > 0;
+  } catch {
+    return false;
+  }
+}
+
+const SENSITIVE: SensitiveCategory[] = [
+  {
+    configKey: "keep_github_key",
+    label: "GitHub SSH key",
+    destroys: "~/.ssh/id_ed25519_github + its ~/.ssh/config entry",
+    present: (home) => existsSync(join(home, ".ssh", "id_ed25519_github")),
+  },
+  {
+    configKey: "keep_git_identity",
+    label: "git identity",
+    destroys: "git config --global user.email / user.name / init.defaultBranch",
+    present: (home) => existsSync(join(home, ".gitconfig")),
+  },
+  {
+    configKey: "keep_authorized_keys",
+    label: "~/.ssh/authorized_keys",
+    destroys: "~/.ssh/authorized_keys (may contain keys devlair didn't add)",
+    present: (home) => nonEmptyFile(join(home, ".ssh", "authorized_keys")),
+  },
+  {
+    configKey: "keep_tailscale_auth",
+    label: "Tailscale auth",
+    destroys: "tailscale logout (drops this node from your tailnet)",
+    present: () => commandExists("tailscale"),
+  },
+];
+
+// ── devlair-core artifacts (owned by no module; removed last) ───────────────
+
+interface CoreItem {
+  label: string;
+  path: string;
+  privileged: boolean;
+}
+
+function coreItems(home: string): CoreItem[] {
   return [
-    {
-      label: "devlair binary",
-      path: "/usr/local/bin/devlair",
-      type: "file",
-      privileged: true,
-      status: "pending",
-      detail: "",
-    },
-    {
-      label: "devlair modules",
-      path: "/usr/local/share/devlair",
-      type: "dir",
-      privileged: true,
-      status: "pending",
-      detail: "",
-    },
-    { label: "~/.devlair/", path: join(userHome, ".devlair"), type: "dir", status: "pending", detail: "" },
-    { label: "~/.zim/", path: join(userHome, ".zim"), type: "dir", status: "pending", detail: "" },
-    { label: "~/.zimrc", path: join(userHome, ".zimrc"), type: "file", status: "pending", detail: "" },
-    { label: "~/.zshenv", path: join(userHome, ".zshenv"), type: "file", status: "pending", detail: "" },
-    {
-      label: "~/.zshrc (devlair block)",
-      path: join(userHome, ".zshrc"),
-      type: "zshrc-strip",
-      status: "pending",
-      detail: "",
-    },
-    { label: "~/.tmux.conf", path: join(userHome, ".tmux.conf"), type: "file", status: "pending", detail: "" },
-    { label: "~/.tmux/plugins/", path: join(userHome, ".tmux", "plugins"), type: "dir", status: "pending", detail: "" },
+    { label: "devlair binary", path: "/usr/local/bin/devlair", privileged: true },
+    { label: "devlair modules", path: "/usr/local/share/devlair", privileged: true },
+    { label: "~/.devlair/", path: join(home, ".devlair"), privileged: false },
   ];
 }
 
-function isDevlairZshenv(p: string): boolean {
+function removePrivileged(p: string): boolean {
   try {
-    return readFileSync(p, "utf8").includes(ZSHENV_MARKER);
+    if (statSync(p).isDirectory()) rmSync(p, { recursive: true, force: true });
+    else unlinkSync(p);
+    return true;
   } catch {
-    return false;
+    return spawnSync("sudo", ["-n", "rm", "-rf", p], { stdio: "ignore" }).status === 0;
   }
 }
 
-function hasDevlairZshrcBlock(p: string): boolean {
+function removeCoreItem(item: CoreItem): Status {
+  if (!existsSync(item.path)) return "skip";
+  if (item.privileged) return removePrivileged(item.path) ? "ok" : "fail";
   try {
-    return readFileSync(p, "utf8").includes(ZSHRC_MARKER);
+    rmSync(item.path, { recursive: true, force: true });
+    return "ok";
   } catch {
-    return false;
+    return "fail";
   }
 }
 
-function stripZshrcBlock(p: string): { ok: boolean; detail: string } {
-  try {
-    const content = readFileSync(p, "utf8");
-    const idx = content.indexOf(ZSHRC_MARKER);
-    if (idx === -1) return { ok: true, detail: "no devlair block found" };
-    const before = content.slice(0, idx).trimEnd();
-    writeFileSync(p, before ? `${before}\n` : "", "utf8");
-    return { ok: true, detail: "block removed" };
-  } catch (err) {
-    return { ok: false, detail: (err as Error).message };
-  }
+/** True when devlair appears to be installed at all. */
+function anythingInstalled(home: string): boolean {
+  return (
+    existsSync("/usr/local/bin/devlair") ||
+    existsSync(join(home, ".devlair")) ||
+    existsSync(join(home, ".zim")) ||
+    existsSync(join(home, ".tmux.conf"))
+  );
 }
 
-function removePrivileged(p: string): { ok: boolean; detail: string } {
-  try {
-    const stat = statSync(p);
-    if (stat.isDirectory()) {
-      rmSync(p, { recursive: true, force: true });
-    } else {
-      unlinkSync(p);
-    }
-    return { ok: true, detail: "removed" };
-  } catch {
-    const r = spawnSync("sudo", ["-n", "rm", "-rf", p], { stdio: "ignore" });
-    if (r.status === 0) return { ok: true, detail: "removed" };
-    return { ok: false, detail: "permission denied (try: sudo devlair uninstall)" };
-  }
-}
+const CORE_KEY = "__devlair_core__";
 
-function removeItem(item: RemovalItem): Pick<RemovalItem, "status" | "detail"> {
-  if (!existsSync(item.path)) {
-    return { status: "skip", detail: "not found" };
-  }
+// ── Phases ──────────────────────────────────────────────────────────────────
 
-  if (item.type === "zshrc-strip") {
-    if (!hasDevlairZshrcBlock(item.path)) {
-      return { status: "skip", detail: "no devlair block" };
-    }
-    const r = stripZshrcBlock(item.path);
-    return { status: r.ok ? "ok" : "fail", detail: r.detail };
-  }
-
-  if (item.type === "file" && item.path.endsWith(".zshenv") && !isDevlairZshenv(item.path)) {
-    return { status: "skip", detail: "not devlair-managed" };
-  }
-
-  if (item.privileged) {
-    const r = removePrivileged(item.path);
-    return { status: r.ok ? "ok" : "fail", detail: r.detail };
-  }
-
-  try {
-    if (item.type === "dir") {
-      rmSync(item.path, { recursive: true, force: true });
-    } else {
-      unlinkSync(item.path);
-    }
-    return { status: "ok", detail: "removed" };
-  } catch (err) {
-    return { status: "fail", detail: (err as Error).message };
-  }
-}
-
-function statusIcon(status: ItemStatus): { char: string; color: string } {
-  switch (status) {
-    case "ok":
-      return { char: "✓", color: D_GREEN };
-    case "skip":
-      return { char: "–", color: D_COMMENT };
-    case "fail":
-      return { char: "✗", color: D_RED };
-    default:
-      return { char: " ", color: D_COMMENT };
-  }
-}
-
-type Phase = "confirm" | "running" | "done";
+type Phase = "prompt" | "confirm" | "running" | "done";
 
 export function UninstallView({ flags }: { flags: UninstallFlags }) {
   const { exit } = useApp();
+  const exitRef = useRef(exit);
+
   const [[username, userHome]] = useState(() => resolveInvokingUser());
-  const [phase, setPhase] = useState<Phase>("confirm");
-  const [items, setItems] = useState<RemovalItem[]>(() => buildItems(userHome));
+  const [platform] = useState(() => detectPlatform());
+
+  // Sensitive categories present on this machine, in order.
+  const [categories] = useState(() => SENSITIVE.filter((c) => c.present(userHome)));
+  // keep[i] === true means keep (default); false means destroy.
+  const [keep, setKeep] = useState<boolean[]>(() => categories.map(() => !flags.purge));
+
+  const installed = anythingInstalled(userHome);
+
+  // --yes / --purge skip prompts; otherwise ask per present category, then confirm.
+  const [phase, setPhase] = useState<Phase>(() =>
+    !installed ? "done" : flags.yes || flags.purge || categories.length === 0 ? "confirm" : "prompt",
+  );
+  const [promptIdx, setPromptIdx] = useState(0);
   const [aborted, setAborted] = useState(false);
 
-  const runRemoval = useCallback(() => {
-    setPhase("running");
+  const teardown = useState(() => resolveTeardownOrder(platform))[0];
 
-    const results = items.map((item) => {
-      const update = removeItem(item);
-      return { ...item, ...update };
+  const [modules, setModules] = useState<ModuleRun[]>(() =>
+    [...teardown.map((s) => ({ key: s.key, label: s.label })), { key: CORE_KEY, label: "devlair files" }].map((m) => ({
+      key: m.key,
+      label: m.label,
+      status: "pending" as const,
+      detail: "",
+      progressMsg: "",
+      progressHistory: [],
+    })),
+  );
+
+  const buildContext = useCallback((): ModuleContext => {
+    const wslVersion = detectWslVersion(platform);
+    const config: Record<string, string> = {
+      // jq's `// empty` treats JSON false as empty, so pass strings, not booleans.
+      remove_packages: flags.keepPackages ? "false" : "true",
+    };
+    categories.forEach((c, i) => {
+      config[c.configKey] = keep[i] ? "true" : "false";
     });
+    return buildModuleContext(platform, wslVersion, config);
+  }, [platform, flags.keepPackages, categories, keep]);
 
-    setItems(results);
-    setPhase("done");
+  const runTeardown = useCallback(() => {
+    setPhase("running");
+    const context = buildContext();
+    const abort = new AbortController();
+    let logDir: string | null = null;
+    try {
+      logDir = createInitLogDir(userHome);
+    } catch {
+      // best-effort logging
+    }
 
-    const anyFail = results.some((r) => r.status === "fail");
-    if (anyFail) process.exitCode = 1;
-    setTimeout(() => exit(), 0);
-  }, [items, exit]);
+    (async () => {
+      for (let i = 0; i < teardown.length; i++) {
+        const spec = teardown[i];
+        setModules((prev) => prev.map((m) => (m.key === spec.key ? { ...m, status: "running" } : m)));
 
-  // Auto-run when --yes is passed
+        let status: Status = "fail";
+        let detail = "";
+        let resultEmitted = false;
+        try {
+          const ownership = invokerOwnership();
+          const iter = runModule(moduleScriptPath(spec.key), context, "uninstall", {
+            signal: abort.signal,
+            logFile: logDir ? moduleLogPath(logDir, spec.key) : undefined,
+            chownUidGid: ownership ?? undefined,
+          });
+          while (true) {
+            const { value, done } = await iter.next();
+            if (done) {
+              if (!resultEmitted) status = value.status;
+              break;
+            }
+            if (value.type === "progress") {
+              setModules((prev) =>
+                prev.map((m) =>
+                  m.key === spec.key
+                    ? {
+                        ...m,
+                        progressMsg: value.message,
+                        progressHistory: m.progressMsg ? [...m.progressHistory, m.progressMsg] : m.progressHistory,
+                      }
+                    : m,
+                ),
+              );
+            } else if (value.type === "result") {
+              status = value.status;
+              detail = value.detail;
+              resultEmitted = true;
+            }
+          }
+        } catch (err) {
+          status = "fail";
+          detail = err instanceof Error ? err.message : String(err);
+        }
+
+        setModules((prev) =>
+          prev.map((m) => (m.key === spec.key ? { ...m, status, detail, progressMsg: "", progressHistory: [] } : m)),
+        );
+      }
+
+      // devlair-core removal — runs after every module, last (modules read state
+      // from ~/.devlair while they run).
+      setModules((prev) => prev.map((m) => (m.key === CORE_KEY ? { ...m, status: "running" } : m)));
+      const results = coreItems(userHome).map((item) => ({ item, status: removeCoreItem(item) }));
+      const coreFail = results.some((r) => r.status === "fail");
+      const coreRemoved = results.filter((r) => r.status === "ok").map((r) => r.item.label);
+      setModules((prev) =>
+        prev.map((m) =>
+          m.key === CORE_KEY
+            ? {
+                ...m,
+                status: coreFail ? "fail" : coreRemoved.length > 0 ? "ok" : "skip",
+                detail: coreFail
+                  ? "some files need root (try: sudo devlair uninstall)"
+                  : coreRemoved.length > 0
+                    ? `removed: ${coreRemoved.join(", ")}`
+                    : "nothing to remove",
+                progressMsg: "",
+              }
+            : m,
+        ),
+      );
+
+      setPhase("done");
+      if (coreFail) process.exitCode = 1;
+      setTimeout(() => exitRef.current(), 0);
+    })();
+
+    return abort;
+  }, [buildContext, teardown]);
+
+  // Start the teardown exactly once. The AbortController is kept in a ref and
+  // only fired on real unmount — NOT tied to a phase-dependent effect, because
+  // runTeardown() calls setPhase("running"), and an effect that re-ran on
+  // `phase` would fire its cleanup and SIGTERM the in-flight run immediately.
+  const startedRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const start = useCallback(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    abortRef.current = runTeardown();
+  }, [runTeardown]);
+
+  // Nothing-to-remove fast path, and non-interactive auto-start (--yes/--purge).
   useEffect(() => {
-    if (flags.yes && phase === "confirm") runRemoval();
-  }, [flags.yes, phase, runRemoval]);
+    if (!installed) {
+      setTimeout(() => exitRef.current(), 0);
+      return;
+    }
+    if (flags.yes || flags.purge) start();
+  }, [installed, flags.yes, flags.purge, start]);
 
+  // Abort the run only when the component truly unmounts.
+  useEffect(() => () => abortRef.current?.abort(), []);
+
+  // Prompt-phase input: y = destroy, n/Enter = keep (default).
+  useInput(
+    (input, key) => {
+      const destroy = input === "y" || input === "Y";
+      const keepIt = key.return || input === "n" || input === "N";
+      if (!destroy && !keepIt) return;
+      setKeep((prev) => {
+        const next = [...prev];
+        next[promptIdx] = !destroy;
+        return next;
+      });
+      const nextIdx = promptIdx + 1;
+      if (nextIdx >= categories.length) setPhase("confirm");
+      else setPromptIdx(nextIdx);
+    },
+    { isActive: phase === "prompt" },
+  );
+
+  // Confirm-phase input (interactive only).
   useInput(
     (input, key) => {
       if (key.return || input === "y" || input === "Y") {
-        runRemoval();
+        start();
       } else if (key.escape || input === "n" || input === "N" || input === "q") {
         setAborted(true);
         setPhase("done");
-        setTimeout(() => exit(), 0);
+        setTimeout(() => exitRef.current(), 0);
       }
     },
-    { isActive: phase === "confirm" && !flags.yes },
+    { isActive: phase === "confirm" && !flags.yes && !flags.purge },
   );
-
-  const presentItems = items.filter((item) => {
-    if (!existsSync(item.path)) return false;
-    if (item.type === "zshrc-strip") return hasDevlairZshrcBlock(item.path);
-    if (item.type === "file" && item.path.endsWith(".zshenv")) return isDevlairZshenv(item.path);
-    return true;
-  });
 
   return (
     <Box flexDirection="column">
@@ -217,73 +339,66 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
         </Text>
       </Box>
 
-      {phase === "confirm" && (
-        <Box flexDirection="column">
-          {presentItems.length === 0 ? (
-            <Box marginBottom={1}>
-              <Text color={D_COMMENT}>{"  Nothing to remove — devlair does not appear to be installed."}</Text>
-            </Box>
-          ) : (
-            <Box flexDirection="column" marginBottom={1}>
-              <Text color={D_ORANGE}>{"  The following will be permanently deleted:"}</Text>
-              {presentItems.map((item) => (
-                <Text key={item.path} color={D_COMMENT}>
-                  {"    · "}
-                  <Text color={D_FG}>{item.label}</Text>
-                </Text>
-              ))}
-            </Box>
-          )}
+      {!installed && phase === "done" && (
+        <Text color={D_COMMENT}>{"  Nothing to remove — devlair does not appear to be installed."}</Text>
+      )}
 
-          {presentItems.length > 0 && !flags.yes && (
-            <Box>
-              <Text>{"  "}</Text>
-              <Text color={D_PURPLE}>Remove everything listed above? </Text>
-              <Text color={D_COMMENT}>(y/N)</Text>
-            </Box>
-          )}
+      {phase === "prompt" && categories[promptIdx] && (
+        <Box flexDirection="column">
+          <Text color={D_ORANGE}>{"  Keep or destroy sensitive items? (default: keep)"}</Text>
+          <Box marginTop={1}>
+            <Text color={D_COMMENT}>{`  [${promptIdx + 1}/${categories.length}] `}</Text>
+            <Text>{"Destroy "}</Text>
+            <Text color={D_FG} bold>
+              {categories[promptIdx].label}
+            </Text>
+            <Text color={D_COMMENT}>{"?  (y / N)"}</Text>
+          </Box>
+          <Text color={D_COMMENT}>{`        ${categories[promptIdx].destroys}`}</Text>
         </Box>
       )}
 
-      {(phase === "running" || phase === "done") && (
+      {phase === "confirm" && !flags.yes && !flags.purge && (
         <Box flexDirection="column">
-          {items.map((item) => {
-            if (item.status === "pending") return null;
-            const icon = statusIcon(item.status);
-            return (
-              <Box key={item.path}>
-                <Text color={icon.color}>
-                  {"  "}
-                  {icon.char}
-                </Text>
-                <Text>
-                  {"  "}
-                  {item.label}
-                </Text>
-                {item.detail && (
-                  <Text color={D_COMMENT}>
-                    {"  "}
-                    {item.detail}
-                  </Text>
-                )}
-              </Box>
-            );
-          })}
+          <Text color={D_ORANGE}>{"  About to remove devlair, its tools, and configuration."}</Text>
+          <Box flexDirection="column" marginTop={1}>
+            <Text color={D_COMMENT}>
+              {"    packages: "}
+              <Text color={D_FG}>{flags.keepPackages ? "kept" : "removed"}</Text>
+            </Text>
+            {categories.map((c, i) => (
+              <Text key={c.configKey} color={D_COMMENT}>
+                {"    "}
+                {c.label}
+                {": "}
+                <Text color={keep[i] ? D_GREEN : D_RED}>{keep[i] ? "kept" : "destroyed"}</Text>
+              </Text>
+            ))}
+          </Box>
+          <Box marginTop={1}>
+            <Text color={D_PURPLE}>{"  Proceed? "}</Text>
+            <Text color={D_COMMENT}>{"(y/N)"}</Text>
+          </Box>
         </Box>
       )}
 
-      {phase === "done" && !aborted && (
+      {(phase === "running" || (phase === "done" && installed && !aborted)) && (
+        <Progress modules={modules} total={modules.length} />
+      )}
+
+      {phase === "done" && !aborted && installed && (
         <Box marginTop={1} flexDirection="column">
-          {items.some((r) => r.status === "fail") ? (
+          {modules.some((m) => m.status === "fail") ? (
             <Text color={D_ORANGE}>{"  Some items could not be removed. See errors above."}</Text>
           ) : (
             <>
               <Text color={D_GREEN}>{"  ✓ devlair uninstalled."}</Text>
               <Text color={D_COMMENT}>
                 {
-                  "  Run the installer again for a clean install: curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | bash"
+                  "  Fresh install: curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | bash"
                 }
               </Text>
+              <Text color={D_COMMENT}>{"  Open a new shell for the restored login shell to take effect."}</Text>
             </>
           )}
         </Box>

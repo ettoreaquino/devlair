@@ -114,3 +114,13 @@ export function resolveOrder(keys?: ReadonlySet<string>, platform?: Platform): M
 export function keysForGroups(groups: Set<string>): Set<string> {
   return new Set(MODULE_SPECS.filter((s) => groups.has(s.group)).map((s) => s.key));
 }
+
+/**
+ * Return ModuleSpecs in dependency-safe TEARDOWN order — the reverse of the
+ * install order, so dependents are removed before their dependencies
+ * (e.g. firewall→ssh→tailscale, shell→zsh). Modules incompatible with
+ * `platform` are excluded.
+ */
+export function resolveTeardownOrder(platform?: Platform): ModuleSpec[] {
+  return resolveOrder(undefined, platform).reverse();
+}

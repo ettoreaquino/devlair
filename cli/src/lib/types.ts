@@ -28,7 +28,7 @@ export interface CheckItem {
   detail?: string;
 }
 
-export type ModuleMode = "run" | "check";
+export type ModuleMode = "run" | "check" | "uninstall";
 
 export const ModuleExitCode = {
   Success: 0,

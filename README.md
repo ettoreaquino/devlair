@@ -84,7 +84,8 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
     doctor [--fix]                      Check system health & fix drift
     upgrade [--no-self]                 Upgrade tools & re-apply configs
     disable-password                    Lock SSH to key-only auth
-    uninstall [--yes]                   Remove everything devlair installed
+    uninstall [--yes] [--purge]         Remove everything devlair installed
+      [--keep-packages]
 
   AI Agents
     claude [--plan TIER] [--1m on|off]  Usage dashboard & config
@@ -370,7 +371,7 @@ The installer downloads the latest `devlair-cli-{os}-{arch}` binary and places i
 |---------|-------|
 | `devlair disable-password [--yes]` | Linux-only, auto-elevates via sudo. `--yes` skips the interactive confirmation. |
 | `devlair claude [--plan TIER\|--1m on\|off]` | Configures the local Claude Code install. No dashboard (see above). |
-| `devlair uninstall [--yes]` | Removes the devlair binary, share directory, `~/.devlair/`, `~/.zim/`, `~/.zimrc`, `~/.zshenv` (if managed), the devlair block from `~/.zshrc`, `~/.tmux.conf`, and `~/.tmux/plugins/`. Auto-elevates via sudo. `--yes` skips the interactive confirmation. |
+| `devlair uninstall [--yes] [--purge] [--keep-packages]` | Full teardown. Runs each module's reverse step in reverse dependency order — removes installed tools (pyenv, nvm, bun, fzf, uv, and with default package removal: docker, gh, aws, tailscale, tmux, ufw/fail2ban), reverts system state (firewall, sshd hardening, default shell back to the recorded original, docker group, Gnome Terminal profile), strips devlair config blocks, and removes the binary + `~/.devlair/`. Sensitive items (GitHub SSH key, git identity, `~/.ssh/authorized_keys`, Tailscale auth) are kept by default and you're asked per-category whether to destroy each. Never purges `openssh-server` (lockout-safe) or Homebrew. `--yes` keeps all sensitive items non-interactively; `--purge` destroys them all; `--keep-packages` skips apt/brew package removal. Auto-elevates via sudo. |
 
 **v2 wizard behavior notes:**
 

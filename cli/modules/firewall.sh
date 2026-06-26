@@ -56,8 +56,39 @@ do_check() {
 
 }
 
+do_uninstall() {
+  local removed=()
+
+  if cmd_exists ufw; then
+    json_progress "disabling firewall"
+    ufw --force disable >&2 2>&1 || true
+    removed+=("ufw disabled")
+  fi
+
+  if systemctl list-unit-files fail2ban.service >/dev/null 2>&1; then
+    json_progress "stopping fail2ban"
+    systemctl stop fail2ban >&2 2>&1 || true
+    systemctl disable fail2ban >&2 2>&1 || true
+    removed+=("fail2ban stopped")
+  fi
+
+  rm_user_path "$FAIL2BAN_JAIL"
+
+  if [[ "$(cfg_bool remove_packages false)" == "true" ]]; then
+    apt_purge ufw fail2ban
+    removed+=("ufw + fail2ban packages")
+  fi
+
+  if [[ ${#removed[@]} -eq 0 ]]; then
+    json_result "skip" "nothing to remove"
+    exit 2
+  fi
+  json_result "ok" "removed: $(IFS=', '; echo "${removed[*]}")"
+}
+
 case "$MODE" in
-  run)   do_run ;;
-  check) do_check ;;
-  *)     json_result "fail" "unknown mode: $MODE"; exit 1 ;;
+  run)       do_run ;;
+  check)     do_check ;;
+  uninstall) do_uninstall ;;
+  *)         json_result "fail" "unknown mode: $MODE"; exit 1 ;;
 esac

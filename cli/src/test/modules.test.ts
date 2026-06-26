@@ -1,5 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { GROUPS, MODULE_SPECS, REAPPLY_KEYS, keysForGroups, resolveOrder, validateDag } from "../lib/modules.js";
+import {
+  GROUPS,
+  MODULE_SPECS,
+  REAPPLY_KEYS,
+  keysForGroups,
+  resolveOrder,
+  resolveTeardownOrder,
+  validateDag,
+} from "../lib/modules.js";
 
 describe("MODULE_SPECS", () => {
   test("has 13 modules", () => {
@@ -155,5 +163,29 @@ describe("resolveOrder", () => {
     ];
     const actualOrder = resolveOrder().map((s) => s.key);
     expect(actualOrder).toEqual(expectedOrder);
+  });
+});
+
+describe("resolveTeardownOrder", () => {
+  test("is the exact reverse of the install order", () => {
+    const install = resolveOrder().map((s) => s.key);
+    const teardown = resolveTeardownOrder().map((s) => s.key);
+    expect(teardown).toEqual([...install].reverse());
+  });
+
+  test("removes dependents before their dependencies", () => {
+    const order = resolveTeardownOrder().map((s) => s.key);
+    // firewall → ssh → tailscale, and shell → zsh
+    expect(order.indexOf("firewall")).toBeLessThan(order.indexOf("ssh"));
+    expect(order.indexOf("ssh")).toBeLessThan(order.indexOf("tailscale"));
+    expect(order.indexOf("shell")).toBeLessThan(order.indexOf("zsh"));
+    expect(order.indexOf("claude")).toBeLessThan(order.indexOf("devtools"));
+  });
+
+  test("filters by platform", () => {
+    const macos = resolveTeardownOrder("macos").map((s) => s.key);
+    expect(macos).not.toContain("firewall");
+    expect(macos).not.toContain("ssh");
+    expect(macos).toContain("homebrew");
   });
 });

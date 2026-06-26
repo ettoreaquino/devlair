@@ -254,8 +254,47 @@ do_check() {
   fi
 }
 
+do_uninstall() {
+  local removed=()
+  local remove_packages
+  remove_packages=$(cfg_bool remove_packages false)
+
+  # ── User-level version managers (always removed) ──────────────────────────
+  rm_user_path "$USER_HOME/.pyenv"
+  rm_user_path "$USER_HOME/.nvm"
+  rm_user_path "$USER_HOME/.bun"
+  rm_user_path "$USER_HOME/.fzf"
+  rm_user_path "$USER_HOME/.local/bin/uv"
+  rm_user_path "$USER_HOME/.local/bin/uvx"
+
+  if [[ "$remove_packages" == "true" ]]; then
+    if [[ "$PLATFORM" == "macos" ]]; then
+      brew_uninstall uv pyenv fzf gh awscli bun
+      removed+=("brew dev tools")
+    else
+      # Drop the user from the docker group, then purge docker + repos.
+      if id -nG "$USERNAME" 2>/dev/null | grep -qw docker; then
+        gpasswd -d "$USERNAME" docker >&2 2>&1 || true
+      fi
+      apt_purge docker-ce docker-ce-cli containerd.io docker-compose-plugin docker-buildx-plugin gh
+      rm -f /etc/apt/keyrings/docker.gpg /etc/apt/sources.list.d/docker.list 2>/dev/null || true
+      rm -f /usr/share/keyrings/githubcli-archive-keyring.gpg /etc/apt/sources.list.d/github-cli.list 2>/dev/null || true
+      # AWS CLI v2 installs to /usr/local (not apt-managed).
+      rm -rf /usr/local/aws-cli /usr/local/bin/aws /usr/local/bin/aws_completer 2>/dev/null || true
+      removed+=("docker, gh, aws + apt repos")
+    fi
+  fi
+
+  if [[ ${#removed[@]} -eq 0 ]]; then
+    json_result "skip" "nothing to remove"
+    exit 2
+  fi
+  json_result "ok" "removed: $(IFS=', '; echo "${removed[*]}")"
+}
+
 case "$MODE" in
-  run)   do_run ;;
-  check) do_check ;;
-  *)     json_result "fail" "unknown mode: $MODE"; exit 1 ;;
+  run)       do_run ;;
+  check)     do_check ;;
+  uninstall) do_uninstall ;;
+  *)         json_result "fail" "unknown mode: $MODE"; exit 1 ;;
 esac

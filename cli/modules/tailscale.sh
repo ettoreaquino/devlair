@@ -8,6 +8,8 @@ source "$SCRIPT_DIR/_lib.sh"
 
 read_context
 
+USERNAME=$(ctx_get username)
+PLATFORM=$(ctx_get platform)
 MODE=${1:-run}
 
 # `tailscale up` without an auth key blocks until the user completes browser
@@ -126,8 +128,45 @@ do_check() {
   fi
 }
 
+do_uninstall() {
+  local removed=()
+
+  if ! cmd_exists tailscale; then
+    json_result "skip" "tailscale not installed"
+    exit 2
+  fi
+
+  # Auth state — sensitive, default keep. Destroy => logout (drops node key);
+  # keep => just bring the link down so it stops routing.
+  if [[ "$(cfg_bool keep_tailscale_auth true)" == "true" ]]; then
+    json_progress "bringing tailscale down"
+    tailscale down >&2 2>&1 || true
+    removed+=("tailscale down (auth kept)")
+  else
+    json_progress "logging out of tailscale"
+    tailscale logout >&2 2>&1 || true
+    removed+=("tailscale logout")
+  fi
+
+  if [[ "$(cfg_bool remove_packages false)" == "true" ]]; then
+    if [[ "$PLATFORM" == "macos" ]]; then
+      brew_uninstall tailscale
+    else
+      systemctl stop tailscaled >&2 2>&1 || true
+      systemctl disable tailscaled >&2 2>&1 || true
+      apt_purge tailscale
+      rm -f /usr/share/keyrings/tailscale-archive-keyring.gpg \
+            /etc/apt/sources.list.d/tailscale.list 2>/dev/null || true
+    fi
+    removed+=("tailscale package")
+  fi
+
+  json_result "ok" "$(IFS=', '; echo "${removed[*]}")"
+}
+
 case "$MODE" in
-  run)   do_run ;;
-  check) do_check ;;
-  *)     json_result "fail" "unknown mode: $MODE"; exit 1 ;;
+  run)       do_run ;;
+  check)     do_check ;;
+  uninstall) do_uninstall ;;
+  *)         json_result "fail" "unknown mode: $MODE"; exit 1 ;;
 esac

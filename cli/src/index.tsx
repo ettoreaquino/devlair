@@ -102,7 +102,8 @@ async function main() {
     // macOS: install Homebrew before Ink starts so the installer has full TTY
     // access for its sudo password prompt. All subsequent brew calls in modules
     // assume brew is on PATH — this is the single point of installation.
-    if (process.platform === "darwin") {
+    // Skip for uninstall — we must never *install* Homebrew while tearing down.
+    if (process.platform === "darwin" && command.type !== "uninstall") {
       macOsPreFlight();
     }
   }

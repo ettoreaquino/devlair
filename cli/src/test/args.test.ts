@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseInitFlags } from "../lib/args.js";
+import { parseInitFlags, parseUninstallFlags } from "../lib/args.js";
 
 describe("parseInitFlags", () => {
   test("returns defaults when no flags", () => {
@@ -46,5 +46,32 @@ describe("parseInitFlags", () => {
   test("filters empty strings from comma-separated values", () => {
     const flags = parseInitFlags(["--only", "system,,ssh,"]);
     expect(flags.only).toEqual(new Set(["system", "ssh"]));
+  });
+});
+
+describe("parseUninstallFlags", () => {
+  test("defaults to interactive, packages removed, sensitive kept", () => {
+    const f = parseUninstallFlags([]);
+    expect(f.yes).toBe(false);
+    expect(f.purge).toBe(false);
+    expect(f.keepPackages).toBe(false);
+  });
+
+  test("--yes / -y skip prompts", () => {
+    expect(parseUninstallFlags(["--yes"]).yes).toBe(true);
+    expect(parseUninstallFlags(["-y"]).yes).toBe(true);
+  });
+
+  test("--purge implies non-interactive (yes) and sets purge", () => {
+    const f = parseUninstallFlags(["--purge"]);
+    expect(f.purge).toBe(true);
+    expect(f.yes).toBe(true);
+  });
+
+  test("--keep-packages is independent", () => {
+    const f = parseUninstallFlags(["--keep-packages"]);
+    expect(f.keepPackages).toBe(true);
+    expect(f.yes).toBe(false);
+    expect(f.purge).toBe(false);
   });
 });
