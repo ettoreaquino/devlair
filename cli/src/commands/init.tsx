@@ -15,6 +15,7 @@ import { BRAND, Logo } from "../components/Logo.js";
 import { type ModuleRun, Progress } from "../components/Progress.js";
 import { OptionalHint, Summary } from "../components/Summary.js";
 import type { InitFlags } from "../lib/args.js";
+import { resolveBrand } from "../lib/brand.js";
 import { buildModuleContext } from "../lib/context.js";
 import { createInitLogDir, invokerOwnership, moduleLogPath } from "../lib/logs.js";
 import type { Group, ModuleSpec } from "../lib/modules.js";
@@ -54,7 +55,7 @@ function InitHeader({
       <Box marginBottom={1}>
         <Text>{"  "}</Text>
         <Text color={D_PURPLE} bold>
-          {BRAND}
+          {brand ?? BRAND}
         </Text>
         <Text color={D_PINK} bold>
           {"  init"}
@@ -230,13 +231,19 @@ interface InitState {
   optional: ModuleSpec[];
   skippedNames: string;
   profile: Profile | null;
+  brand: string;
 }
 
 function buildInitState(flags: InitFlags, profile: Profile | null): InitState {
   const platform = detectPlatform();
   const wslVersion = detectWslVersion(platform);
-  const config = (profile?.config ?? {}) as Record<string, unknown>;
-  const context = buildModuleContext(platform, wslVersion, config);
+  const profileConfig = (profile?.config ?? {}) as Record<string, unknown>;
+  const base = buildModuleContext(platform, wslVersion, profileConfig);
+  // Resolve the brand (flag > persisted > default) and pipe it to the modules
+  // so the shell module persists it and renders the login banner with it.
+  const brand = resolveBrand(flags.brand, base.userHome);
+  const config: Record<string, unknown> = { ...profileConfig, brand };
+  const context: ModuleContext = { ...base, config };
   const profileSelection = profile ? resolveProfileKeys(profile) : undefined;
   const { selected, optional, platformSkipped } = selectModules(flags, platform, profileSelection);
 
@@ -255,6 +262,7 @@ function buildInitState(flags: InitFlags, profile: Profile | null): InitState {
     optional,
     skippedNames: platformSkipped.map((s) => s.key).join(", "),
     profile,
+    brand,
   };
 }
 
@@ -311,11 +319,11 @@ function NonInteractiveInit({ flags }: { flags: InitFlags }) {
       </Box>
     );
   }
-  return <NonInteractiveInitView state={initState} brand={flags.brand} />;
+  return <NonInteractiveInitView state={initState} />;
 }
 
-function NonInteractiveInitView({ state, brand }: { state: InitState; brand?: string }) {
-  const { platform, context, selected, optional, skippedNames, profile } = state;
+function NonInteractiveInitView({ state }: { state: InitState }) {
+  const { platform, context, selected, optional, skippedNames, profile, brand } = state;
   const { modules, done, logDir } = useModuleExecution(selected, context, true);
 
   return (
@@ -344,8 +352,10 @@ function WizardInit({ brand }: { brand?: string }) {
   const [envState] = useState(() => {
     const platform = detectPlatform();
     const wslVersion = detectWslVersion(platform);
-    const context = buildModuleContext(platform, wslVersion);
-    return { platform, wslVersion, context };
+    const base = buildModuleContext(platform, wslVersion);
+    const resolvedBrand = resolveBrand(brand, base.userHome);
+    const context: ModuleContext = { ...base, config: { ...base.config, brand: resolvedBrand } };
+    return { platform, wslVersion, context, brand: resolvedBrand };
   });
 
   const { platform, context: baseContext } = envState;
@@ -376,7 +386,7 @@ function WizardInit({ brand }: { brand?: string }) {
 
   return (
     <Box flexDirection="column">
-      <InitHeader username={context.username} host={hostname()} platform={platform} brand={brand} />
+      <InitHeader username={context.username} host={hostname()} platform={platform} brand={envState.brand} />
 
       {phase === "wizard-groups" && (
         <GroupSelect

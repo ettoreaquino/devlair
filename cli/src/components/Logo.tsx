@@ -1,8 +1,9 @@
 import { Box, Text } from "ink";
 import stripAnsi from "strip-ansi";
+import { DEFAULT_BRAND } from "../lib/brand.js";
 import { D_COMMENT, D_FG, D_PINK, D_PURPLE } from "../lib/theme.js";
 
-export const BRAND = "d e v l a i r";
+export const BRAND = DEFAULT_BRAND;
 const INNER_WIDTH = 48;
 const MIN_W_SHORT = 16;
 

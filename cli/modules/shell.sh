@@ -10,6 +10,7 @@ read_context
 
 USERNAME=$(ctx_get username)
 USER_HOME=$(ctx_get userHome)
+BRAND=$(ctx_get_config brand)
 MODE=${1:-run}
 
 MARKER="# ── devlair aliases ─"
@@ -35,6 +36,17 @@ _clean_zshrc() {
 
 do_run() {
   [[ "$USERNAME" =~ ^[A-Za-z0-9._-]+$ ]] || { json_result "fail" "invalid username: $USERNAME"; exit 1; }
+
+  # Persist the brand (from `init --brand NAME`) so the login banner renders it
+  # and future runs / doctor / upgrade reuse it. Written in the module layer so
+  # ownership stays correct under sudo, matching the chown_user pattern below.
+  if [[ -n "$BRAND" ]]; then
+    mkdir -p "$USER_HOME/.devlair"
+    printf '%s\n' "$BRAND" > "$USER_HOME/.devlair/brand"
+    chown_user "$USER_HOME/.devlair/brand"
+    chown_user "$USER_HOME/.devlair"
+  fi
+
   local zshrc="$USER_HOME/.zshrc"
   local existing=""
   local aliases
