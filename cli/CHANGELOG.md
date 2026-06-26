@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.12.1](https://github.com/ettoreaquino/devlair/compare/v2.12.0...v2.12.1) (2026-06-25)
+
+
+### Bug Fixes
+
+* **claude:** prevent silent set -e abort in chown helpers on non-root macOS ([5e3c120](https://github.com/ettoreaquino/devlair/commit/5e3c120affc62b498c979a5446f9bde75cae3080))
+* **claude:** prevent silent set -e abort in chown helpers on non-root macOS ([11ca2f5](https://github.com/ettoreaquino/devlair/commit/11ca2f5e1844ad1260b260d0408c28cef6695069))
+
 ## [2.12.0](https://github.com/ettoreaquino/devlair/compare/v2.11.4...v2.12.0) (2026-06-25)
 
 

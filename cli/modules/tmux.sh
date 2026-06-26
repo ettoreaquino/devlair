@@ -28,15 +28,13 @@ do_run() {
 
   json_progress "writing tmux config"
   cp "$SCRIPT_DIR/configs/tmux.conf" "$conf"
-  _is_root && chown_user "$conf"
+  chown_user "$conf"
 
   # TPM (tmux plugin manager)
   local plugins_dir="$USER_HOME/.tmux/plugins"
   mkdir -p "$plugins_dir"
-  if _is_root; then
-    chown_user "$USER_HOME/.tmux"
-    chown_user "$plugins_dir"
-  fi
+  chown_user "$USER_HOME/.tmux"
+  chown_user "$plugins_dir"
 
   local tpm_path="$plugins_dir/tpm"
   if [[ ! -d "$tpm_path" ]]; then
