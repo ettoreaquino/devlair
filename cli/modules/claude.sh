@@ -47,6 +47,11 @@ do_run() {
   local patch
   patch=$(cat "$SCRIPT_DIR/configs/claude-settings.json")
   update_json "$settings_path" "$patch"
+  # Strip legacy channel/hook keys left by the retired Telegram feature so that
+  # re-running init migrates existing users off the dead session hooks.
+  local stripped
+  stripped=$(jq 'del(.channelsEnabled, .allowedChannelPlugins, .hooks)' "$settings_path")
+  printf '%s\n' "$stripped" > "$settings_path"
   chown_user "$settings_path"
 
   # Install helper scripts
