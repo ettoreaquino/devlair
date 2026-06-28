@@ -9,6 +9,14 @@ const SHELL_MODULE = join(import.meta.dir, "../../modules/shell.sh");
 // The module chowns files to USERNAME; use the real invoking user so the
 // chown succeeds for the unprivileged test process (chowning own files to self).
 const REAL_USER = userInfo({ encoding: "utf8" }).username;
+// Marker string is owned by shell.sh; derive it from the source so the refresh
+// test always drives the refresh branch even if the marker text changes (a
+// hardcoded copy would silently fall through to the first-install path).
+const ALIAS_MARKER = (() => {
+  const m = readFileSync(SHELL_MODULE, "utf8").match(/^MARKER="([^"]*)"/m);
+  if (!m) throw new Error("could not find MARKER definition in shell.sh");
+  return m[1];
+})();
 
 let root: string;
 let counter = 0;
@@ -65,8 +73,6 @@ describe("shell module brand persistence", () => {
 });
 
 describe("shell module .zshrc alias refresh", () => {
-  const MARKER = "# ── devlair aliases ─";
-
   test("refresh keeps a newline between the header and the aliases block", async () => {
     const home = freshHome();
     // Simulate a prior devlair-managed .zshrc: a zimfw header ending in the
@@ -75,7 +81,7 @@ describe("shell module .zshrc alias refresh", () => {
     // re-runs, never on first install).
     const seeded = `export ZIM_HOME="$HOME/.zim"
 source "$ZIM_HOME/init.zsh"
-${MARKER}──
+${ALIAS_MARKER}──
 alias stale="echo old"
 `;
     writeFileSync(join(home, ".zshrc"), seeded);
@@ -87,6 +93,6 @@ alias stale="echo old"
     expect(zshrc).not.toContain('init.zsh"#');
     expect(zshrc).toContain('source "$ZIM_HOME/init.zsh"\n');
     // The refreshed block is still present.
-    expect(zshrc).toContain(MARKER);
+    expect(zshrc).toContain(ALIAS_MARKER);
   });
 });

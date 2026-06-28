@@ -63,7 +63,7 @@ do_run() {
     # The $(...) on $header strips its trailing newline, so the separator must
     # be restored explicitly — otherwise the aliases marker is glued onto the
     # last header line (e.g. `source ".../init.zsh"# ── devlair aliases ─`),
-    # producing a path zsh cannot source. Mirrors the first-time branch below.
+    # producing a path zsh cannot source.
     local header
     header="${existing%%${MARKER}*}"
     header=$(_clean_zshrc "$header")
