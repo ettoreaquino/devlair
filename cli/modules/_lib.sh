@@ -186,19 +186,24 @@ _run_as_user() {
 # download_script URL -- download an installer script to a temp file.
 # Prints the temp file path; caller is responsible for cleanup.
 #
-# Under `sudo devlair init` the temp file is created root-owned 0600, but the
-# installers it feeds (uv/pyenv/nvm/bun via _run_as_user, Homebrew via
-# brew_ensure) execute it as the target user through `sudo -u`. Without the
-# chown the unprivileged user cannot read the script and bash reports
-# "Permission denied". chown_user is a no-op when not root (the normal macOS
-# path runs as the user and already owns the file), so this only takes effect
-# on the privileged path that needs it.
+# mktemp creates the file 0600. Under `sudo devlair init` it is root-owned,
+# but some installers run as the target user via `sudo -u` (uv/pyenv/nvm/bun
+# through _run_as_user, Homebrew through brew_ensure), and that user cannot
+# read a root-owned 0600 file — bash reports "Permission denied". Grant read
+# so the dropped-privilege user can source the script.
+#
+# Grant read only — do NOT chown it to the user. Other installers (e.g.
+# tailscale) execute the script as root via `bash "$script"`; a user-owned
+# file in the sticky /tmp would let an unprivileged process rewrite it before
+# root runs it (TOCTOU privilege escalation). Keeping root ownership + write
+# and adding only read closes that window. The scripts are public installers,
+# so world-readable leaks nothing.
 download_script() {
   local url=$1
   local tmp
   tmp=$(mktemp /tmp/devlair.XXXXXX.sh 2>/dev/null || mktemp)
   curl -fsSL "$url" -o "$tmp" >&2
-  chown_user "$tmp"
+  chmod a+r "$tmp"
   printf '%s' "$tmp"
 }
 
