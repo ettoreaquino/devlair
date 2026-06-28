@@ -73,3 +73,17 @@ def test_pick_update_unparseable_current_is_safe():
 
     assert latest_same_major is None
     assert newer_major is False
+
+
+def test_pick_update_rejects_noncanonical_tags():
+    # Only canonical MAJOR.MINOR.PATCH tags may be selected — a crafted tag must
+    # never flow into the binary download URL (e.g. `v{latest}/devlair-<arch>`).
+    releases = [
+        _rel("v1.foo/../evil"),  # would parse to (1,) but is not canonical
+        _rel("v1.2"),  # two-part, not canonical
+        _rel("v1.3.0"),  # the only real same-major release
+    ]
+    latest_same_major, newer_major = upgrade._pick_update(releases, "1.1.0")
+
+    assert latest_same_major == "1.3.0"
+    assert newer_major is False
