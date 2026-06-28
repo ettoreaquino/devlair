@@ -59,11 +59,15 @@ do_run() {
   fi
 
   if [[ "$existing" == *"$MARKER"* ]]; then
-    # Refresh: keep everything before the marker, clean it, then append aliases
+    # Refresh: keep everything before the marker, clean it, then append aliases.
+    # The $(...) on $header strips its trailing newline, so the separator must
+    # be restored explicitly — otherwise the aliases marker is glued onto the
+    # last header line (e.g. `source ".../init.zsh"# ── devlair aliases ─`),
+    # producing a path zsh cannot source. Mirrors the first-time branch below.
     local header
     header="${existing%%${MARKER}*}"
     header=$(_clean_zshrc "$header")
-    printf '%s%s\n' "$header" "$aliases" > "$zshrc"
+    printf '%s\n%s\n' "$header" "$aliases" > "$zshrc"
     chown_user "$zshrc"
     json_result "ok" "aliases refreshed in .zshrc"
   else
