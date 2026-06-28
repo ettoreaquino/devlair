@@ -185,11 +185,20 @@ _run_as_user() {
 
 # download_script URL -- download an installer script to a temp file.
 # Prints the temp file path; caller is responsible for cleanup.
+#
+# Under `sudo devlair init` the temp file is created root-owned 0600, but the
+# installers it feeds (uv/pyenv/nvm/bun via _run_as_user, Homebrew via
+# brew_ensure) execute it as the target user through `sudo -u`. Without the
+# chown the unprivileged user cannot read the script and bash reports
+# "Permission denied". chown_user is a no-op when not root (the normal macOS
+# path runs as the user and already owns the file), so this only takes effect
+# on the privileged path that needs it.
 download_script() {
   local url=$1
   local tmp
   tmp=$(mktemp /tmp/devlair.XXXXXX.sh 2>/dev/null || mktemp)
   curl -fsSL "$url" -o "$tmp" >&2
+  chown_user "$tmp"
   printf '%s' "$tmp"
 }
 
