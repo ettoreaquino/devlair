@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.0.1](https://github.com/ettoreaquino/devlair/compare/v3.0.0...v3.0.1) (2026-06-29)
+
+
+### Bug Fixes
+
+* **devtools:** chown temp installer to target user ([4ed0a6d](https://github.com/ettoreaquino/devlair/commit/4ed0a6d5efc1fad3ffce70cb996a478395eb5cfa))
+* **devtools:** chown temp installer to target user ([2839518](https://github.com/ettoreaquino/devlair/commit/2839518de352b525d9b97254110b39b6053c6da5))
+* **devtools:** grant read instead of chown on temp installer ([d8cf8cc](https://github.com/ettoreaquino/devlair/commit/d8cf8ccb967497b674afc5ddf88517415099364c))
+* **init:** prune init logs by run name, not filesystem mtime ([60bdd6e](https://github.com/ettoreaquino/devlair/commit/60bdd6e1121ae76c92871b924b762bb9d280bb0a))
+* **init:** prune init logs by run name, not filesystem mtime ([2eb625c](https://github.com/ettoreaquino/devlair/commit/2eb625c441ff0de2ad53969b8e9c57a19aa5aa31))
+* **shell:** preserve newline on .zshrc alias refresh ([28a0964](https://github.com/ettoreaquino/devlair/commit/28a096455d9edf26f6f325c3903942ae33189942))
+* **shell:** preserve newline on .zshrc alias refresh ([d07f4a3](https://github.com/ettoreaquino/devlair/commit/d07f4a37b42bb39d063625c85cb6a7f8a8f50301))
+
 ## [3.0.0](https://github.com/ettoreaquino/devlair/compare/v2.12.1...v3.0.0) (2026-06-26)
 
 
