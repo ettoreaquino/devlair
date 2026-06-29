@@ -23,7 +23,7 @@ import {
   parseUpgradeFlags,
 } from "./lib/args.js";
 import { elevateIfNeeded } from "./lib/elevate.js";
-import { macOsPreFlight } from "./lib/homebrew.js";
+import { macOsPreFlight, macOsPurgeHomebrew } from "./lib/homebrew.js";
 import { D_FG } from "./lib/theme.js";
 
 const VERSION = pkg.version;
@@ -103,8 +103,15 @@ async function main() {
     // access for its sudo password prompt. All subsequent brew calls in modules
     // assume brew is on PATH — this is the single point of installation.
     // Skip for uninstall — we must never *install* Homebrew while tearing down.
-    if (process.platform === "darwin" && command.type !== "uninstall") {
-      macOsPreFlight();
+    if (process.platform === "darwin") {
+      if (command.type === "uninstall") {
+        // `--purge` means "remove everything": tear Homebrew down too, pre-Ink
+        // so the uninstaller has TTY access for its sudo prompt. Plain
+        // uninstall leaves shared Homebrew untouched.
+        if (command.flags.purge) macOsPurgeHomebrew();
+      } else {
+        macOsPreFlight();
+      }
     }
   }
 
