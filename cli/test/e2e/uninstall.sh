@@ -80,8 +80,9 @@ jq -e '.original_shell' "$DEV_HOME/.devlair/state.json" >/dev/null 2>&1 && pass 
 has_cmd zsh && pass "zsh package installed by init" || fail "zsh not installed"
 
 # ── uninstall (keep sensitive, remove packages) ──────────────────────────────
-hdr "devlair uninstall --yes"
-run_dl "uninstall --yes" || fail "uninstall exited non-zero"
+# --force is the non-interactive escape hatch; --yes now still shows a confirm.
+hdr "devlair uninstall --force"
+run_dl "uninstall --force" || fail "uninstall exited non-zero"
 
 absent /usr/local/bin/devlair
 absent /usr/local/share/devlair
@@ -103,7 +104,7 @@ has_cmd tmux && fail "tmux still installed" || pass "tmux package purged"
 # ── idempotent re-run ────────────────────────────────────────────────────────
 hdr "idempotent re-run"
 stage   # restore binary + modules so we can invoke it again
-if run_dl "uninstall --yes"; then
+if run_dl "uninstall --force"; then
   pass "second uninstall exited 0 (idempotent)"
 else
   fail "second uninstall errored"

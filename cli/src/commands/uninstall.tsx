@@ -8,8 +8,10 @@
  *
  * Sensitive items (SSH keys, git identity, authorized_keys, tailscale auth) are
  * kept by default. Interactively, the user is asked per-category whether to
- * destroy each. `--yes` keeps all of them non-interactively; `--purge` destroys
- * all of them non-interactively.
+ * destroy each. `--yes` preselects "keep" and `--purge` preselects "destroy"
+ * (both skip the per-category prompts); either way a final confirmation that
+ * lists everything is still shown. `--force` is the only flag that skips that
+ * confirmation, for fully non-interactive use.
  */
 
 import { spawnSync } from "node:child_process";
@@ -119,6 +121,10 @@ function removeCoreItem(item: CoreItem): Status {
 function anythingInstalled(home: string): boolean {
   return (
     existsSync("/usr/local/bin/devlair") ||
+    // The share dir is root-owned, so a half-completed uninstall (user-owned
+    // markers gone, privileged removal failed) can leave only this behind —
+    // it MUST be detected or the retry wrongly reports "nothing to remove".
+    existsSync("/usr/local/share/devlair") ||
     existsSync(join(home, ".devlair")) ||
     existsSync(join(home, ".zim")) ||
     existsSync(join(home, ".tmux.conf"))
@@ -145,9 +151,18 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
 
   const installed = anythingInstalled(userHome);
 
-  // --yes / --purge skip prompts; otherwise ask per present category, then confirm.
+  // --yes / --purge preselect sensitive choices and skip the per-category
+  // prompts (jumping to confirm); --force skips the confirm too (auto-start
+  // effect takes over). A bare uninstall asks per present category, then confirms.
   const [phase, setPhase] = useState<Phase>(() =>
-    !installed ? "done" : flags.yes || flags.purge || categories.length === 0 ? "confirm" : "prompt",
+    !installed
+      ? "done"
+      : // --force must never land on "prompt": its interactive useInput would
+        // throw "Raw mode not supported" in the non-TTY context --force is for.
+        // The auto-start effect moves it to "running" on mount.
+        flags.force || flags.yes || flags.purge || categories.length === 0
+        ? "confirm"
+        : "prompt",
   );
   const [promptIdx, setPromptIdx] = useState(0);
   const [aborted, setAborted] = useState(false);
@@ -250,7 +265,7 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
                 ...m,
                 status: coreFail ? "fail" : coreRemoved.length > 0 ? "ok" : "skip",
                 detail: coreFail
-                  ? "some files need root (try: sudo devlair uninstall)"
+                  ? "some files need root — re-run devlair uninstall and enter your password when prompted"
                   : coreRemoved.length > 0
                     ? `removed: ${coreRemoved.join(", ")}`
                     : "nothing to remove",
@@ -286,8 +301,8 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
       setTimeout(() => exitRef.current(), 0);
       return;
     }
-    if (flags.yes || flags.purge) start();
-  }, [installed, flags.yes, flags.purge, start]);
+    if (flags.force) start();
+  }, [installed, flags.force, start]);
 
   // Abort the run only when the component truly unmounts.
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -321,7 +336,7 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
         setTimeout(() => exitRef.current(), 0);
       }
     },
-    { isActive: phase === "confirm" && !flags.yes && !flags.purge },
+    { isActive: phase === "confirm" && !flags.force },
   );
 
   return (
@@ -358,9 +373,21 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
         </Box>
       )}
 
-      {phase === "confirm" && !flags.yes && !flags.purge && (
+      {phase === "confirm" && !flags.force && (
         <Box flexDirection="column">
           <Text color={D_ORANGE}>{"  About to remove devlair, its tools, and configuration."}</Text>
+          <Box flexDirection="column" marginTop={1}>
+            <Text color={D_COMMENT}>{"    reverts: "}</Text>
+            <Text color={D_COMMENT}>{`      ${teardown.map((s) => s.label).join(", ")}`}</Text>
+            <Box marginTop={1}>
+              <Text color={D_COMMENT}>{"    removes: "}</Text>
+            </Box>
+            {coreItems(userHome).map((item) => (
+              <Text key={item.path} color={D_COMMENT}>
+                {`      ${item.path}`}
+              </Text>
+            ))}
+          </Box>
           <Box flexDirection="column" marginTop={1}>
             <Text color={D_COMMENT}>
               {"    packages: "}

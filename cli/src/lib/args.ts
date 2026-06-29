@@ -113,10 +113,12 @@ export function parseDisablePasswordFlags(args: readonly string[]): DisablePassw
 }
 
 export interface UninstallFlags {
-  /** Skip interactive prompts; keep all sensitive items, remove everything else. */
+  /** Preselect "keep" for sensitive items and skip the per-category prompts. Still confirms. */
   yes: boolean;
-  /** Non-interactive; destroy ALL sensitive items too (keys, identity, auth). */
+  /** Preselect "destroy" for ALL sensitive items (keys, identity, auth) and skip the per-category prompts. Still confirms. */
   purge: boolean;
+  /** Skip the final confirmation — fully non-interactive. */
+  force: boolean;
   /** Skip removal of apt/brew packages devlair installed. */
   keepPackages: boolean;
 }
@@ -124,9 +126,12 @@ export interface UninstallFlags {
 export function parseUninstallFlags(args: readonly string[]): UninstallFlags {
   const purge = args.includes("--purge");
   return {
-    // --purge implies non-interactive, so it also satisfies --yes semantics.
+    // --purge preselects "destroy" for every sensitive item, which also skips
+    // the per-category prompts (same as --yes does for "keep").
     yes: args.includes("--yes") || args.includes("-y") || purge,
     purge,
+    // --force is the only flag that skips the final confirmation.
+    force: args.includes("--force") || args.includes("-f"),
     keepPackages: args.includes("--keep-packages"),
   };
 }
