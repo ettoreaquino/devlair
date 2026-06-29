@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.0](https://github.com/ettoreaquino/devlair/compare/v3.0.3...v3.1.0) (2026-06-29)
+
+
+### Features
+
+* **uninstall:** always confirm + interactive sudo, add --force ([#241](https://github.com/ettoreaquino/devlair/issues/241)) ([e09d478](https://github.com/ettoreaquino/devlair/commit/e09d478906db63f5b42d4f8960faafdcb4de5790))
+
 ## [3.0.3](https://github.com/ettoreaquino/devlair/compare/v3.0.2...v3.0.3) (2026-06-29)
 
 
