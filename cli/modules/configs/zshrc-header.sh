@@ -15,3 +15,10 @@ if [[ ! "$ZIM_HOME/init.zsh" -nt "$HOME/.zimrc" ]]; then
   source "$ZIM_HOME/zimfw.zsh" init -q
 fi
 source "$ZIM_HOME/init.zsh"
+
+# zimfw's `environment` module turns on NO_CLOBBER, which makes `>>` to a
+# *nonexistent* file an error (e.g. Homebrew's `... >> ~/.zprofile` on a clean
+# machine). APPEND_CREATE lets `>>` create the file while keeping NO_CLOBBER's
+# protection against clobbering existing files with `>`. Set after init.zsh so
+# it survives zimfw's option setup.
+setopt APPEND_CREATE
