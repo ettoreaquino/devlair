@@ -28,7 +28,7 @@ const HELP_SECTIONS: HelpSection[] = [
   },
   {
     title: "AI Agents",
-    entries: [{ cmd: "claude [--plan TIER] [--1m on|off]", desc: "Status & config (dashboard moved to v1)" }],
+    entries: [{ cmd: "claude [--plan TIER] [--1m on|off]", desc: "Status & config" }],
   },
   {
     title: "tmux Sessions",
