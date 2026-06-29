@@ -7,7 +7,7 @@
  */
 
 import { hostname } from "node:os";
-import { useApp } from "ink";
+import { useApp, useInput } from "ink";
 import { Box, Text } from "ink";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -106,6 +106,18 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
   const [done, setDone] = useState(false);
   const [logDir, setLogDir] = useState<string | null>(null);
 
+  // Abort controller for the module currently waiting on an auth panel. Pressing
+  // Enter aborts it, which tells runModule to send SIGUSR1 so the module stops
+  // polling and continues instead of blocking forever.
+  const authSkipRef = useRef<AbortController | null>(null);
+  const awaitingAuth = modules.some((m) => m.authUrl);
+  useInput(
+    (_input, key) => {
+      if (key.return) authSkipRef.current?.abort();
+    },
+    { isActive: awaitingAuth && process.stdin.isTTY === true },
+  );
+
   // Re-initialize module state whenever specs change
   // (wizard transitions from [] to the real selection).
   useEffect(() => {
@@ -149,8 +161,11 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
         try {
           const scriptPath = moduleScriptPath(spec.key);
           const ownership = invokerOwnership();
+          const skipController = new AbortController();
+          authSkipRef.current = skipController;
           const iter = runModule(scriptPath, context, "run", {
             signal: abortController.signal,
+            skipSignal: skipController.signal,
             logFile: runLogDir ? moduleLogPath(runLogDir, spec.key) : undefined,
             chownUidGid: ownership ?? undefined,
           });
@@ -174,7 +189,13 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
                     ? {
                         ...m,
                         progressMsg: value.message,
-                        progressHistory: m.progressMsg ? [...m.progressHistory, m.progressMsg] : m.progressHistory,
+                        // Only archive the previous message when it differs from
+                        // the incoming one — modules sometimes emit the same step
+                        // twice (e.g. devtools + brew_install both say "installing uv").
+                        progressHistory:
+                          m.progressMsg && m.progressMsg !== value.message
+                            ? [...m.progressHistory, m.progressMsg]
+                            : m.progressHistory,
                       }
                     : m,
                 ),

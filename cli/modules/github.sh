@@ -105,15 +105,34 @@ EOF
   pub=$(cat "${gh_key}.pub")
   json_auth_url "https://github.com/settings/ssh/new" "$pub"
 
-  local poll_interval=3
+  # Poll until the key is accepted. `ssh -T git@github.com` always exits 1
+  # (GitHub provides no shell), so capture its output with `|| true` and grep
+  # the variable — piping straight to grep would, under `set -o pipefail`,
+  # propagate ssh's non-zero exit and the loop would never break.
+  #
+  # The Ink UI sends SIGUSR1 when the user presses Enter to stop waiting. The
+  # trap flips _auth_skip so the loop exits and reports a warn rather than
+  # blocking forever when the key is added out-of-band (or never). The `|| true`
+  # on the ssh invocation also absorbs USR1 that the kernel may forward to the
+  # sudo/ssh grandchild processes, preventing their non-zero exit from surfacing.
+  local poll_interval=3 out
+  local _auth_skip=0
+  trap '_auth_skip=1' USR1
   while true; do
-    if _run_as_user "ssh -T git@github.com -o StrictHostKeyChecking=accept-new 2>&1" | grep -q "successfully authenticated"; then
-      break
+    out=$(_run_as_user "ssh -T git@github.com -o StrictHostKeyChecking=accept-new 2>&1" || true)
+    if grep -q "successfully authenticated" <<<"$out"; then
+      trap - USR1
+      json_result "ok" "connected"
+      return 0
     fi
-    sleep "$poll_interval"
+    if (( _auth_skip )); then break; fi
+    # `|| true`: SIGUSR1 interrupts sleep with a non-zero exit under `set -e`.
+    sleep "$poll_interval" || true
+    if (( _auth_skip )); then break; fi
   done
+  trap - USR1
 
-  json_result "ok" "connected"
+  json_result "warn" "key not verified yet — add it to GitHub, then run 'devlair doctor'"
 }
 
 do_check() {
@@ -125,7 +144,10 @@ do_check() {
     return
   fi
 
-  if _run_as_user "ssh -T git@github.com -o StrictHostKeyChecking=accept-new 2>&1" | grep -q "successfully authenticated"; then
+  # See do_run: ssh -T always exits 1, so capture-then-grep to avoid pipefail.
+  local out
+  out=$(_run_as_user "ssh -T git@github.com -o StrictHostKeyChecking=accept-new 2>&1" || true)
+  if grep -q "successfully authenticated" <<<"$out"; then
     json_check "github connection" "ok"
   else
     json_check "github connection" "fail"

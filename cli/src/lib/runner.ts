@@ -16,6 +16,13 @@ export interface RunOptions {
   timeoutMs?: number;
   /** Abort signal — triggers SIGTERM on the child when aborted. */
   signal?: AbortSignal;
+  /**
+   * Skip signal — sends SIGUSR1 (not SIGTERM) to the child when aborted. Lets a
+   * module that's polling for an out-of-band action (e.g. the github module
+   * waiting for SSH-key authentication) stop waiting and finish, rather than
+   * being killed. Modules opt in by trapping USR1.
+   */
+  skipSignal?: AbortSignal;
   /** Invoked for each stderr line (no trailing newline). */
   onStderr?: (line: string) => void;
   /** Override the bash executable (defaults to "bash"). Useful for tests. */
@@ -134,6 +141,15 @@ export async function* runModule(
     }
   }
 
+  const skipHandler = () => killTree("SIGUSR1");
+  if (options.skipSignal) {
+    if (options.skipSignal.aborted) {
+      skipHandler();
+    } else {
+      options.skipSignal.addEventListener("abort", skipHandler, { once: true });
+    }
+  }
+
   const closePromise = new Promise<number>((resolve, reject) => {
     child.on("close", (code) => resolve(code ?? ModuleExitCode.Failure));
     child.on("error", reject);
@@ -199,6 +215,7 @@ export async function* runModule(
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
     options.signal?.removeEventListener("abort", abortHandler);
+    options.skipSignal?.removeEventListener("abort", skipHandler);
     // If the consumer abandoned the generator (early return / thrown error),
     // kill the process group so detached children don't linger.
     if (!exited) killTree("SIGTERM");
