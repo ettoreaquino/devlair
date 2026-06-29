@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir, userInfo } from "node:os";
 import { join } from "node:path";
 import { runModule } from "../lib/runner.js";
@@ -9,6 +9,14 @@ const SHELL_MODULE = join(import.meta.dir, "../../modules/shell.sh");
 // The module chowns files to USERNAME; use the real invoking user so the
 // chown succeeds for the unprivileged test process (chowning own files to self).
 const REAL_USER = userInfo({ encoding: "utf8" }).username;
+// Marker string is owned by shell.sh; derive it from the source so the refresh
+// test always drives the refresh branch even if the marker text changes (a
+// hardcoded copy would silently fall through to the first-install path).
+const ALIAS_MARKER = (() => {
+  const m = readFileSync(SHELL_MODULE, "utf8").match(/^MARKER="([^"]*)"/m);
+  if (!m) throw new Error("could not find MARKER definition in shell.sh");
+  return m[1];
+})();
 
 let root: string;
 let counter = 0;
@@ -61,5 +69,30 @@ describe("shell module brand persistence", () => {
     const zshrc = readFileSync(join(home, ".zshrc"), "utf8");
     expect(zshrc).toContain(".devlair/brand"); // read logic present
     expect(zshrc).toContain("d e v l a i r"); // default fallback retained
+  });
+});
+
+describe("shell module .zshrc alias refresh", () => {
+  test("refresh keeps a newline between the header and the aliases block", async () => {
+    const home = freshHome();
+    // Simulate a prior devlair-managed .zshrc: a zimfw header ending in the
+    // `source` line, followed by an existing aliases block. The marker being
+    // present forces shell.sh down the refresh path (the bug only triggered on
+    // re-runs, never on first install).
+    const seeded = `export ZIM_HOME="$HOME/.zim"
+source "$ZIM_HOME/init.zsh"
+${ALIAS_MARKER}──
+alias stale="echo old"
+`;
+    writeFileSync(join(home, ".zshrc"), seeded);
+
+    await runShell(home, {});
+
+    const zshrc = readFileSync(join(home, ".zshrc"), "utf8");
+    // Regression: the aliases header must not be glued onto the source line.
+    expect(zshrc).not.toContain('init.zsh"#');
+    expect(zshrc).toContain('source "$ZIM_HOME/init.zsh"\n');
+    // The refreshed block is still present.
+    expect(zshrc).toContain(ALIAS_MARKER);
   });
 });
