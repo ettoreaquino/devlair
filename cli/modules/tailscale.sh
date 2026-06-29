@@ -71,9 +71,19 @@ ts_connect() {
   # `tailscale up` returns. The user is sitting at the wizard; if they need
   # extra time we let them have it. Ctrl-C in the wizard sends SIGTERM down
   # the process group and the EXIT trap below cleans up.
+  #
+  # The Ink UI sends SIGUSR1 when the user presses Enter to stop waiting. Trap
+  # it so we break the poll and fall through to graceful cleanup — an untrapped
+  # USR1 would kill bash by default disposition, skip the EXIT trap, and orphan
+  # the root `tailscale up` process plus the temp log.
+  local _auth_skip=0
+  trap '_auth_skip=1' USR1
   while ! tailscale status >/dev/null 2>&1; do
-    sleep "$poll_interval_secs"
+    if (( _auth_skip )); then break; fi
+    sleep "$poll_interval_secs" || true
+    if (( _auth_skip )); then break; fi
   done
+  trap - USR1
 
   # trap handles kill + wait + rm -f on EXIT; explicit cleanup here so the
   # trap becomes a no-op for the normal path.

@@ -229,6 +229,37 @@ exit 0`,
     expect(final.value.status).toBe("fail");
   });
 
+  test("skip signal lets a trapping module finish instead of dying", async () => {
+    const script = writeScript(
+      "skippable.sh",
+      `source "${LIB_PATH}"
+read_context
+skip=0
+trap 'skip=1' USR1
+json_progress "waiting"
+while true; do
+  if (( skip )); then break; fi
+  sleep 0.1 || true
+done
+json_result "warn" "skipped"
+exit 0`,
+    );
+    const skipController = new AbortController();
+    const iter = runModule(script, ctx(), "run", { skipSignal: skipController.signal });
+    const first = await iter.next();
+    expect(first.done).toBe(false);
+    skipController.abort();
+    const events: ModuleEvent[] = [];
+    let final: IteratorResult<ModuleEvent, RunResult>;
+    do {
+      final = await iter.next();
+      if (!final.done) events.push(final.value);
+    } while (!final.done);
+    // Exited cleanly via its own json_result, not killed by the signal.
+    expect(events).toContainEqual({ type: "result", status: "warn", detail: "skipped" });
+    expect(final.value.exitCode).toBe(0);
+  });
+
   test("passes mode argument to the script", async () => {
     const script = writeScript(
       "mode.sh",

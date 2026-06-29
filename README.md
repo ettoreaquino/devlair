@@ -375,8 +375,8 @@ The installer downloads the latest `devlair-cli-{os}-{arch}` binary and places i
 
 **v2 wizard behavior notes:**
 
-- **GitHub config step** — when the `github` module is selected in the wizard, a dedicated `wizard-github` step collects `github_email` (required, regex-validated) and `github_name` (optional) before execution begins. In non-interactive mode (`--config`), `github_email` must be supplied via `config.github_email` in the profile YAML or the command exits with an error.
-- **Tailscale auth** — browser-based Tailscale authentication waits indefinitely. There is no timeout; the wizard's `AbortController` / SIGTERM is the only cancellation path (Ctrl-C).
+- **GitHub config step** — when the `github` module is selected in the wizard, a dedicated `wizard-github` step collects `github_email` (required, regex-validated) and `github_name` (optional) before execution begins. In non-interactive mode (`--config`), `github_email` must be supplied via `config.github_email` in the profile YAML or the command exits with an error. During the SSH-authentication check, devlair auto-detects a successful `ssh -T git@github.com` handshake; press **Enter** at any point to skip the wait and verify later with `devlair doctor`.
+- **Tailscale auth** — browser-based Tailscale authentication waits for the user to complete the browser flow. Press **Enter** to skip waiting and verify later with `devlair doctor`. Ctrl-C (via the wizard's `AbortController` / SIGTERM) remains the full abort path.
 
 **Develop locally:**
 
