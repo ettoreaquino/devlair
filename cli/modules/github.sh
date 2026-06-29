@@ -112,7 +112,9 @@ EOF
   #
   # The Ink UI sends SIGUSR1 when the user presses Enter to stop waiting. The
   # trap flips _auth_skip so the loop exits and reports a warn rather than
-  # blocking forever when the key is added out-of-band (or never).
+  # blocking forever when the key is added out-of-band (or never). The `|| true`
+  # on the ssh invocation also absorbs USR1 that the kernel may forward to the
+  # sudo/ssh grandchild processes, preventing their non-zero exit from surfacing.
   local poll_interval=3 out
   local _auth_skip=0
   trap '_auth_skip=1' USR1
