@@ -30,10 +30,11 @@ do_check() {
 }
 
 do_uninstall() {
-  # Homebrew is shared infrastructure used by software well beyond devlair, so
-  # plain uninstall never touches it. `devlair uninstall --purge` removes it in
-  # a pre-Ink step (macOsPurgeHomebrew, full TTY for sudo) — by the time this
-  # module runs, brew is already gone, so just report it accurately.
+  # Homebrew is shared infrastructure used by software well beyond devlair.
+  # Plain uninstall never touches it. Under `--purge`, the CLI removes it LAST,
+  # *after* Ink exits (macOsPurgeHomebrew, full TTY for sudo) so the modules can
+  # still use brew to uninstall their packages — and it drops this module from
+  # the in-Ink teardown loop, so do_uninstall only runs on the keep path here.
   if ! cmd_exists brew; then
     json_result "ok" "Homebrew removed"
     return

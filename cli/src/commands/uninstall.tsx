@@ -135,12 +135,28 @@ const CORE_KEY = "__devlair_core__";
 
 type Phase = "prompt" | "confirm" | "running" | "done";
 
-export function UninstallView({ flags }: { flags: UninstallFlags }) {
+export function UninstallView({
+  flags,
+  onOutcome,
+}: {
+  flags: UninstallFlags;
+  /** Called once on a confirmed, completed run so index.tsx can tear down
+   *  Homebrew last (post-Ink, where it has TTY access for its sudo prompt). */
+  onOutcome?: (o: { purgeHomebrew: boolean }) => void;
+}) {
   const { exit } = useApp();
   const exitRef = useRef(exit);
+  const onOutcomeRef = useRef(onOutcome);
 
   const [[username, userHome]] = useState(() => resolveInvokingUser());
   const [platform] = useState(() => detectPlatform());
+
+  // macOS `--purge` removes Homebrew, but it's shared infra and its uninstaller
+  // needs the real TTY — so it's torn down LAST, after Ink exits, by index.tsx.
+  // Here we only decide whether it will happen (for the confirm listing + the
+  // outcome signal) and keep it OUT of the in-Ink teardown loop so brew stays
+  // available while modules use it to uninstall their packages.
+  const [willPurgeHomebrew] = useState(() => platform === "macos" && flags.purge && commandExists("brew"));
 
   // Sensitive categories present on this machine, in order.
   const [categories] = useState(() => SENSITIVE.filter((c) => c.present(userHome)));
@@ -167,7 +183,12 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
 
   const [coreItemsList] = useState(() => coreItems(userHome));
 
-  const teardown = useState(() => resolveTeardownOrder(platform))[0];
+  // When Homebrew is removed post-Ink, drop its module from the in-loop teardown:
+  // running homebrew.sh mid-loop (brew still present) would print a misleading
+  // "Homebrew left installed" row, and the real removal happens after Ink exits.
+  const teardown = useState(() =>
+    resolveTeardownOrder(platform).filter((s) => !(willPurgeHomebrew && s.key === "homebrew")),
+  )[0];
 
   const [modules, setModules] = useState<ModuleRun[]>(() =>
     [...teardown.map((s) => ({ key: s.key, label: s.label })), { key: CORE_KEY, label: "devlair files" }].map((m) => ({
@@ -277,11 +298,14 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
 
       setPhase("done");
       if (coreFail) process.exitCode = 1;
+      // The run proceeded to completion (not aborted): let index.tsx remove
+      // Homebrew last, post-Ink. No-op signal on non-macOS / non-purge runs.
+      onOutcomeRef.current?.({ purgeHomebrew: willPurgeHomebrew });
       setTimeout(() => exitRef.current(), 0);
     })();
 
     return abort;
-  }, [buildContext, teardown, coreItemsList]);
+  }, [buildContext, teardown, coreItemsList, willPurgeHomebrew]);
 
   // Start the teardown exactly once. The AbortController is kept in a ref and
   // only fired on real unmount — NOT tied to a phase-dependent effect, because
@@ -386,6 +410,12 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
                   {`      ${item.path}`}
                 </Text>
               ))}
+              {willPurgeHomebrew && (
+                <Text color={D_ORANGE}>
+                  {"      Homebrew "}
+                  <Text color={D_COMMENT}>{"(removed last — affects all brew-managed software)"}</Text>
+                </Text>
+              )}
             </Box>
           </Box>
           <Box flexDirection="column" marginTop={1}>

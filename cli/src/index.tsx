@@ -68,7 +68,13 @@ function parseCommand(args: string[]): Command {
   return { type: "help" };
 }
 
-function App({ command }: { command: Command }) {
+function App({
+  command,
+  onUninstallOutcome,
+}: {
+  command: Command;
+  onUninstallOutcome?: (o: { purgeHomebrew: boolean }) => void;
+}) {
   if (command.type === "version") {
     return <Text color={D_FG}>devlair {VERSION}</Text>;
   }
@@ -88,7 +94,7 @@ function App({ command }: { command: Command }) {
     return <DisablePasswordView flags={command.flags} />;
   }
   if (command.type === "uninstall") {
-    return <UninstallView flags={command.flags} />;
+    return <UninstallView flags={command.flags} onOutcome={onUninstallOutcome} />;
   }
   return <Help version={VERSION} />;
 }
@@ -117,22 +123,41 @@ async function main() {
             "Warning: --force on macOS cannot prompt for sudo; root-owned artifacts will be skipped if credentials are not already cached.\n",
           );
         }
-        // `--purge` means "remove everything": tear Homebrew down too, pre-Ink
-        // so the uninstaller has TTY access for its sudo prompt. Plain
-        // uninstall leaves shared Homebrew untouched.
-        if (command.flags.purge) macOsPurgeHomebrew();
+        // NOTE: Homebrew (`--purge`) is removed *after* Ink exits, not here — see
+        // the post-render block below. Removing it pre-Ink nuked shared infra with
+        // no confirmation AND left brew gone before the modules could use it to
+        // uninstall their packages. It must come last.
       } else {
         macOsPreFlight();
       }
     }
   }
 
+  // The uninstall view signals, on a confirmed completed run, whether Homebrew
+  // should be torn down. We act on it only after Ink has fully exited.
+  const outcome = { purgeHomebrew: false };
+
   if (command.type === "help" || command.type === "version") {
     const { unmount } = render(<App command={command} />);
     unmount();
   } else {
-    const { waitUntilExit } = render(<App command={command} />);
+    const { waitUntilExit } = render(
+      <App
+        command={command}
+        onUninstallOutcome={(o) => {
+          outcome.purgeHomebrew = o.purgeHomebrew;
+        }}
+      />,
+    );
     await waitUntilExit();
+  }
+
+  // macOS: remove Homebrew LAST — after Ink closes (the official uninstaller
+  // needs the real TTY for its own sudo prompt, which Ink's raw mode blocks) and
+  // only when the confirmed, non-aborted run asked for it. macOsPurgeHomebrew
+  // self-guards on brew presence and an interactive TTY, so --force/CI no-ops.
+  if (process.platform === "darwin" && outcome.purgeHomebrew) {
+    macOsPurgeHomebrew();
   }
 }
 

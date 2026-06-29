@@ -16,7 +16,9 @@
  * Homebrew prompt for the password over the real TTY and manage its own sudo.
  *
  * macOsPurgeHomebrew() is the symmetric teardown for `devlair uninstall
- * --purge`: it runs Homebrew's official uninstaller interactively pre-Ink.
+ * --purge`: it runs Homebrew's official uninstaller interactively. Unlike the
+ * install, the purge runs *after* Ink exits (post-render) so the modules can
+ * still use brew to uninstall their packages and Homebrew is removed last.
  */
 
 import { spawnSync } from "node:child_process";
@@ -193,9 +195,11 @@ export function macOsPreFlight(): void {
 }
 
 /**
- * Remove Homebrew for `devlair uninstall --purge`. Runs pre-Ink with a real
- * TTY (same reason as install). Best-effort: warns instead of aborting, so the
- * rest of the teardown still runs if the uninstaller can't complete.
+ * Remove Homebrew for `devlair uninstall --purge`. Runs post-Ink (after the
+ * teardown checklist closes) with a real TTY for the uninstaller's own sudo
+ * prompt — by then the modules have already used brew to uninstall their
+ * packages. Best-effort: warns instead of aborting, and self-guards on brew
+ * presence + an interactive TTY (so --force/CI no-ops cleanly).
  */
 export function macOsPurgeHomebrew(): void {
   if (brewPath() === null) return; // nothing to remove
