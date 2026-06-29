@@ -15,7 +15,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, rmSync, statSync, unlinkSync } from "node:fs";
+import { existsSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { Box, Text, useApp, useInput } from "ink";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -98,8 +98,7 @@ function coreItems(home: string): CoreItem[] {
 
 function removePrivileged(p: string): boolean {
   try {
-    if (statSync(p).isDirectory()) rmSync(p, { recursive: true, force: true });
-    else unlinkSync(p);
+    rmSync(p, { recursive: true, force: true });
     return true;
   } catch {
     return spawnSync("sudo", ["-n", "rm", "-rf", p], { stdio: "ignore" }).status === 0;
@@ -120,12 +119,11 @@ function removeCoreItem(item: CoreItem): Status {
 /** True when devlair appears to be installed at all. */
 function anythingInstalled(home: string): boolean {
   return (
-    existsSync("/usr/local/bin/devlair") ||
     // The share dir is root-owned, so a half-completed uninstall (user-owned
     // markers gone, privileged removal failed) can leave only this behind —
     // it MUST be detected or the retry wrongly reports "nothing to remove".
-    existsSync("/usr/local/share/devlair") ||
-    existsSync(join(home, ".devlair")) ||
+    coreItems(home).some((item) => existsSync(item.path)) ||
+    // Module-owned sentinels (not tracked in coreItems).
     existsSync(join(home, ".zim")) ||
     existsSync(join(home, ".tmux.conf"))
   );
@@ -166,6 +164,8 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
   );
   const [promptIdx, setPromptIdx] = useState(0);
   const [aborted, setAborted] = useState(false);
+
+  const [coreItemsList] = useState(() => coreItems(userHome));
 
   const teardown = useState(() => resolveTeardownOrder(platform))[0];
 
@@ -255,7 +255,7 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
       // devlair-core removal — runs after every module, last (modules read state
       // from ~/.devlair while they run).
       setModules((prev) => prev.map((m) => (m.key === CORE_KEY ? { ...m, status: "running" } : m)));
-      const results = coreItems(userHome).map((item) => ({ item, status: removeCoreItem(item) }));
+      const results = coreItemsList.map((item) => ({ item, status: removeCoreItem(item) }));
       const coreFail = results.some((r) => r.status === "fail");
       const coreRemoved = results.filter((r) => r.status === "ok").map((r) => r.item.label);
       setModules((prev) =>
@@ -281,7 +281,7 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
     })();
 
     return abort;
-  }, [buildContext, teardown]);
+  }, [buildContext, teardown, coreItemsList]);
 
   // Start the teardown exactly once. The AbortController is kept in a ref and
   // only fired on real unmount — NOT tied to a phase-dependent effect, because
@@ -295,7 +295,7 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
     abortRef.current = runTeardown();
   }, [runTeardown]);
 
-  // Nothing-to-remove fast path, and non-interactive auto-start (--yes/--purge).
+  // Nothing-to-remove fast path, and non-interactive auto-start (--force).
   useEffect(() => {
     if (!installed) {
       setTimeout(() => exitRef.current(), 0);
@@ -379,14 +379,14 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
           <Box flexDirection="column" marginTop={1}>
             <Text color={D_COMMENT}>{"    reverts: "}</Text>
             <Text color={D_COMMENT}>{`      ${teardown.map((s) => s.label).join(", ")}`}</Text>
-            <Box marginTop={1}>
+            <Box flexDirection="column" marginTop={1}>
               <Text color={D_COMMENT}>{"    removes: "}</Text>
+              {coreItemsList.map((item) => (
+                <Text key={item.path} color={D_COMMENT}>
+                  {`      ${item.path}`}
+                </Text>
+              ))}
             </Box>
-            {coreItems(userHome).map((item) => (
-              <Text key={item.path} color={D_COMMENT}>
-                {`      ${item.path}`}
-              </Text>
-            ))}
           </Box>
           <Box flexDirection="column" marginTop={1}>
             <Text color={D_COMMENT}>
