@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.1](https://github.com/ettoreaquino/devlair/compare/v3.1.0...v3.1.1) (2026-06-29)
+
+
+### Bug Fixes
+
+* **uninstall:** confirm Homebrew removal and tear it down last ([#244](https://github.com/ettoreaquino/devlair/issues/244)) ([558d967](https://github.com/ettoreaquino/devlair/commit/558d967bfd7849ff57bd803c9ee610000a52fd41)), closes [#243](https://github.com/ettoreaquino/devlair/issues/243)
+
 ## [3.1.0](https://github.com/ettoreaquino/devlair/compare/v3.0.3...v3.1.0) (2026-06-29)
 
 
