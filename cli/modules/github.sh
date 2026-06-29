@@ -109,16 +109,28 @@ EOF
   # (GitHub provides no shell), so capture its output with `|| true` and grep
   # the variable — piping straight to grep would, under `set -o pipefail`,
   # propagate ssh's non-zero exit and the loop would never break.
+  #
+  # The Ink UI sends SIGUSR1 when the user presses Enter to stop waiting. The
+  # trap flips _auth_skip so the loop exits and reports a warn rather than
+  # blocking forever when the key is added out-of-band (or never).
   local poll_interval=3 out
+  local _auth_skip=0
+  trap '_auth_skip=1' USR1
   while true; do
     out=$(_run_as_user "ssh -T git@github.com -o StrictHostKeyChecking=accept-new 2>&1" || true)
     if grep -q "successfully authenticated" <<<"$out"; then
-      break
+      trap - USR1
+      json_result "ok" "connected"
+      return 0
     fi
-    sleep "$poll_interval"
+    if (( _auth_skip )); then break; fi
+    # `|| true`: SIGUSR1 interrupts sleep with a non-zero exit under `set -e`.
+    sleep "$poll_interval" || true
+    if (( _auth_skip )); then break; fi
   done
+  trap - USR1
 
-  json_result "ok" "connected"
+  json_result "warn" "key not verified yet — add it to GitHub, then run 'devlair doctor'"
 }
 
 do_check() {

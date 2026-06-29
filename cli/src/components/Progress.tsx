@@ -25,6 +25,7 @@ function AuthPanel({ url, message }: { url: string; message: string }) {
       <Text color={D_COMMENT}>
         Add the key above, then return here — devlair checks every few seconds and continues automatically.
       </Text>
+      <Text color={D_COMMENT}>Or press Enter to skip and verify later with `devlair doctor`.</Text>
     </Box>
   );
 }
