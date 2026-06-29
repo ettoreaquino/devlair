@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.2](https://github.com/ettoreaquino/devlair/compare/v3.0.1...v3.0.2) (2026-06-29)
+
+
+### Bug Fixes
+
+* **github:** stop init hanging at SSH-auth step, add Enter escape ([#233](https://github.com/ettoreaquino/devlair/issues/233)) ([a0ae4a6](https://github.com/ettoreaquino/devlair/commit/a0ae4a63c7406457abf2a7ac81b186440c4af082))
+
 ## [3.0.1](https://github.com/ettoreaquino/devlair/compare/v3.0.0...v3.0.1) (2026-06-29)
 
 
