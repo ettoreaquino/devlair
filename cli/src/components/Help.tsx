@@ -16,7 +16,10 @@ const HELP_SECTIONS: HelpSection[] = [
   {
     title: "Setup & Health",
     entries: [
-      { cmd: "init [--only MOD] [--skip MOD] [--group GRP] [--config FILE]", desc: "Set up this machine from scratch" },
+      {
+        cmd: "init [--only MOD] [--skip MOD] [--group GRP] [--config FILE] [--brand NAME]",
+        desc: "Set up this machine from scratch",
+      },
       { cmd: "doctor [--fix]", desc: "Check system health & fix drift" },
       { cmd: "upgrade [--no-self]", desc: "Upgrade tools & re-apply configs" },
       { cmd: "disable-password [--yes]", desc: "Lock SSH to key-only auth" },
