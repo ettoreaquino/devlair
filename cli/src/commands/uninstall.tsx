@@ -8,12 +8,14 @@
  *
  * Sensitive items (SSH keys, git identity, authorized_keys, tailscale auth) are
  * kept by default. Interactively, the user is asked per-category whether to
- * destroy each. `--yes` keeps all of them non-interactively; `--purge` destroys
- * all of them non-interactively.
+ * destroy each. `--yes` preselects "keep" and `--purge` preselects "destroy"
+ * (both skip the per-category prompts); either way a final confirmation that
+ * lists everything is still shown. `--force` is the only flag that skips that
+ * confirmation, for fully non-interactive use.
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, rmSync, statSync, unlinkSync } from "node:fs";
+import { existsSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { Box, Text, useApp, useInput } from "ink";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -96,8 +98,7 @@ function coreItems(home: string): CoreItem[] {
 
 function removePrivileged(p: string): boolean {
   try {
-    if (statSync(p).isDirectory()) rmSync(p, { recursive: true, force: true });
-    else unlinkSync(p);
+    rmSync(p, { recursive: true, force: true });
     return true;
   } catch {
     return spawnSync("sudo", ["-n", "rm", "-rf", p], { stdio: "ignore" }).status === 0;
@@ -118,8 +119,11 @@ function removeCoreItem(item: CoreItem): Status {
 /** True when devlair appears to be installed at all. */
 function anythingInstalled(home: string): boolean {
   return (
-    existsSync("/usr/local/bin/devlair") ||
-    existsSync(join(home, ".devlair")) ||
+    // The share dir is root-owned, so a half-completed uninstall (user-owned
+    // markers gone, privileged removal failed) can leave only this behind —
+    // it MUST be detected or the retry wrongly reports "nothing to remove".
+    coreItems(home).some((item) => existsSync(item.path)) ||
+    // Module-owned sentinels (not tracked in coreItems).
     existsSync(join(home, ".zim")) ||
     existsSync(join(home, ".tmux.conf"))
   );
@@ -145,12 +149,23 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
 
   const installed = anythingInstalled(userHome);
 
-  // --yes / --purge skip prompts; otherwise ask per present category, then confirm.
+  // --yes / --purge preselect sensitive choices and skip the per-category
+  // prompts (jumping to confirm); --force skips the confirm too (auto-start
+  // effect takes over). A bare uninstall asks per present category, then confirms.
   const [phase, setPhase] = useState<Phase>(() =>
-    !installed ? "done" : flags.yes || flags.purge || categories.length === 0 ? "confirm" : "prompt",
+    !installed
+      ? "done"
+      : // --force must never land on "prompt": its interactive useInput would
+        // throw "Raw mode not supported" in the non-TTY context --force is for.
+        // The auto-start effect moves it to "running" on mount.
+        flags.force || flags.yes || flags.purge || categories.length === 0
+        ? "confirm"
+        : "prompt",
   );
   const [promptIdx, setPromptIdx] = useState(0);
   const [aborted, setAborted] = useState(false);
+
+  const [coreItemsList] = useState(() => coreItems(userHome));
 
   const teardown = useState(() => resolveTeardownOrder(platform))[0];
 
@@ -240,7 +255,7 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
       // devlair-core removal — runs after every module, last (modules read state
       // from ~/.devlair while they run).
       setModules((prev) => prev.map((m) => (m.key === CORE_KEY ? { ...m, status: "running" } : m)));
-      const results = coreItems(userHome).map((item) => ({ item, status: removeCoreItem(item) }));
+      const results = coreItemsList.map((item) => ({ item, status: removeCoreItem(item) }));
       const coreFail = results.some((r) => r.status === "fail");
       const coreRemoved = results.filter((r) => r.status === "ok").map((r) => r.item.label);
       setModules((prev) =>
@@ -250,7 +265,7 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
                 ...m,
                 status: coreFail ? "fail" : coreRemoved.length > 0 ? "ok" : "skip",
                 detail: coreFail
-                  ? "some files need root (try: sudo devlair uninstall)"
+                  ? "some files need root — re-run devlair uninstall and enter your password when prompted"
                   : coreRemoved.length > 0
                     ? `removed: ${coreRemoved.join(", ")}`
                     : "nothing to remove",
@@ -266,7 +281,7 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
     })();
 
     return abort;
-  }, [buildContext, teardown]);
+  }, [buildContext, teardown, coreItemsList]);
 
   // Start the teardown exactly once. The AbortController is kept in a ref and
   // only fired on real unmount — NOT tied to a phase-dependent effect, because
@@ -280,14 +295,14 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
     abortRef.current = runTeardown();
   }, [runTeardown]);
 
-  // Nothing-to-remove fast path, and non-interactive auto-start (--yes/--purge).
+  // Nothing-to-remove fast path, and non-interactive auto-start (--force).
   useEffect(() => {
     if (!installed) {
       setTimeout(() => exitRef.current(), 0);
       return;
     }
-    if (flags.yes || flags.purge) start();
-  }, [installed, flags.yes, flags.purge, start]);
+    if (flags.force) start();
+  }, [installed, flags.force, start]);
 
   // Abort the run only when the component truly unmounts.
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -321,7 +336,7 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
         setTimeout(() => exitRef.current(), 0);
       }
     },
-    { isActive: phase === "confirm" && !flags.yes && !flags.purge },
+    { isActive: phase === "confirm" && !flags.force },
   );
 
   return (
@@ -358,9 +373,21 @@ export function UninstallView({ flags }: { flags: UninstallFlags }) {
         </Box>
       )}
 
-      {phase === "confirm" && !flags.yes && !flags.purge && (
+      {phase === "confirm" && !flags.force && (
         <Box flexDirection="column">
           <Text color={D_ORANGE}>{"  About to remove devlair, its tools, and configuration."}</Text>
+          <Box flexDirection="column" marginTop={1}>
+            <Text color={D_COMMENT}>{"    reverts: "}</Text>
+            <Text color={D_COMMENT}>{`      ${teardown.map((s) => s.label).join(", ")}`}</Text>
+            <Box flexDirection="column" marginTop={1}>
+              <Text color={D_COMMENT}>{"    removes: "}</Text>
+              {coreItemsList.map((item) => (
+                <Text key={item.path} color={D_COMMENT}>
+                  {`      ${item.path}`}
+                </Text>
+              ))}
+            </Box>
+          </Box>
           <Box flexDirection="column" marginTop={1}>
             <Text color={D_COMMENT}>
               {"    packages: "}

@@ -5,6 +5,33 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
+
+/**
+ * Cache sudo credentials up front so later `sudo -n` calls succeed.
+ *
+ * On macOS `elevateIfNeeded()` deliberately does NOT re-exec the process as
+ * root (Homebrew refuses root, modules install to user space). But the
+ * devlair-core artifacts (`/usr/local/bin/devlair`, `/usr/local/share/devlair`)
+ * are root-owned, so uninstall's `sudo -n rm` fallback fails on a machine
+ * without cached sudo creds — surfacing as "[N/N] some files need root".
+ *
+ * Priming `sudo -v` here, BEFORE Ink starts rendering, prompts for the password
+ * once over the real TTY (Ink's raw mode would otherwise swallow it) and caches
+ * the timestamp the later `sudo -n rm` relies on. No-op when nothing privileged
+ * is present, when already root, or when sudo is unavailable.
+ */
+export function primeSudoForRootArtifacts(paths: readonly string[]): void {
+  if (process.platform !== "darwin") return;
+  if (process.getuid?.() === 0) return;
+  if (!paths.some((p) => existsSync(p))) return;
+
+  const result = spawnSync("sudo", ["-v"], { stdio: "inherit" });
+  if (result.error || (result.status ?? 1) !== 0) {
+    // Don't hard-fail: the run can still proceed and report what needs root.
+    process.stderr.write("Warning: could not cache sudo credentials; root-owned files may not be removed.\n");
+  }
+}
 
 export function elevateIfNeeded(): void {
   // macOS: Homebrew refuses to run as root, and all macOS modules install to

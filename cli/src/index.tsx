@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { existsSync } from "node:fs";
 import { Text, render } from "ink";
 import pkg from "../package.json" with { type: "json" };
 import { ClaudeView } from "./commands/claude.js";
@@ -22,7 +23,7 @@ import {
   parseUninstallFlags,
   parseUpgradeFlags,
 } from "./lib/args.js";
-import { elevateIfNeeded } from "./lib/elevate.js";
+import { elevateIfNeeded, primeSudoForRootArtifacts } from "./lib/elevate.js";
 import { macOsPreFlight, macOsPurgeHomebrew } from "./lib/homebrew.js";
 import { D_FG } from "./lib/theme.js";
 
@@ -105,6 +106,17 @@ async function main() {
     // Skip for uninstall — we must never *install* Homebrew while tearing down.
     if (process.platform === "darwin") {
       if (command.type === "uninstall") {
+        // Cache sudo creds before Ink starts so the root-owned devlair-core
+        // artifacts can be removed. `--force` is non-interactive (can't prompt
+        // for a password), so skip priming there.
+        const rootArtifacts = ["/usr/local/bin/devlair", "/usr/local/share/devlair"];
+        if (!command.flags.force) {
+          primeSudoForRootArtifacts(rootArtifacts);
+        } else if (rootArtifacts.some((p) => existsSync(p))) {
+          process.stderr.write(
+            "Warning: --force on macOS cannot prompt for sudo; root-owned artifacts will be skipped if credentials are not already cached.\n",
+          );
+        }
         // `--purge` means "remove everything": tear Homebrew down too, pre-Ink
         // so the uninstaller has TTY access for its sudo prompt. Plain
         // uninstall leaves shared Homebrew untouched.

@@ -54,16 +54,34 @@ describe("parseUninstallFlags", () => {
     const f = parseUninstallFlags([]);
     expect(f.yes).toBe(false);
     expect(f.purge).toBe(false);
+    expect(f.force).toBe(false);
     expect(f.keepPackages).toBe(false);
   });
 
-  test("--yes / -y skip prompts", () => {
+  test("--yes / -y preselect keep (skip per-category prompts) but still confirm", () => {
     expect(parseUninstallFlags(["--yes"]).yes).toBe(true);
     expect(parseUninstallFlags(["-y"]).yes).toBe(true);
+    expect(parseUninstallFlags(["--yes"]).force).toBe(false);
   });
 
-  test("--purge implies non-interactive (yes) and sets purge", () => {
+  test("--purge preselects destroy (yes) but does not skip the confirm", () => {
     const f = parseUninstallFlags(["--purge"]);
+    expect(f.purge).toBe(true);
+    expect(f.yes).toBe(true);
+    expect(f.force).toBe(false);
+  });
+
+  test("--force / -f is the only non-interactive escape hatch", () => {
+    expect(parseUninstallFlags(["--force"]).force).toBe(true);
+    expect(parseUninstallFlags(["-f"]).force).toBe(true);
+    // --force alone keeps sensitive items (yes/purge unset).
+    expect(parseUninstallFlags(["--force"]).yes).toBe(false);
+    expect(parseUninstallFlags(["--force"]).purge).toBe(false);
+  });
+
+  test("--force --purge is non-interactive and destroys sensitive items", () => {
+    const f = parseUninstallFlags(["--force", "--purge"]);
+    expect(f.force).toBe(true);
     expect(f.purge).toBe(true);
     expect(f.yes).toBe(true);
   });
@@ -73,5 +91,6 @@ describe("parseUninstallFlags", () => {
     expect(f.keepPackages).toBe(true);
     expect(f.yes).toBe(false);
     expect(f.purge).toBe(false);
+    expect(f.force).toBe(false);
   });
 });
