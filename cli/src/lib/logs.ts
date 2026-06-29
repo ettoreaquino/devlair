@@ -2,7 +2,7 @@
 // to its own file so failures can be diagnosed without re-running with extra
 // flags.
 
-import { chmodSync, chownSync, lstatSync, mkdirSync, readdirSync, rmSync, statSync } from "node:fs";
+import { chmodSync, chownSync, lstatSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const KEEP_RUNS = 10;
@@ -76,26 +76,22 @@ export function createInitLogDir(userHome: string, now: Date = new Date()): stri
 }
 
 function pruneOldRuns(logsRoot: string, keep: number): void {
-  let entries: { name: string; mtimeMs: number }[];
+  let names: string[];
   try {
-    entries = readdirSync(logsRoot)
-      .filter((name) => name.startsWith(LOG_DIR_PREFIX))
-      .map((name) => {
-        const full = join(logsRoot, name);
-        try {
-          return { name, mtimeMs: statSync(full).mtimeMs };
-        } catch {
-          return null;
-        }
-      })
-      .filter((e): e is { name: string; mtimeMs: number } => e !== null);
+    names = readdirSync(logsRoot).filter((name) => name.startsWith(LOG_DIR_PREFIX));
   } catch {
     return;
   }
-  if (entries.length <= keep) return;
-  entries.sort((a, b) => b.mtimeMs - a.mtimeMs || b.name.localeCompare(a.name));
-  for (const stale of entries.slice(keep)) {
-    const path = join(logsRoot, stale.name);
+  if (names.length <= keep) return;
+  // Sort by directory name, which is the run's ISO-8601 UTC timestamp from
+  // runDirName(). The format is fixed-width, so a plain code-unit sort (default,
+  // locale-independent) orders chronologically. The name is the canonical run
+  // identity; sorting by it avoids depending on filesystem mtime, whose
+  // granularity made an mtime-based sort flaky on CI.
+  names.sort(); // ascending: oldest first
+  const stale = names.slice(0, names.length - keep);
+  for (const name of stale) {
+    const path = join(logsRoot, name);
     try {
       // Re-lstat to guard against a TOCTOU race where the entry was replaced
       // with a symlink between readdirSync and now — never rmSync a symlink target.
