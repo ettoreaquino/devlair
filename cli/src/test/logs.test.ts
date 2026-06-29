@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, readFileSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -28,24 +28,25 @@ describe("createInitLogDir", () => {
   test("prunes older runs, keeping the 10 most recent", () => {
     const logsRoot = join(home, ".devlair", "logs");
     mkdirSync(logsRoot, { recursive: true });
-    // Seed 12 fake older runs, mtimes spaced 1s apart so sort order is stable.
+    // Seed 12 fake older runs. Pruning sorts by directory name (the ISO-8601
+    // run timestamp), so recency is encoded in the name alone — no mtime needed.
     for (let i = 0; i < 12; i++) {
-      const name = `init-2025-01-01T00-00-${i.toString().padStart(2, "0")}Z`;
-      const path = join(logsRoot, name);
-      mkdirSync(path);
-      writeFileSync(join(path, "marker"), name);
-      const t = new Date(2025, 0, 1, 0, 0, i).getTime() / 1000;
-      utimesSync(path, t, t);
+      mkdirSync(join(logsRoot, `init-2025-01-01T00-00-${i.toString().padStart(2, "0")}Z`));
     }
-    createInitLogDir(home);
+    // Explicit `now` newer than every seed (00..11) so the result is
+    // deterministic regardless of the wall clock.
+    createInitLogDir(home, new Date(Date.UTC(2025, 0, 1, 0, 0, 30)));
     const remaining = readdirSync(logsRoot)
       .filter((n) => n.startsWith("init-"))
       .sort();
     // 10 retained including the just-created one.
     expect(remaining.length).toBe(10);
-    // The oldest seeded entries (00, 01) should be gone.
+    // The three oldest seeds (00, 01, 02) should be pruned.
     expect(remaining.some((n) => n.endsWith("-00Z"))).toBe(false);
     expect(remaining.some((n) => n.endsWith("-01Z"))).toBe(false);
+    expect(remaining.some((n) => n.endsWith("-02Z"))).toBe(false);
+    // The just-created run is retained.
+    expect(remaining.some((n) => n.endsWith("-30Z"))).toBe(true);
   });
 });
 
