@@ -322,7 +322,7 @@ Verifies every component without making changes — checks installed tools, conf
 devlair upgrade
 ```
 
-Checks for a new devlair binary first — if a new version is available, it downloads, replaces, and re-execs so the rest of the upgrade runs new code. Then upgrades system packages and any tools that were installed during init (Docker, GitHub CLI, AWS CLI, pyenv/Python, nvm/Node, Bun). After upgrading, automatically re-applies module configurations (hooks, settings, shell aliases) so new config shapes take effect immediately. Use `--no-self` to skip the binary update.
+Checks for a new devlair binary first — if a newer release of the same major version is available, it downloads, replaces, and re-execs so the rest of the upgrade runs new code. When a newer major version exists (e.g. v3.x while running v1), the self-update is skipped and devlair prints guidance to reinstall via `install.sh` instead (cross-major binaries have a different asset name and runtime and cannot be swapped in place). Then upgrades system packages and any tools that were installed during init (Docker, GitHub CLI, AWS CLI, pyenv/Python, nvm/Node, Bun). After upgrading, automatically re-applies module configurations (hooks, settings, shell aliases) so new config shapes take effect immediately. Use `--no-self` to skip the binary update.
 
 ## Requirements
 

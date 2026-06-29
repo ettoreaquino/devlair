@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 
 import httpx
@@ -177,6 +178,66 @@ def _installed_version() -> str:
     return __version__
 
 
+# Display-only: printed as upgrade guidance, never executed. Do not pass to a
+# shell/subprocess.
+INSTALL_CMD = "curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | sudo bash"
+
+# A real devlair release tag is canonical MAJOR.MINOR.PATCH (release-please).
+# Anything else is rejected before its tag can flow into a download URL.
+_CANONICAL_VERSION = re.compile(r"\d+\.\d+\.\d+")
+
+
+def _version_tuple(version: str) -> tuple[int, ...]:
+    """Parse a dotted version into a tuple of ints. Each component is split on
+    '-' to drop a pre-release suffix, and parsing stops at the first component
+    that is not purely numeric (so '1.2.0-rc1' -> (1, 2, 0); '1.x.0' -> (1,))."""
+    parts: list[int] = []
+    for component in version.split("."):
+        num = component.split("-")[0]
+        if not num.isdigit():
+            break
+        parts.append(int(num))
+    return tuple(parts)
+
+
+def _pick_update(releases: list[dict], current: str) -> tuple[str | None, bool]:
+    """Choose the best self-update from a GitHub releases list.
+
+    Returns (latest_same_major_version, newer_major_exists), versions stripped of
+    the leading 'v'. Drafts, prereleases, and non-canonical tags are ignored.
+
+    The self-updater can only swap a same-major binary in place: v1 release
+    assets are named ``devlair-<arch>`` whereas v2+ ship ``devlair-cli-<arch>``
+    (a different runtime entirely), so a v1 binary fetching the absolute-latest
+    release 404s. Resolving the latest *same-major* release fixes in-major
+    updates; the newer-major flag lets the caller redirect to install.sh.
+
+    Only canonical MAJOR.MINOR.PATCH tags are considered, so the returned
+    version is always safe to interpolate into the binary download URL.
+    """
+    current_t = _version_tuple(current)
+    if not current_t:
+        return None, False
+    current_major = current_t[0]
+
+    best_same: str | None = None
+    best_same_t: tuple[int, ...] = ()
+    newer_major = False
+    for release in releases:
+        if release.get("draft") or release.get("prerelease"):
+            continue
+        tag = str(release.get("tag_name", "")).removeprefix("v")
+        if not _CANONICAL_VERSION.fullmatch(tag):
+            continue
+        version_t = _version_tuple(tag)
+        if version_t[0] == current_major:
+            if version_t > best_same_t:
+                best_same, best_same_t = tag, version_t
+        elif version_t[0] > current_major:
+            newer_major = True
+    return best_same, newer_major
+
+
 def _self_update() -> Path | None:
     """Check for and install a newer devlair binary.
 
@@ -191,16 +252,26 @@ def _self_update() -> Path | None:
     with console.status("[step]Checking for devlair updates...[/step]", spinner="dots", spinner_style=D_PURPLE):
         try:
             resp = httpx.get(
-                "https://api.github.com/repos/ettoreaquino/devlair/releases/latest",
+                "https://api.github.com/repos/ettoreaquino/devlair/releases?per_page=30",
                 timeout=10,
             )
             resp.raise_for_status()
-            latest = resp.json()["tag_name"].removeprefix("v")
+            latest, newer_major = _pick_update(resp.json(), current)
         except Exception as exc:
             console.print(f"  [warning]Could not check for updates: {exc}[/warning]")
             return None
 
-    if latest == current:
+    # A newer major ships as a separate binary with a different asset name and
+    # runtime — it cannot be swapped in place, so point the user at install.sh
+    # instead of attempting a download that would 404.
+    if newer_major:
+        console.print("  [warning]A newer major version of devlair is available.[/warning]")
+        console.print("  [muted]New majors ship as a separate binary and can't be self-updated in place.[/muted]")
+        console.print("  [info]Upgrade with:[/info]")
+        console.print(f"    [accent]{INSTALL_CMD}[/accent]")
+        return None
+
+    if not latest or latest == current:
         console.print(f"  [muted]devlair {current} is already up to date.[/muted]")
         return None
 
