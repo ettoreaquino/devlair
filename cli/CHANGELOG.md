@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.3](https://github.com/ettoreaquino/devlair/compare/v3.0.2...v3.0.3) (2026-06-29)
+
+
+### Bug Fixes
+
+* **macos:** interactive Homebrew pre-flight + noclobber-safe zsh ([#236](https://github.com/ettoreaquino/devlair/issues/236)) ([9c152cc](https://github.com/ettoreaquino/devlair/commit/9c152ccaacee827278bafdf21da4f9efb20ec256))
+
 ## [3.0.2](https://github.com/ettoreaquino/devlair/compare/v3.0.1...v3.0.2) (2026-06-29)
 
 
