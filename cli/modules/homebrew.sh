@@ -30,8 +30,14 @@ do_check() {
 }
 
 do_uninstall() {
-  # Homebrew is shared infrastructure used by software well beyond devlair;
-  # uninstalling it would be destructive and surprising. Never touch it.
+  # Homebrew is shared infrastructure used by software well beyond devlair, so
+  # plain uninstall never touches it. `devlair uninstall --purge` removes it in
+  # a pre-Ink step (macOsPurgeHomebrew, full TTY for sudo) — by the time this
+  # module runs, brew is already gone, so just report it accurately.
+  if ! cmd_exists brew; then
+    json_result "ok" "Homebrew removed"
+    return
+  fi
   json_result "skip" "Homebrew left installed"
   exit 2
 }
