@@ -6,11 +6,11 @@
   <img alt="devlair" src="assets/logo.svg" width="480">
 </picture>
 
-**One command to provision a fully configured Ubuntu or WSL development machine.**
+**One command to provision a fully configured Ubuntu, WSL, or macOS development machine.**
 
 [![Release](https://img.shields.io/github/v/release/ettoreaquino/devlair?style=flat-square)](https://github.com/ettoreaquino/devlair/releases/latest)
-[![CI](https://img.shields.io/github/actions/workflow/status/ettoreaquino/devlair/lint.yml?style=flat-square&label=CI)](https://github.com/ettoreaquino/devlair/actions)
-[![Platform](https://img.shields.io/badge/platform-Ubuntu_%7C_WSL-E95420?style=flat-square&logo=ubuntu&logoColor=white)](https://ubuntu.com)
+[![CI](https://img.shields.io/github/actions/workflow/status/ettoreaquino/devlair/ci-v2.yml?style=flat-square&label=CI)](https://github.com/ettoreaquino/devlair/actions)
+[![Platform](https://img.shields.io/badge/platform-Ubuntu%20%7C%20WSL%20%7C%20macOS-E95420?style=flat-square&logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![License](https://img.shields.io/github/license/ettoreaquino/devlair?style=flat-square)](LICENSE)
 
 </div>
@@ -23,19 +23,43 @@ and wiring up dev toolchains. Run it once on a fresh machine or re-run anytime t
 
 ## Quick start
 
-**macOS**
+**1. Install the binary**
+
+macOS:
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | bash
-devlair init
 ```
 
-**Linux / WSL**
+Linux / WSL:
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | sudo bash
+```
+
+The installer downloads the `devlair` binary to `/usr/local/bin` and auto-elevates only when that path is not writable — on macOS with Homebrew, `sudo` is usually not needed.
+
+**2. Provision the machine**
+
+```bash
 devlair init
 ```
 
-The installer auto-elevates only when `/usr/local/bin` is not writable — on macOS with Homebrew that's usually not needed. `devlair init` takes care of the rest.
+`devlair init` launches an interactive wizard that walks you through group and module selection, then converges the machine to the desired state.
+
+**Common options**
+
+```bash
+devlair init --group core,coding      # run only specific module groups
+devlair init --only ssh,tmux          # run individual modules (deps auto-added)
+devlair init --skip gnome_terminal    # exclude modules from a run
+devlair init --config setup.yaml      # drive selection from a YAML profile
+
+# White-label the login banner and wizard for your team/company:
+devlair init --brand "acme"           # banner reads "a c m e" instead of "devlair"
+```
+
+`--brand` is persisted to `~/.devlair/brand` and reused automatically on every subsequent run and login.
 
 ## Why devlair
 
@@ -52,7 +76,7 @@ Run it once or a hundred times — devlair always converges to the desired state
 
 **Security-first**
 
-SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the box on Linux. On WSL, network modules that require `systemctl` are auto-skipped. Disable password auth with a single command when you're ready.
+SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the box on Linux. On WSL and macOS, modules that require `systemctl` are auto-skipped. Disable password auth with a single command when you're ready.
 
 </td>
 <td width="33%" valign="top">
@@ -80,22 +104,22 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
   vX.Y.Z
 
   Setup & Health
-    init [--only MOD] [--skip MOD] [--group GRP] [--config FILE] [--brand NAME]  Interactive wizard (or non-interactive with flags)
-    doctor [--fix]                      Check system health & fix drift
-    upgrade [--no-self]                 Upgrade tools & re-apply configs
-    disable-password                    Lock SSH to key-only auth
-    uninstall [--yes] [--purge]         Remove everything devlair installed
+    init [--only MOD] [--skip MOD] [--group GRP] [--config FILE] [--brand NAME]  Set up this machine from scratch
+    doctor [--fix]                          Check system health & fix drift
+    upgrade [--no-self]                     Upgrade tools & re-apply configs
+    disable-password [--yes]                Lock SSH to key-only auth
+    uninstall [--yes] [--purge]             Remove everything devlair installed
       [--keep-packages]
 
   AI Agents
-    claude [--plan TIER] [--1m on|off]  Usage dashboard & config
+    claude [--plan TIER] [--1m on|off]      Status & config
 
   tmux Sessions
-    t                                   Start/attach default 'dev' session
-    tmx <name>                          Attach to a named session
-    tmx new --name N                    Create a plain session
-    tmx new --name N --claude           Session with Claude Code
-    Ctrl+A  y                           Claude Code popup (any session)
+    t                                       Start/attach default 'dev' session
+    tmx <name>                              Attach to a named session
+    tmx new --name N                        Create a plain session
+    tmx new --name N --claude               Session with Claude Code
+    Ctrl+A  y                               Claude Code popup (any session)
 
   Options:  --version -v  Show version    --help  Show this screen
 ```
@@ -118,6 +142,9 @@ devlair init --only claude
 # Skip specific modules
 devlair init --skip devtools,gnome_terminal
 
+# White-label the brand on the login banner + wizard
+devlair init --brand "acme"
+
 # Setup from a YAML profile
 devlair init --config setup.yaml
 
@@ -130,20 +157,6 @@ devlair doctor --fix
 # Upgrade all tools + re-apply configs + update devlair itself
 devlair upgrade
 ```
-
-
-<details>
-<summary><b>Claude Code dashboard</b></summary>
-
-```bash
-# Claude Code usage dashboard
-devlair claude
-
-# Set your Claude Max plan tier
-devlair claude --plan max5x
-```
-
-</details>
 
 <details>
 <summary><b>tmux sessions</b></summary>
@@ -166,48 +179,76 @@ tmx new --name work --claude
 
 ## Claude Code integration
 
-devlair hooks into Claude Code to track session usage and display a dashboard:
+The opt-in `claude` module installs Claude Code and merges devlair-managed keys into `~/.claude/settings.json` (model, effort level). The `devlair claude` command shows a short status panel and configures your plan and context window:
 
 ```
-╭──────────────────────── devlair  claude  max5x ─────────────────────────╮
-│  session  ████░░░░░░░░░░░░░░░░░░  7%  ~$4.20  3.1M in 25K out         │
-│                                        resets in ~3h38m                │
-│                                                                        │
-│  all models  ██░░░░░░░░░░░░░░░░░░░░  4%  ~$78  45M in 170K out        │
-│                                        resets Fri 09:00 AM · 20 sess.  │
-│                                                                        │
-│  sonnet only  █░░░░░░░░░░░░░░░░░░░░░  2%  ~$12  27M in 77K out        │
-│                                        resets Mon 09:00 AM · 7 sess.   │
-╰────────────────────────────────────────────────────────────────────────╯
+devlair  claude  max5x
+
+  plan   max5x
+  model  sonnet
 ```
 
-- **Session** — 5h rolling window: percentage of estimated plan budget, cost at API rates, token counts, reset countdown
-- **All models** — weekly usage against total budget, resets every Friday 09:00; session count
-- **Sonnet only** — weekly Sonnet usage tracked separately, resets every Monday 09:00
-- **Plan-aware** — supports `pro`, `max5x`, and `max20x` tiers (`devlair claude --plan <tier>`)
+- `devlair claude` — show the current plan and model
+- `devlair claude --plan pro|max5x|max20x` — set your subscription tier
+- `devlair claude --1m on|off` — toggle 1M-token context (sets `opus[1m]` / `sonnet`)
+
+> A full usage dashboard (budget bars, cost tracking) is not part of devlair.
 
 ## What gets installed
 
-`devlair init` runs these modules in order. Some modules are **opt-in** and not included in a default run — use `devlair init --only <module>` or `--group` to enable them. Opt-in modules: `claude`; `tailscale` is opt-in on WSL and macOS. Portable modules (supported on Linux, WSL, and macOS): `system`, `tailscale`, `zsh`, `tmux`, `rclone`, `github`, `shell`, `claude`, `devtools`. macOS-only modules (auto-skipped on Linux/WSL): `homebrew` (Homebrew preamble — on macOS, `macOsPreFlight()` runs before the Ink UI starts; it first checks that the user is a local admin (`isMacAdmin()`) and exits with an error if not; if Homebrew is already installed it adds brew to PATH, otherwise it caches sudo credentials via `sudo -v` so the `homebrew` module can run the installer non-interactively as step [1/8]; the `homebrew` module is a dependency of `system`, `zsh`, `tmux`, and `devtools` on macOS). Linux-only modules (auto-skipped elsewhere): `firewall`, `gnome_terminal`, `ssh`, `timezone`.
+`devlair init` runs a set of modules in dependency order. Most run by default; a few are **opt-in** (enable with `devlair init --only <module>` or `--group`). Module availability and defaults vary by platform:
+
+| Module | Linux | WSL | macOS |
+|--------|:-----:|:---:|:-----:|
+| `homebrew` — Homebrew bootstrap | — | — | ✓ |
+| `system` — OS packages & essentials | ✓ | ✓ | ✓ |
+| `timezone` — IANA timezone | ✓ | — | — |
+| `tailscale` — VPN | ✓ | ○ | ○ |
+| `ssh` — hardened SSH server | ✓ | — | — |
+| `firewall` — UFW + Fail2Ban | ✓ | — | — |
+| `zsh` — shell + Dracula prompt | ✓ | ✓ | ✓ |
+| `tmux` — Dracula multiplexer | ✓ | ✓ | ✓ |
+| `devtools` — dev toolchain | ✓ | ✓ | ✓ |
+| `github` — SSH key + git config | ✓ | ✓ | ✓ |
+| `shell` — aliases + login banner | ✓ | ✓ | ✓ |
+| `gnome_terminal` — Dracula palette | ✓ | — | — |
+| `claude` — Claude Code | ○ | ○ | ○ |
+
+Legend: ✓ runs by default · ○ available, opt-in (`--only`) · — not applicable
+
+### On Linux / WSL
+
+Packages install via `apt`. Core essentials (`git`, `curl`, `vim`, `htop`, `tmux`, `zsh`, `bat`, `fzf`, `build-essential`, `jq`, and more) are installed on every Linux/WSL run. On bare Linux, `system` also installs `openssh-server`, `ufw`, `fail2ban`, and `avahi-daemon`, and the dedicated `ssh`, `firewall`, `timezone`, and `gnome_terminal` modules run. On **WSL** these systemd-dependent modules are auto-skipped (and `wslu` is installed so `wslview` can open your Windows browser). Docker installs via apt on bare Linux; on WSL it expects Docker Desktop for Windows with WSL integration enabled.
+
+### On macOS
+
+Before the wizard UI starts, a pre-flight verifies you're a local admin and installs Homebrew if it's missing — running Homebrew's official installer interactively (it prompts for your password over the terminal). This is the single point of Homebrew installation; all packages then install via `brew`. Linux-only modules (`timezone`, `ssh`, `firewall`, `gnome_terminal`) are skipped. In `devtools`, `uv`, `pyenv`, `fzf`, `gh`, `aws`, and `bun` install via `brew` (with pyenv's build deps), while `nvm` uses its official install script. **Docker is not installed** — the module prints guidance to install Docker Desktop for Mac and continues without error.
+
+<details>
+<summary><b>Homebrew</b> — package-manager bootstrap (macOS)</summary>
+
+macOS-only. Before the wizard UI starts, a pre-flight (`macOsPreFlight()`) checks that the user is a local admin (exiting with guidance if not) and requires an interactive terminal. If Homebrew is missing it runs Homebrew's official installer interactively — Homebrew prompts for your password over the real TTY. This is the single point of Homebrew installation; the `homebrew` module step itself just confirms `brew` is on `PATH`. `homebrew` is a dependency of `system`, `zsh`, `tmux`, and `devtools` on macOS.
+
+</details>
 
 <details>
 <summary><b>System</b> — OS packages and essentials</summary>
 
-Runs `apt update && upgrade` and installs core packages: `git`, `curl`, `vim`, `htop`, `tmux`, `zsh`, `bat`, `fzf`, `build-essential`, and more. On bare Linux it also installs `openssh-server`, `ufw`, `fail2ban`, and `avahi-daemon`; these are skipped on WSL because they ship systemd-managed postinst scripts that don't work under WSL's systemd-less default (the dedicated `ssh` and `firewall` modules are also Linux-only). On macOS, Homebrew is guaranteed to be on PATH before this module runs — `macOsPreFlight()` in `index.tsx` adds brew to PATH if already installed, or the `homebrew` module installs it as step [1/8] if not. The module runs `brew update && brew upgrade` and installs a set of macOS essentials via `brew install` (`git`, `curl`, `wget`, `vim`, `htop`, `tmux`, `unzip`, `jq`, `tree`, `rsync`, `zsh`, `bat`, `fzf`, `gnupg`).
+On Linux/WSL, runs `apt update && upgrade` and installs core packages: `curl`, `wget`, `git`, `vim`, `htop`, `tmux`, `unzip`, `net-tools`, `build-essential`, `ca-certificates`, `gnupg`, `jq`, `tree`, `rsync`, `zsh`, `bat`, `fzf`, `locales`. On bare Linux it also installs `openssh-server`, `ufw`, `fail2ban`, and `avahi-daemon`; these are skipped on WSL because they ship systemd-managed postinst scripts that don't work under WSL's systemd-less default (the dedicated `ssh` and `firewall` modules are also Linux-only). WSL additionally gets `wslu`. On macOS the module runs `brew update && brew upgrade` and installs the macOS essentials via `brew install` (`git`, `curl`, `wget`, `vim`, `htop`, `tmux`, `unzip`, `jq`, `tree`, `rsync`, `zsh`, `bat`, `fzf`, `gnupg`).
 
 </details>
 
 <details>
 <summary><b>Timezone</b> — interactive timezone configuration</summary>
 
-Displays the current timezone and prompts for a new one. Uses `timedatectl set-timezone` on Linux/WSL. The configured timezone is IANA-validated before being applied; `do_check` reports `fail` when the timezone cannot be read. Linux-only — auto-skipped on WSL and macOS.
+Displays the current timezone and prompts for a new one. Uses `timedatectl set-timezone`. The configured timezone is IANA-validated before being applied; the health check reports `fail` when the timezone cannot be read. Linux-only — auto-skipped on WSL and macOS.
 
 </details>
 
 <details>
 <summary><b>Tailscale</b> — VPN for secure remote access</summary>
 
-Installs [Tailscale](https://tailscale.com) and walks you through browser-based authentication. Your Tailscale IP is used to restrict SSH access.
+Installs [Tailscale](https://tailscale.com) and walks you through browser-based authentication. On Linux your Tailscale IP is used to restrict SSH access. Runs by default on Linux; **opt-in on WSL and macOS** (`--only tailscale`). During the browser flow, press **Enter** to skip waiting and verify later with `devlair doctor`.
 
 </details>
 
@@ -227,7 +268,7 @@ Prompts for your SSH public key if `authorized_keys` is empty. Linux-only — au
 <details>
 <summary><b>Firewall</b> — UFW + Fail2Ban</summary>
 
-Resets and configures UFW (default deny incoming, allow outgoing). Sets up Fail2Ban with 1-hour ban times and 3 max retries.
+Resets and configures UFW (default deny incoming, allow outgoing). Sets up Fail2Ban with 1-hour ban times and 3 max retries. Linux-only — auto-skipped on macOS and WSL.
 
 </details>
 
@@ -250,7 +291,7 @@ Writes `~/.tmux.conf` with Dracula colors, `C-a` prefix, mouse support, 50k line
 </details>
 
 <details>
-<summary><b>Dev tools</b> — 8 essential tools</summary>
+<summary><b>Dev tools</b> — language toolchains and CLIs</summary>
 
 Installs (skipping any that already exist):
 
@@ -265,22 +306,21 @@ Installs (skipping any that already exist):
 | [aws](https://aws.amazon.com/cli/) | AWS CLI v2 |
 | [Bun](https://bun.sh/) | JavaScript runtime |
 
-On macOS, `uv`, `bun`, `pyenv`, `gh`, and `aws` are installed via `brew` instead of apt/curl. Build dependencies for pyenv (openssl, readline, sqlite3, xz, zlib) are also installed via brew. Docker is not installed on macOS — the module prints guidance to install Docker Desktop for Mac and continues without error.
+On Linux/WSL these install via apt/curl/git (AWS CLI v2 is GPG-verified). On macOS, `uv`, `pyenv`, `fzf`, `gh`, `aws`, and `bun` install via `brew` (plus pyenv's build deps), while `nvm` uses its official install script. **Docker is not installed on WSL or macOS** — the module prints guidance to install Docker Desktop and continues without error.
 
 </details>
-
 
 <details>
 <summary><b>GitHub</b> — SSH key + git config</summary>
 
-Generates an `ed25519` SSH key for GitHub, configures `~/.ssh/config`, tests the connection, and sets `git` user/email globally.
+Generates an `ed25519` SSH key for GitHub, configures `~/.ssh/config`, tests the connection, and sets `git` user/email globally. The wizard collects `github_email` (required, regex-validated) and `github_name` (optional) before execution; in non-interactive mode (`--config`) `github_email` must be supplied via `config.github_email` in the profile YAML. During the SSH-authentication check, devlair auto-detects a successful `ssh -T git@github.com` handshake — press **Enter** to skip the wait and verify later with `devlair doctor`.
 
 </details>
 
 <details>
 <summary><b>Shell</b> — aliases + login banner</summary>
 
-Appends aliases to `.zshrc` and a `tmx` command for session management. Aliases are platform-aware: `ll`, `ports`, and `update` expand differently on macOS (`ls -G`, `lsof`, `brew`) vs Linux/WSL (`ls --color`, `ss`, `apt`). The `BROWSER` env var is set to `open` on macOS and `wslview` on WSL. The login banner title defaults to `devlair` but reflects the `--brand NAME` value when one is set (persisted to `~/.devlair/brand` and reused automatically on subsequent runs). The banner shows live tmux sessions:
+Appends aliases to `.zshrc` and a `tmx` command for session management. Aliases are platform-aware: `ll`, `ports`, and `update` expand differently on macOS (`ls -G`, `lsof`, `brew`) vs Linux/WSL (`ls --color`, `ss`, `apt`). The `BROWSER` env var is set to `wslview` on WSL. The login banner title defaults to `devlair` but reflects the `--brand NAME` value when one is set (persisted to `~/.devlair/brand` and reused automatically on subsequent runs). The banner shows live tmux sessions:
 
 ```
 ╭─ myhost ──────────────────────────────────────╮
@@ -297,14 +337,14 @@ Appends aliases to `.zshrc` and a `tmx` command for session management. Aliases 
 <details>
 <summary><b>GNOME Terminal</b> — Dracula color scheme</summary>
 
-Applies the full 16-color Dracula palette to your default GNOME Terminal profile.
+Applies the full 16-color Dracula palette to your default GNOME Terminal profile. Linux-only — auto-skipped on WSL and macOS.
 
 </details>
 
 <details>
 <summary><b>Claude Code</b> — install + settings</summary>
 
-Installs Claude Code (if absent) and merges devlair-managed keys into `~/.claude/settings.json` (model, effort level). Deploys the `tmx-new` helper for launching named tmux sessions (`tmx new --name <n> [--claude]`). Use `devlair claude` to view the current plan/model, `--plan TIER` to set the subscription tier, and `--1m on|off` to toggle 1M-token context.
+Always opt-in (`--only claude`). Installs Claude Code (if absent) and merges devlair-managed keys into `~/.claude/settings.json` (model, effort level). Deploys the `tmx-new` helper for launching named tmux sessions (`tmx new --name <n> [--claude]`). Use `devlair claude` to view the current plan/model, `--plan TIER` to set the subscription tier, and `--1m on|off` to toggle 1M-token context.
 
 </details>
 
@@ -322,72 +362,38 @@ Verifies every component without making changes — checks installed tools, conf
 devlair upgrade
 ```
 
-Checks for a new devlair binary first — if a newer release of the same major version is available, it downloads, replaces, and re-execs so the rest of the upgrade runs new code. When a newer major version exists (e.g. v3.x while running v1), the self-update is skipped and devlair prints guidance to reinstall via `install.sh` instead (cross-major binaries have a different asset name and runtime and cannot be swapped in place). Then upgrades system packages and any tools that were installed during init (Docker, GitHub CLI, AWS CLI, pyenv/Python, nvm/Node, Bun). After upgrading, automatically re-applies module configurations (hooks, settings, shell aliases) so new config shapes take effect immediately. Use `--no-self` to skip the binary update.
+Checks for a new devlair binary first — if a newer release is available, it downloads, replaces, and re-execs so the rest of the upgrade runs new code. Then upgrades system packages and any tools that were installed during init (Docker, GitHub CLI, AWS CLI, pyenv/Python, nvm/Node, Bun). After upgrading, automatically re-applies module configurations (hooks, settings, shell aliases) so new config shapes take effect immediately. Use `--no-self` to skip the binary update.
+
+## Uninstall
+
+```bash
+devlair uninstall
+```
+
+Runs each module's reverse step in reverse dependency order — removes installed tools (pyenv, nvm, bun, fzf, uv, and with default package removal: docker, gh, aws, tailscale, tmux, ufw/fail2ban), reverts system state (firewall, sshd hardening, default shell back to the recorded original, docker group, GNOME Terminal profile), strips devlair config blocks, and removes the binary + `~/.devlair/`. Sensitive items (GitHub SSH key, git identity, `~/.ssh/authorized_keys`, Tailscale auth) are kept by default and you're asked per-category whether to destroy each. Never purges `openssh-server` (lockout-safe) or Homebrew. Flags: `--yes` keeps all sensitive items non-interactively, `--purge` destroys them all, `--keep-packages` skips apt/brew package removal. Auto-elevates via sudo.
 
 ## Requirements
 
-- **OS:** Ubuntu 24.04 LTS, WSL 2 (Ubuntu), or macOS (portable modules only — see module list above)
+- **OS:** Ubuntu 24.04 LTS, WSL 2 (Ubuntu), or macOS 13+ (Apple Silicon or Intel)
 - **Arch:** x86_64 or aarch64
-- **Privileges:** root or a user with `sudo`
-- **WSL extras:** Docker Desktop for Windows with WSL integration enabled (for Docker-dependent modules)
+- **Privileges:** root or a user with `sudo` on Linux; a local admin account on macOS
+- **Docker:** Docker Desktop required on WSL and macOS for Docker-dependent workflows (not installed by devlair on those platforms)
 
 ## Development
 
-### v1 (Python — stable)
+devlair is a TypeScript + [Ink](https://github.com/vadimdemedes/ink) CLI compiled to a standalone binary with [Bun](https://bun.sh). No runtime dependencies on the target machine.
 
 ```bash
 git clone git@github.com:ettoreaquino/devlair.git
-cd devlair
-uv sync --group dev
-uv run pytest tests/unit/
-uv run ruff check devlair/ tests/
-```
-
-### v2 (TypeScript + Ink — stable)
-
-**Install v2 (default):**
-
-```bash
-# macOS
-curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | bash
-
-# Linux / WSL
-curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | sudo bash
-```
-
-The installer downloads the latest `devlair-cli-{os}-{arch}` binary and places it at `/usr/local/bin/devlair`. The companion `modules.tar.gz` (shell scripts invoked by the wizard) is verified against `checksums.txt` and extracted to `/usr/local/share/devlair/modules/`. To install the legacy v1 (Python) instead, pass `--v1`.
-
-**Removed in v2** (vs. v1):
-
-| Command | Replacement |
-|---------|-------------|
-| `devlair filesystem` | Removed — not ported |
-| `devlair sync` / rclone | Removed — not ported |
-| `devlair claude` usage dashboard | Pin to v1 for the dashboard. v2 `devlair claude` prints a short status panel only (plan + model); `--plan` and `--1m on\|off` still work for configuration. |
-
-**Ported in v2:**
-
-| Command | Notes |
-|---------|-------|
-| `devlair disable-password [--yes]` | Linux-only, auto-elevates via sudo. `--yes` skips the interactive confirmation. |
-| `devlair claude [--plan TIER\|--1m on\|off]` | Configures the local Claude Code install. No dashboard (see above). |
-| `devlair uninstall [--yes] [--purge] [--keep-packages]` | Full teardown. Runs each module's reverse step in reverse dependency order — removes installed tools (pyenv, nvm, bun, fzf, uv, and with default package removal: docker, gh, aws, tailscale, tmux, ufw/fail2ban), reverts system state (firewall, sshd hardening, default shell back to the recorded original, docker group, Gnome Terminal profile), strips devlair config blocks, and removes the binary + `~/.devlair/`. Sensitive items (GitHub SSH key, git identity, `~/.ssh/authorized_keys`, Tailscale auth) are kept by default and you're asked per-category whether to destroy each. Never purges `openssh-server` (lockout-safe) or Homebrew. `--yes` keeps all sensitive items non-interactively; `--purge` destroys them all; `--keep-packages` skips apt/brew package removal. Auto-elevates via sudo. |
-
-**v2 wizard behavior notes:**
-
-- **GitHub config step** — when the `github` module is selected in the wizard, a dedicated `wizard-github` step collects `github_email` (required, regex-validated) and `github_name` (optional) before execution begins. In non-interactive mode (`--config`), `github_email` must be supplied via `config.github_email` in the profile YAML or the command exits with an error. During the SSH-authentication check, devlair auto-detects a successful `ssh -T git@github.com` handshake; press **Enter** at any point to skip the wait and verify later with `devlair doctor`.
-- **Tailscale auth** — browser-based Tailscale authentication waits for the user to complete the browser flow. Press **Enter** to skip waiting and verify later with `devlair doctor`. Ctrl-C (via the wizard's `AbortController` / SIGTERM) remains the full abort path.
-
-**Develop locally:**
-
-```bash
-cd cli
+cd devlair/cli
 bun install
 bun run dev          # run in development
 bun run typecheck    # tsc --noEmit
 bun run lint         # biome check
 bun run compile      # standalone binary → dist/devlair
 ```
+
+Open the repo in your editor of choice. devlair does not install VS Code or define a `code` alias — the `code` command comes from VS Code's own shell integration (on macOS, "Shell Command: Install 'code' command in PATH"; on Linux it ships with the apt/snap package).
 
 ### Releasing
 
@@ -396,22 +402,15 @@ Releases are automated via [release-please](https://github.com/googleapis/releas
 ### Project structure
 
 ```
-devlair/                # v1 Python CLI (stable)
-  cli.py               # Typer CLI entrypoint
-  runner.py             # subprocess helpers
-  context.py            # shared types, user resolution, JSON config helpers
-  console.py            # Rich console + Dracula color tokens
-  modules/              # one file per init module (13 modules)
-  features/             # doctor, upgrade, disable-password, filesystem, claude, sync, audit, profile
-cli/                    # v2 TypeScript CLI (stable)
+cli/                    # TypeScript CLI
   src/
-    index.tsx           # Ink app entrypoint
+    index.tsx           # Ink app entrypoint (+ macOS pre-flight)
     commands/           # init, doctor, upgrade, claude, disable-password, uninstall
     components/         # Ink UI components (Logo, Help, Progress, Summary)
     wizard/             # interactive wizard (GroupSelect, ModuleSelect, Confirmation, GithubConfig)
     lib/                # theme, types, runner, modules, platform detection,
                         # args, selection, profiles, jsonConfig, elevate, homebrew, brand
-  modules/              # shell modules executed by the v2 binary
+  modules/              # shell modules executed by the binary
                         # (packaged into modules.tar.gz on release)
 assets/
   logo.svg              # brand mark (dark background)
@@ -422,3 +421,5 @@ install.sh              # curl-pipe installer
 ## License
 
 [MIT](LICENSE)
+</content>
+</invoke>
