@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.2.2](https://github.com/ettoreaquino/devlair/compare/v3.2.1...v3.2.2) (2026-06-30)
+
+
+### Bug Fixes
+
+* **macos-terminal:** name temp file Dracula.terminal so profile registers correctly ([#259](https://github.com/ettoreaquino/devlair/issues/259)) ([46ce0d5](https://github.com/ettoreaquino/devlair/commit/46ce0d5d66969743b347e08566152ba9eade77fb))
+
 ## [3.2.1](https://github.com/ettoreaquino/devlair/compare/v3.2.0...v3.2.1) (2026-06-30)
 
 
