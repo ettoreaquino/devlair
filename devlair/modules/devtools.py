@@ -12,6 +12,8 @@ TOOLS = ["uv", "pyenv", "nvm", "fzf", "docker", "gh", "aws", "bun"]
 # AWS CLI v2 public GPG key ID used to sign release bundles.
 _AWS_CLI_GPG_KEY_URL = "https://awscli.amazonaws.com/awscli-exe-linux-public-key.asc"
 
+_VSCODE_APP = Path("/Applications/Visual Studio Code.app")
+
 
 def _bun_exists(user_home: Path) -> bool:
     return runner.cmd_exists("bun") or (user_home / ".bun" / "bin" / "bun").exists()
@@ -233,8 +235,7 @@ def run(ctx: SetupContext) -> ModuleResult:
         installed.append("bun")
 
     # ── VS Code ───────────────────────────────────────────────────────────────
-    _vscode_app = Path("/Applications/Visual Studio Code.app")
-    if runner.cmd_exists("code") or (ctx.platform == "macos" and _vscode_app.exists()):
+    if runner.cmd_exists("code") or (ctx.platform == "macos" and _VSCODE_APP.exists()):
         skipped.append("vscode")
     elif ctx.platform == "macos":
         console.print("    [muted]VS Code...[/muted]")
@@ -276,12 +277,8 @@ def run(ctx: SetupContext) -> ModuleResult:
 
 
 def check() -> list[CheckItem]:
-    import sys
-
     user_home = Path("~").expanduser()
-    vscode_ok = runner.cmd_exists("code") or (
-        sys.platform == "darwin" and Path("/Applications/Visual Studio Code.app").exists()
-    )
+    vscode_ok = runner.cmd_exists("code") or _VSCODE_APP.exists()
     return [
         CheckItem(
             label=t,

@@ -11,9 +11,7 @@ _DRACULA_URL = "https://raw.githubusercontent.com/dracula/terminal-app/master/Dr
 
 
 def _open_terminal_file(username: str, filepath: Path) -> None:
-    """Open a .terminal file so Terminal.app imports the profile.
-
-    Uses launchctl asuser when running as root so the open command reaches
+    """Uses launchctl asuser when running as root so the open command reaches
     the user's Aqua session; falls back to sudo -u otherwise.
     """
     uid = pwd.getpwnam(username).pw_uid
