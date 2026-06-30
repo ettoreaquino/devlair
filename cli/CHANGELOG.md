@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.2](https://github.com/ettoreaquino/devlair/compare/v3.1.1...v3.1.2) (2026-06-30)
+
+
+### Bug Fixes
+
+* **macos:** propagate brew PATH to module subshells ([#247](https://github.com/ettoreaquino/devlair/issues/247)) ([a36193b](https://github.com/ettoreaquino/devlair/commit/a36193be515ad3c11c527f21efe93d319c38a381))
+
 ## [3.1.1](https://github.com/ettoreaquino/devlair/compare/v3.1.0...v3.1.1) (2026-06-29)
 
 
