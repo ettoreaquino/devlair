@@ -112,6 +112,9 @@ export async function* runModule(
   const child = spawn(options.bashPath ?? "bash", [scriptPath, mode], {
     stdio: ["pipe", "pipe", "pipe"],
     detached: true,
+    // Pass env explicitly so Bun (which may snapshot the env at startup) picks
+    // up mutations made by the macOS pre-flight (e.g. setupBrewPath).
+    env: process.env,
   });
 
   const killTree = (sig: NodeJS.Signals = "SIGTERM") => {

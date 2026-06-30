@@ -16,6 +16,17 @@ do_run() {
     json_result "skip" "already installed"
     exit 2
   fi
+  # Check known paths directly in case PATH wasn't propagated by the pre-flight.
+  local _brew_bin
+  for _brew_bin in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+    if [[ -x "$_brew_bin" ]]; then
+      eval "$($_brew_bin shellenv 2>/dev/null)" || export PATH="$(dirname "$_brew_bin"):${PATH}"
+      if cmd_exists brew; then
+        json_result "skip" "already installed"
+        exit 2
+      fi
+    fi
+  done
   brew_ensure
   json_install "homebrew" "raw.githubusercontent.com/Homebrew/install" false
   json_result "ok" "Homebrew ready"

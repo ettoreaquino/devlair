@@ -139,6 +139,15 @@ brew_ensure() {
     eval "$(sudo -u "$USERNAME" brew shellenv 2>/dev/null)" || true
     return 0
   fi
+  # Check known Homebrew paths directly — handles the case where the macOS
+  # pre-flight installed/found brew but the PATH update didn't reach this subshell.
+  local _brew_bin
+  for _brew_bin in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+    if [[ -x "$_brew_bin" ]]; then
+      eval "$($_brew_bin shellenv 2>/dev/null)" || export PATH="$(dirname "$_brew_bin"):${PATH}"
+      cmd_exists brew && return 0
+    fi
+  done
   json_progress "installing Homebrew"
   local tmp
   tmp=$(download_script "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh")
