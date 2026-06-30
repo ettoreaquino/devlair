@@ -73,7 +73,7 @@ function setupBrewPath(existing: string): void {
       }
     }
   } catch {
-    // ignore — fallback below handles it
+    // shellenv failed; pathSet stays false and the guard below prepends brewBinDir
   }
   // Always ensure the brew bin dir is on PATH, even when shellenv fails or
   // produces no PATH line (e.g. non-zero exit, empty output, broken brew).
