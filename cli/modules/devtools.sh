@@ -219,6 +219,31 @@ do_run() {
     installed+=(bun)
   fi
 
+  # ── VS Code ──────────────────────────────────────────────────────────────────
+  if cmd_exists code || [[ -d "/Applications/Visual Studio Code.app" ]]; then
+    skipped+=(vscode)
+  elif [[ "$PLATFORM" == "macos" ]]; then
+    brew_install --cask visual-studio-code
+    json_install "vscode" "brew:cask:visual-studio-code" true
+    installed+=(vscode)
+  elif [[ "$PLATFORM" == "linux" ]]; then
+    json_progress "installing vscode"
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
+      | gpg --dearmor -o /etc/apt/keyrings/microsoft.gpg >&2
+    chmod a+r /etc/apt/keyrings/microsoft.gpg
+    echo "deb [arch=$ARCH signed-by=/etc/apt/keyrings/microsoft.gpg] \
+      https://packages.microsoft.com/repos/code stable main" \
+      > /etc/apt/sources.list.d/vscode.list
+    apt-get update -qq >&2
+    apt-get install -y -qq code >&2
+    json_install "vscode" "apt:packages.microsoft.com" true
+    installed+=(vscode)
+  else
+    # WSL: VS Code is installed on the Windows side with Remote WSL extension
+    skipped+=(vscode)
+  fi
+
   # Build result detail
   local parts=()
   [[ ${#installed[@]} -gt 0 ]] && parts+=("installed: $(IFS=,; echo "${installed[*]}")")
@@ -234,6 +259,12 @@ do_check() {
       json_check "$tool" "fail" "missing"
     fi
   done
+
+  if cmd_exists code || [[ -d "/Applications/Visual Studio Code.app" ]]; then
+    json_check "vscode" "ok" "installed"
+  else
+    json_check "vscode" "warn" "missing"
+  fi
 
   if [[ -d "$USER_HOME/.pyenv" ]]; then
     json_check "pyenv" "ok"
@@ -270,18 +301,20 @@ do_uninstall() {
   if [[ "$remove_packages" == "true" ]]; then
     if [[ "$PLATFORM" == "macos" ]]; then
       brew_uninstall uv pyenv fzf gh awscli bun
+      brew_uninstall --cask --quiet visual-studio-code
       removed+=("brew dev tools")
     else
       # Drop the user from the docker group, then purge docker + repos.
       if id -nG "$USERNAME" 2>/dev/null | grep -qw docker; then
         gpasswd -d "$USERNAME" docker >&2 2>&1 || true
       fi
-      apt_purge docker-ce docker-ce-cli containerd.io docker-compose-plugin docker-buildx-plugin gh
+      apt_purge docker-ce docker-ce-cli containerd.io docker-compose-plugin docker-buildx-plugin gh code
       rm -f /etc/apt/keyrings/docker.gpg /etc/apt/sources.list.d/docker.list 2>/dev/null || true
       rm -f /usr/share/keyrings/githubcli-archive-keyring.gpg /etc/apt/sources.list.d/github-cli.list 2>/dev/null || true
+      rm -f /etc/apt/keyrings/microsoft.gpg /etc/apt/sources.list.d/vscode.list 2>/dev/null || true
       # AWS CLI v2 installs to /usr/local (not apt-managed).
       rm -rf /usr/local/aws-cli /usr/local/bin/aws /usr/local/bin/aws_completer 2>/dev/null || true
-      removed+=("docker, gh, aws + apt repos")
+      removed+=("docker, gh, aws, vscode + apt repos")
     fi
   fi
 
