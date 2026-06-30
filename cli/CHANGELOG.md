@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.2.1](https://github.com/ettoreaquino/devlair/compare/v3.2.0...v3.2.1) (2026-06-30)
+
+
+### Bug Fixes
+
+* **upgrade:** correct asset name for self-update binary download ([#256](https://github.com/ettoreaquino/devlair/issues/256)) ([0cd5112](https://github.com/ettoreaquino/devlair/commit/0cd511239f4999260a1f43859633df3d1cd6beba))
+
 ## [3.2.0](https://github.com/ettoreaquino/devlair/compare/v3.1.2...v3.2.0) (2026-06-30)
 
 
