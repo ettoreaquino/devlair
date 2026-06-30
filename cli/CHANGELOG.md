@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.2.0](https://github.com/ettoreaquino/devlair/compare/v3.1.2...v3.2.0) (2026-06-30)
+
+
+### Features
+
+* **cli:** port VS Code install + Terminal.app Dracula to v3 cli modules ([#253](https://github.com/ettoreaquino/devlair/issues/253)) ([131b95d](https://github.com/ettoreaquino/devlair/commit/131b95d0ccecaf92023d0a40b9f2a717037c1a35))
+
 ## [3.1.2](https://github.com/ettoreaquino/devlair/compare/v3.1.1...v3.1.2) (2026-06-30)
 
 
