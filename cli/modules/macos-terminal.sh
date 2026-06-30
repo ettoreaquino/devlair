@@ -9,6 +9,7 @@ source "$SCRIPT_DIR/_lib.sh"
 read_context
 
 USERNAME=$(ctx_get username)
+[[ "$USERNAME" =~ ^[A-Za-z0-9._-]+$ ]] || { json_result "fail" "invalid username: $USERNAME"; exit 1; }
 MODE=${1:-run}
 
 # Pinned to commit 9ca4acf (dracula/terminal-app, 2018-10-05).
@@ -64,6 +65,7 @@ do_run() {
 
   json_progress "importing Dracula theme"
   _open_terminal_file "$tmp"
+  # Terminal.app needs a moment to register the imported profile before defaults write can reference it by name
   sleep 1
 
   run_shell_as "$USERNAME" "

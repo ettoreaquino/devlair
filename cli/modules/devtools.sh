@@ -301,11 +301,7 @@ do_uninstall() {
   if [[ "$remove_packages" == "true" ]]; then
     if [[ "$PLATFORM" == "macos" ]]; then
       brew_uninstall uv pyenv fzf gh awscli bun
-      if _is_root; then
-        sudo -u "$USERNAME" brew uninstall --cask --quiet visual-studio-code >&2 2>&1 || true
-      else
-        brew uninstall --cask --quiet visual-studio-code >&2 2>&1 || true
-      fi
+      brew_uninstall --cask --quiet visual-studio-code
       removed+=("brew dev tools")
     else
       # Drop the user from the docker group, then purge docker + repos.
