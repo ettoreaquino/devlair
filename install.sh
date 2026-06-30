@@ -3,18 +3,12 @@
 #
 # Usage (Linux / WSL):
 #   curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | sudo bash
-#   curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | sudo bash -s -- --v1
 #
 # Usage (macOS):
 #   curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | bash
 #
 # The script auto-elevates only when /usr/local/bin is not writable.
 # On macOS with Homebrew, sudo is usually not required.
-#
-# Channels:
-#   (default)  Latest v2 release (TypeScript + Ink).
-#   --v1       Latest v1 release (Python). Legacy.
-#   --pre      Deprecated — v2 is now the default. Accepted for backward compatibility.
 set -euo pipefail
 
 REPO="ettoreaquino/devlair"
@@ -283,14 +277,6 @@ rm -f "$TMP_CHECKSUMS"
 
 printf "\n%s✓%s %sdevlair %s installed%s\n" "$C_GREEN" "$C_RESET" "$C_BOLD" "$LATEST" "$C_RESET"
 printf "  %s%s%s\n\n" "$C_COMMENT" "${INSTALL_DIR}/${BIN}" "$C_RESET"
-
-# ── Post-install notice (v2 only) ─────────────────────────────────────────────
-if [[ "$CHANNEL" != "v1" ]]; then
-  printf "%s!%s %sv2%s — the following v1 commands have been REMOVED:\n\n" \
-    "$C_ORANGE" "$C_RESET" "$C_BOLD" "$C_RESET"
-  printf "  %sdevlair filesystem%s   not ported\n\n" "$C_PINK" "$C_RESET"
-  printf "  %sReport issues: https://github.com/ettoreaquino/devlair/issues%s\n\n" "$C_COMMENT" "$C_RESET"
-fi
 
 printf "%sNext step:%s\n" "$C_BOLD" "$C_RESET"
 if [[ "$OS_SUFFIX" == "darwin" ]]; then
