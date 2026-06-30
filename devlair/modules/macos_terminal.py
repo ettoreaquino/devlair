@@ -7,7 +7,12 @@ from devlair.context import CheckItem, ModuleResult, SetupContext
 
 LABEL = "Terminal.app Dracula"
 
-_DRACULA_URL = "https://raw.githubusercontent.com/dracula/terminal-app/master/Dracula.terminal"
+# Pinned to commit 9ca4acf (2018-10-05 "Update font to SF Mono (macOS Mojave)").
+# To update: fetch the new commit SHA from dracula/terminal-app, download the file,
+# recompute the SHA-256, and update both constants.
+_DRACULA_COMMIT = "9ca4acf67fa43c51b21248a243407fd1549f4268"
+_DRACULA_URL = f"https://raw.githubusercontent.com/dracula/terminal-app/{_DRACULA_COMMIT}/Dracula.terminal"
+_DRACULA_SHA256 = "2d29ed73a31c343098cb405f12fdb48462382b37eb793300c2109e4a281b794d"
 
 
 def _open_terminal_file(username: str, filepath: Path) -> None:
@@ -36,6 +41,7 @@ def run(ctx: SetupContext) -> ModuleResult:
     theme_file = runner.safe_tempfile(suffix=".terminal")
     try:
         runner.run_shell(f'curl -fsSL "{_DRACULA_URL}" -o "{theme_file}"', quiet=True)
+        runner.verify_checksum(theme_file, _DRACULA_SHA256)
         _open_terminal_file(ctx.username, theme_file)
         runner.run_shell_as(
             ctx.username,
