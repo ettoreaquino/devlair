@@ -26,17 +26,17 @@ _defaults_read_profile() {
   fi
 }
 
-# Returns 0 if the Dracula profile is actually registered in Terminal.app's Window Settings.
-# Terminal.app names imported profiles after the filename stem, not the plist name key, so
-# a temp-file import can register under the wrong name even when Default Window Settings = Dracula.
-_dracula_profile_registered() {
-  local prefs
+# Terminal.app registers profiles by filename stem, not the plist name key.
+_terminal_prefs_path() {
   if _is_root; then
-    prefs="/Users/$USERNAME/Library/Preferences/com.apple.Terminal.plist"
+    echo "/Users/$USERNAME/Library/Preferences/com.apple.Terminal.plist"
   else
-    prefs="$HOME/Library/Preferences/com.apple.Terminal.plist"
+    echo "$HOME/Library/Preferences/com.apple.Terminal.plist"
   fi
-  /usr/libexec/PlistBuddy -c "Print :'Window Settings':Dracula" "$prefs" > /dev/null 2>&1
+}
+
+_dracula_profile_registered() {
+  /usr/libexec/PlistBuddy -c "Print :'Window Settings':Dracula" "$(_terminal_prefs_path)" > /dev/null 2>&1
 }
 
 _open_terminal_file() {
