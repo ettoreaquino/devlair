@@ -6,8 +6,8 @@
  * 3. Re-apply: re-run REAPPLY_KEYS modules to refresh configs.
  */
 
-import { chmodSync, renameSync, writeFileSync } from "node:fs";
-import { hostname } from "node:os";
+import { chmodSync, mkdtempSync, renameSync, writeFileSync } from "node:fs";
+import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
 import { useApp } from "ink";
 import { Box, Text } from "ink";
@@ -130,14 +130,17 @@ async function checkSelfUpdate(currentVersion: string): Promise<SelfUpdateResult
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = (await resp.json()) as { tag_name: string };
     const latest = data.tag_name.replace(/^v/, "");
+    if (!/^\d+\.\d+\.\d+$/.test(latest)) throw new Error(`Invalid version format: ${latest}`);
 
     if (latest === currentVersion) {
       return { status: "up-to-date", detail: `devlair ${currentVersion} is already up to date.` };
     }
 
     // Download the new binary
+    const detectedPlatform = detectPlatform();
+    const os = detectedPlatform === "macos" ? "darwin" : "linux";
     const arch = process.arch === "x64" ? "x86_64" : "aarch64";
-    const url = `https://github.com/ettoreaquino/devlair/releases/download/v${latest}/devlair-linux-${arch}`;
+    const url = `https://github.com/ettoreaquino/devlair/releases/download/v${latest}/devlair-cli-${os}-${arch}`;
 
     const binResp = await fetch(url, { signal: AbortSignal.timeout(60_000), redirect: "follow" });
     if (!binResp.ok) throw new Error(`Download failed: HTTP ${binResp.status}`);
@@ -145,7 +148,8 @@ async function checkSelfUpdate(currentVersion: string): Promise<SelfUpdateResult
 
     // Write to /usr/local/bin/devlair
     const installPath = "/usr/local/bin/devlair";
-    const tmpPath = join("/tmp", `devlair-update-${Date.now()}`);
+    const tmpDir = mkdtempSync(join(tmpdir(), "devlair-update-"));
+    const tmpPath = join(tmpDir, "devlair");
     writeFileSync(tmpPath, buffer);
     chmodSync(tmpPath, 0o755);
 
