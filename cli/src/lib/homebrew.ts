@@ -51,6 +51,8 @@ function brewPath(): string | null {
 }
 
 function setupBrewPath(existing: string): void {
+  const binDir = brewBinDir(existing);
+  let pathSet = false;
   try {
     const shellenv = spawnSync(existing, ["shellenv"], {
       encoding: "utf8",
@@ -59,12 +61,24 @@ function setupBrewPath(existing: string): void {
     const SAFE_BREW_VARS = new Set(["PATH", "HOMEBREW_PREFIX", "HOMEBREW_CELLAR", "HOMEBREW_REPOSITORY"]);
     for (const line of shellenv.split("\n")) {
       const m = line.match(/^export ([A-Z_]+)="(.*)"/);
-      if (m && SAFE_BREW_VARS.has(m[1])) process.env[m[1]] = m[2];
+      if (m && SAFE_BREW_VARS.has(m[1])) {
+        if (m[1] === "PATH") {
+          // brew shellenv emits `${PATH}` literally; expand it so child
+          // processes inherit the full search path, not a placeholder string.
+          process.env.PATH = m[2].replace(/\$\{?PATH\}?/g, process.env.PATH ?? "");
+          pathSet = true;
+        } else {
+          process.env[m[1]] = m[2];
+        }
+      }
     }
   } catch {
-    // Non-fatal: brew shellenv failure means PATH may be incomplete, but
-    // brew itself is usable if the caller found it at a known path.
-    process.env.PATH = `${brewBinDir(existing)}:${process.env.PATH ?? ""}`;
+    // shellenv failed; pathSet stays false and the guard below prepends brewBinDir
+  }
+  // Always ensure the brew bin dir is on PATH, even when shellenv fails or
+  // produces no PATH line (e.g. non-zero exit, empty output, broken brew).
+  if (!pathSet) {
+    process.env.PATH = `${binDir}:${process.env.PATH ?? ""}`;
   }
 }
 
