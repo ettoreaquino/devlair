@@ -22,6 +22,9 @@ alias dps='docker ps --format "table {{.Names}}\\t{{.Status}}\\t{{.Ports}}"'
 alias ts='tailscale status'
 alias t='tmux new-session -A -s dev'
 alias bcat='bat --paging=never'
+if [[ "$(uname)" == "Darwin" ]] && [ -d "/Applications/Visual Studio Code.app" ] && ! command -v code &>/dev/null; then
+  alias code='/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code'
+fi
 tmx() {
   if [ "$1" = "new" ]; then
     shift

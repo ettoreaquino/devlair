@@ -7,6 +7,7 @@ from devlair.modules import (
     firewall,
     github,
     gnome_terminal,
+    macos_terminal,
     rclone,
     shell,
     ssh,
@@ -41,11 +42,12 @@ MODULE_SPECS: list[ModuleSpec] = [
     ModuleSpec("firewall",       "Firewall + Fail2Ban",    firewall,       "network",     deps=["ssh"],              platforms={"linux"}),
     ModuleSpec("zsh",            "Zsh + Dracula",          zsh,            "core",        reapply=True,              platforms={"linux", "wsl", "macos"}),
     ModuleSpec("tmux",           "tmux",                   tmux,           "coding",      reapply=True,              platforms={"linux", "wsl", "macos"}),
-    ModuleSpec("devtools",       "Dev tools",              devtools,       "coding",      reapply=True),
+    ModuleSpec("devtools",       "Dev tools",              devtools,       "coding",      reapply=True,              platforms={"linux", "wsl", "macos"}),
     ModuleSpec("rclone",         "rclone sync",            rclone,         "cloud-sync",                              default_on=set(),                              platforms={"linux", "wsl", "macos"}),
     ModuleSpec("github",         "GitHub SSH key",         github,         "coding",                                 platforms={"linux", "wsl", "macos"}),
     ModuleSpec("shell",          "Shell aliases",          shell,          "core",        deps=["zsh"], reapply=True, platforms={"linux", "wsl", "macos"}),
     ModuleSpec("gnome_terminal", "Gnome Terminal Dracula", gnome_terminal, "desktop",     reapply=True,              platforms={"linux"}),
+    ModuleSpec("macos_terminal", "Terminal.app Dracula",  macos_terminal, "desktop",     reapply=True,              platforms={"macos"}),
     ModuleSpec("claude",         "Claude Code",            claude,         "ai",          deps=["devtools"], reapply=True, default_on=set(),                         platforms={"linux", "wsl", "macos"}),
 ]
 # fmt: on

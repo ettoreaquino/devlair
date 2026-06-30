@@ -75,7 +75,7 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
 
 **Composable**
 
-13 modules you can run individually with `--only` or skip with `--skip`. Each module is self-contained and does one thing well.
+14 modules you can run individually with `--only` or skip with `--skip`. Each module is self-contained and does one thing well.
 
 </td>
 </tr>
@@ -204,6 +204,7 @@ devlair  claude  max5x
 | `github` — SSH key + git config | ✓ | ✓ | ✓ |
 | `shell` — aliases + login banner | ✓ | ✓ | ✓ |
 | `gnome_terminal` — Dracula palette | ✓ | — | — |
+| `macos_terminal` — Terminal.app Dracula | — | — | ✓ |
 | `claude` — Claude Code | ○ | ○ | ○ |
 
 Legend: ✓ runs by default · ○ available, opt-in (`--only`) · — not applicable
@@ -214,7 +215,7 @@ Packages install via `apt`. Core essentials (`git`, `curl`, `vim`, `htop`, `tmux
 
 ### On macOS
 
-Before the wizard UI starts, a pre-flight verifies you're a local admin and installs Homebrew if it's missing — running Homebrew's official installer interactively (it prompts for your password over the terminal). This is the single point of Homebrew installation; all packages then install via `brew`. Linux-only modules (`timezone`, `ssh`, `firewall`, `gnome_terminal`) are skipped. In `devtools`, `uv`, `pyenv`, `fzf`, `gh`, `aws`, and `bun` install via `brew` (with pyenv's build deps), while `nvm` uses its official install script. **Docker is not installed** — the module prints guidance to install Docker Desktop for Mac and continues without error.
+Before the wizard UI starts, a pre-flight verifies you're a local admin and installs Homebrew if it's missing — running Homebrew's official installer interactively (it prompts for your password over the terminal). This is the single point of Homebrew installation; all packages then install via `brew`. Linux-only modules (`timezone`, `ssh`, `firewall`, `gnome_terminal`) are skipped. In `devtools`, `uv`, `pyenv`, `fzf`, `gh`, `aws`, `bun`, and **VS Code** install via `brew` (with pyenv's build deps), while `nvm` uses its official install script. **Docker is not installed** — the module prints guidance to install Docker Desktop for Mac and continues without error. The `macos_terminal` module applies the Dracula color scheme and font to Terminal.app. The `shell` module adds a `code` alias when VS Code.app is present but the `code` binary is not yet on `PATH`.
 
 <details>
 <summary><b>Homebrew</b> — package-manager bootstrap (macOS)</summary>
@@ -297,8 +298,9 @@ Installs (skipping any that already exist):
 | [gh](https://cli.github.com/) | GitHub CLI |
 | [aws](https://aws.amazon.com/cli/) | AWS CLI v2 |
 | [Bun](https://bun.sh/) | JavaScript runtime |
+| [VS Code](https://code.visualstudio.com/) | Code editor (macOS + Linux only) |
 
-On Linux/WSL these install via apt/curl/git (AWS CLI v2 is GPG-verified). On macOS, `uv`, `pyenv`, `fzf`, `gh`, `aws`, and `bun` install via `brew` (plus pyenv's build deps), while `nvm` uses its official install script. **Docker is not installed on WSL or macOS** — the module prints guidance to install Docker Desktop and continues without error.
+On Linux/WSL these install via apt/curl/git (AWS CLI v2 is GPG-verified; VS Code installs via the Microsoft apt repository with GPG key verification on Linux and is skipped on WSL). On macOS, `uv`, `pyenv`, `fzf`, `gh`, `aws`, `bun`, and `VS Code` install via `brew` (plus pyenv's build deps), while `nvm` uses its official install script. **Docker is not installed on WSL or macOS** — the module prints guidance to install Docker Desktop and continues without error.
 
 </details>
 
@@ -312,7 +314,7 @@ Generates an `ed25519` SSH key for GitHub, configures `~/.ssh/config`, tests the
 <details>
 <summary><b>Shell</b> — aliases + login banner</summary>
 
-Appends aliases to `.zshrc` and a `tmx` command for session management. Aliases are platform-aware: `ll`, `ports`, and `update` expand differently on macOS (`ls -G`, `lsof`, `brew`) vs Linux/WSL (`ls --color`, `ss`, `apt`). The `BROWSER` env var is set to `wslview` on WSL. The login banner title defaults to `devlair` but reflects the `--brand NAME` value when one is set (persisted to `~/.devlair/brand` and reused automatically on subsequent runs). The banner shows live tmux sessions:
+Appends aliases to `.zshrc` and a `tmx` command for session management. Aliases are platform-aware: `ll`, `ports`, and `update` expand differently on macOS (`ls -G`, `lsof`, `brew`) vs Linux/WSL (`ls --color`, `ss`, `apt`). On macOS, a `code` alias pointing to `Visual Studio Code.app` is added when VS Code is installed but the `code` binary is not yet on `PATH`. The `BROWSER` env var is set to `wslview` on WSL. The login banner title defaults to `devlair` but reflects the `--brand NAME` value when one is set (persisted to `~/.devlair/brand` and reused automatically on subsequent runs). The banner shows live tmux sessions:
 
 ```
 ╭─ myhost ──────────────────────────────────────╮
@@ -330,6 +332,13 @@ Appends aliases to `.zshrc` and a `tmx` command for session management. Aliases 
 <summary><b>GNOME Terminal</b> — Dracula color scheme</summary>
 
 Applies the full 16-color Dracula palette to your default GNOME Terminal profile. Linux-only — auto-skipped on WSL and macOS.
+
+</details>
+
+<details>
+<summary><b>Terminal.app</b> — Dracula color scheme (macOS)</summary>
+
+Downloads the official [Dracula theme for Terminal.app](https://draculatheme.com/terminal) from the `dracula/terminal-app` release, imports it via `open`, sets it as the default profile, and applies it as the startup (on-open) window profile. macOS-only — auto-skipped on Linux and WSL. The `reapply` flag ensures the theme is re-applied during `devlair upgrade` if it has drifted.
 
 </details>
 
@@ -385,7 +394,7 @@ bun run lint         # biome check
 bun run compile      # standalone binary → dist/devlair
 ```
 
-Open the repo in your editor of choice. devlair does not install VS Code or define a `code` alias — the `code` command comes from VS Code's own shell integration (on macOS, "Shell Command: Install 'code' command in PATH"; on Linux it ships with the apt/snap package).
+Open the repo in your editor of choice. devlair installs VS Code via the `devtools` module on macOS (brew cask) and Linux (Microsoft apt repository with GPG verification) — WSL is skipped. The `shell` module adds a `code` alias on macOS when VS Code.app is present but the `code` binary is not yet on `PATH`.
 
 ### Releasing
 
