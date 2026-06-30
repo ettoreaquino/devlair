@@ -50,6 +50,7 @@ export const MODULE_SPECS: readonly ModuleSpec[] = [
   spec("github", "GitHub SSH key", "coding", { platforms: ["linux", "wsl", "macos"] }),
   spec("shell", "Shell aliases", "core", { deps: ["zsh"], reapply: true, platforms: ["linux", "wsl", "macos"] }),
   spec("gnome_terminal", "Gnome Terminal Dracula", "desktop", { reapply: true, platforms: ["linux"] }),
+  spec("macos_terminal", "Terminal.app Dracula", "desktop", { reapply: true, platforms: ["macos"] }),
   spec("claude", "Claude Code", "ai", {
     deps: ["devtools"],
     reapply: true,

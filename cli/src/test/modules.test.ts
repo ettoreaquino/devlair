@@ -10,8 +10,8 @@ import {
 } from "../lib/modules.js";
 
 describe("MODULE_SPECS", () => {
-  test("has 13 modules", () => {
-    expect(MODULE_SPECS).toHaveLength(13);
+  test("has 14 modules", () => {
+    expect(MODULE_SPECS).toHaveLength(14);
   });
 
   test("all keys are unique", () => {
@@ -40,7 +40,7 @@ describe("REAPPLY_KEYS", () => {
   });
 
   test("includes known reapply modules", () => {
-    for (const key of ["zsh", "tmux", "devtools", "shell", "gnome_terminal", "claude"]) {
+    for (const key of ["zsh", "tmux", "devtools", "shell", "gnome_terminal", "macos_terminal", "claude"]) {
       expect(REAPPLY_KEYS.has(key)).toBe(true);
     }
   });
@@ -68,9 +68,9 @@ describe("keysForGroups", () => {
 });
 
 describe("resolveOrder", () => {
-  test("returns all 13 modules when no keys are specified", () => {
+  test("returns all 14 modules when no keys are specified", () => {
     const specs = resolveOrder();
-    expect(specs).toHaveLength(13);
+    expect(specs).toHaveLength(14);
   });
 
   test("preserves topological order", () => {
@@ -127,6 +127,8 @@ describe("resolveOrder", () => {
     expect(macosKeys).not.toContain("timezone");
     expect(macosKeys).not.toContain("firewall");
     expect(macosKeys).not.toContain("gnome_terminal");
+    // macOS-only modules are present
+    expect(macosKeys).toContain("macos_terminal");
   });
 
   test("combines keys + platform filter", () => {
@@ -159,6 +161,7 @@ describe("resolveOrder", () => {
       "github",
       "shell",
       "gnome_terminal",
+      "macos_terminal",
       "claude",
     ];
     const actualOrder = resolveOrder().map((s) => s.key);
