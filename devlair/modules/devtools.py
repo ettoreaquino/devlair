@@ -232,6 +232,41 @@ def run(ctx: SetupContext) -> ModuleResult:
         safe_log_install(ctx.user_home, tool="bun", source="bun.sh")
         installed.append("bun")
 
+    # ── VS Code ───────────────────────────────────────────────────────────────
+    _vscode_app = Path("/Applications/Visual Studio Code.app")
+    if runner.cmd_exists("code") or (ctx.platform == "macos" and _vscode_app.exists()):
+        skipped.append("vscode")
+    elif ctx.platform == "macos":
+        console.print("    [muted]VS Code...[/muted]")
+        runner.run_shell_as(
+            ctx.username,
+            "brew install --cask --quiet visual-studio-code",
+            quiet=True,
+        )
+        safe_log_install(ctx.user_home, tool="vscode", source="brew:cask:visual-studio-code", verified=True)
+        installed.append("vscode")
+    elif ctx.platform == "linux":
+        console.print("    [muted]VS Code...[/muted]")
+        runner.run_shell(
+            """
+            install -m 0755 -d /etc/apt/keyrings
+            curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
+                | gpg --dearmor -o /etc/apt/keyrings/microsoft.gpg
+            chmod a+r /etc/apt/keyrings/microsoft.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/microsoft.gpg] \
+                https://packages.microsoft.com/repos/code stable main" \
+                > /etc/apt/sources.list.d/vscode.list
+            apt-get update -qq
+            apt-get install -y -qq code
+            """,
+            quiet=True,
+        )
+        safe_log_install(ctx.user_home, tool="vscode", source="apt:packages.microsoft.com", verified=True)
+        installed.append("vscode")
+    else:
+        # WSL: VS Code is installed on the Windows side with Remote WSL extension
+        skipped.append("vscode")
+
     parts = []
     if installed:
         parts.append(f"installed: {', '.join(installed)}")
@@ -241,7 +276,12 @@ def run(ctx: SetupContext) -> ModuleResult:
 
 
 def check() -> list[CheckItem]:
+    import sys
+
     user_home = Path("~").expanduser()
+    vscode_ok = runner.cmd_exists("code") or (
+        sys.platform == "darwin" and Path("/Applications/Visual Studio Code.app").exists()
+    )
     return [
         CheckItem(
             label=t,
@@ -262,5 +302,10 @@ def check() -> list[CheckItem]:
             label="bun",
             status="ok" if _bun_exists(user_home) else "warn",
             detail="installed" if _bun_exists(user_home) else "missing — required for Claude Code channels",
+        ),
+        CheckItem(
+            label="vscode",
+            status="ok" if vscode_ok else "warn",
+            detail="installed" if vscode_ok else "missing",
         ),
     ]
