@@ -136,8 +136,9 @@ async function checkSelfUpdate(currentVersion: string): Promise<SelfUpdateResult
     }
 
     // Download the new binary
+    const os = process.platform === "darwin" ? "darwin" : "linux";
     const arch = process.arch === "x64" ? "x86_64" : "aarch64";
-    const url = `https://github.com/ettoreaquino/devlair/releases/download/v${latest}/devlair-linux-${arch}`;
+    const url = `https://github.com/ettoreaquino/devlair/releases/download/v${latest}/devlair-cli-${os}-${arch}`;
 
     const binResp = await fetch(url, { signal: AbortSignal.timeout(60_000), redirect: "follow" });
     if (!binResp.ok) throw new Error(`Download failed: HTTP ${binResp.status}`);
