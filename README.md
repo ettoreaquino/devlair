@@ -25,19 +25,11 @@ and wiring up dev toolchains. Run it once on a fresh machine or re-run anytime t
 
 **1. Install the binary**
 
-macOS:
-
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | bash
 ```
 
-Linux / WSL:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | sudo bash
-```
-
-The installer downloads the `devlair` binary to `/usr/local/bin` and auto-elevates only when that path is not writable — on macOS with Homebrew, `sudo` is usually not needed.
+The installer downloads the `devlair` binary to `/usr/local/bin` and auto-elevates with `sudo` when that path is not writable — so the same command works on macOS, Linux, and WSL.
 
 **2. Provision the machine**
 
