@@ -26,6 +26,19 @@ _defaults_read_profile() {
   fi
 }
 
+# Returns 0 if the Dracula profile is actually registered in Terminal.app's Window Settings.
+# Terminal.app names imported profiles after the filename stem, not the plist name key, so
+# a temp-file import can register under the wrong name even when Default Window Settings = Dracula.
+_dracula_profile_registered() {
+  local prefs
+  if _is_root; then
+    prefs="/Users/$USERNAME/Library/Preferences/com.apple.Terminal.plist"
+  else
+    prefs="$HOME/Library/Preferences/com.apple.Terminal.plist"
+  fi
+  /usr/libexec/PlistBuddy -c "Print :'Window Settings':Dracula" "$prefs" > /dev/null 2>&1
+}
+
 _open_terminal_file() {
   local path=$1
   if _is_root; then
@@ -42,14 +55,17 @@ _open_terminal_file() {
 do_run() {
   local current
   current=$(_defaults_read_profile | tr -d '[:space:]')
-  if [[ "$current" == "Dracula" ]]; then
+  if [[ "$current" == "Dracula" ]] && _dracula_profile_registered; then
     json_result "ok" "Dracula already default"
     return
   fi
 
   json_progress "downloading Dracula.terminal"
-  local tmp
-  tmp=$(mktemp /tmp/devlair.XXXXXX.terminal 2>/dev/null || mktemp)
+  # The file must be named Dracula.terminal — Terminal.app uses the filename stem
+  # as the registered profile name, ignoring the name key inside the plist.
+  local tmpdir tmp
+  tmpdir=$(mktemp -d)
+  tmp="$tmpdir/Dracula.terminal"
 
   curl -fsSL "$_DRACULA_URL" -o "$tmp" >&2
 
@@ -58,7 +74,7 @@ do_run() {
   local actual
   actual=$(shasum -a 256 "$tmp" | awk '{print $1}')
   if [[ "$actual" != "$_DRACULA_SHA256" ]]; then
-    rm -f "$tmp"
+    rm -rf "$tmpdir"
     json_result "fail" "Dracula.terminal checksum mismatch (got $actual)"
     exit 1
   fi
@@ -73,14 +89,14 @@ do_run() {
     defaults write com.apple.Terminal 'Startup Window Settings' 'Dracula'
   " >&2
 
-  rm -f "$tmp"
+  rm -rf "$tmpdir"
   json_result "ok" "Dracula theme imported and set as default"
 }
 
 do_check() {
   local current
   current=$(_defaults_read_profile | tr -d '[:space:]')
-  if [[ "$current" == "Dracula" ]]; then
+  if [[ "$current" == "Dracula" ]] && _dracula_profile_registered; then
     json_check "Terminal.app Dracula" "ok" "Dracula is default"
   else
     json_check "Terminal.app Dracula" "warn" "current: ${current:-none}"
