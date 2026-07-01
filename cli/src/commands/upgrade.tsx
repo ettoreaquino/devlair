@@ -18,6 +18,7 @@ import { useEffect, useRef, useState } from "react";
 import { Logo } from "../components/Logo.js";
 import { type ModuleRun, Progress } from "../components/Progress.js";
 import type { UpgradeFlags } from "../lib/args.js";
+import { resolveBrand } from "../lib/brand.js";
 import { buildModuleContext } from "../lib/context.js";
 import { REAPPLY_KEYS, resolveOrder } from "../lib/modules.js";
 import { moduleScriptPath } from "../lib/paths.js";
@@ -33,12 +34,22 @@ interface SelfUpdateResult {
   detail: string;
 }
 
-function UpgradeHeader({ username, host, platform }: { username: string; host: string; platform: string }) {
+function UpgradeHeader({
+  username,
+  host,
+  platform,
+  brand,
+}: {
+  username: string;
+  host: string;
+  platform: string;
+  brand: string;
+}) {
   const suffix = platform === "wsl" ? " (WSL)" : platform === "macos" ? " (macOS)" : "";
 
   return (
     <Box flexDirection="column">
-      <Logo />
+      <Logo brand={brand} />
       <Box marginBottom={1}>
         <Text>{"  "}</Text>
         <Text color={D_PURPLE} bold>
@@ -339,7 +350,12 @@ export function UpgradeView({ flags, version }: { flags: UpgradeFlags; version: 
 
   return (
     <Box flexDirection="column">
-      <UpgradeHeader username={context.username} host={hostname()} platform={platform} />
+      <UpgradeHeader
+        username={context.username}
+        host={hostname()}
+        platform={platform}
+        brand={resolveBrand(undefined, context.userHome)}
+      />
 
       {phase === "self-update" && !selfResult && (
         <Box marginBottom={1}>
