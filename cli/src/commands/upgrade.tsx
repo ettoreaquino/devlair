@@ -148,7 +148,6 @@ async function checkSelfUpdate(currentVersion: string): Promise<SelfUpdateResult
     const buffer = Buffer.from(await binResp.arrayBuffer());
 
     // Write to a temp file, then install into /usr/local/bin/ via sudo -n
-    // (credentials were primed before Ink started in index.tsx).
     const installPath = "/usr/local/bin/devlair";
     const tmpDir = mkdtempSync(join(tmpdir(), "devlair-update-"));
     const tmpPath = join(tmpDir, "devlair");
@@ -159,7 +158,8 @@ async function checkSelfUpdate(currentVersion: string): Promise<SelfUpdateResult
     if (mv.error || mv.status !== 0) {
       throw new Error(`Permission denied installing to ${installPath} — run: sudo devlair upgrade`);
     }
-    spawnSync("sudo", ["-n", "chmod", "755", installPath]);
+    const ch = spawnSync("sudo", ["-n", "chmod", "755", installPath]);
+    if (ch.error || ch.status !== 0) throw new Error("chmod failed on installed binary");
 
     return { status: "updated", detail: `devlair updated to v${latest}` };
   } catch (err) {

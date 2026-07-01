@@ -128,8 +128,6 @@ async function main() {
         // no confirmation AND left brew gone before the modules could use it to
         // uninstall their packages. It must come last.
       } else if (command.type === "upgrade" && !command.flags.noSelf) {
-        // Cache sudo credentials before Ink starts so the atomic rename into
-        // /usr/local/bin/ can use `sudo -n` without a mid-render password prompt.
         primeSudoForRootArtifacts(["/usr/local/bin/devlair"]);
         macOsPreFlight();
       } else {
