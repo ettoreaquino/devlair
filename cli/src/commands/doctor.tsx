@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { Logo } from "../components/Logo.js";
 import type { DoctorFlags } from "../lib/args.js";
+import { resolveBrand } from "../lib/brand.js";
 import { buildModuleContext } from "../lib/context.js";
 import { MODULE_SPECS, REAPPLY_KEYS, resolveOrder } from "../lib/modules.js";
 import { moduleScriptPath } from "../lib/paths.js";
@@ -38,12 +39,22 @@ const STATUS_ICON: Record<Status, { char: string; color: string }> = {
   fail: { char: "✗", color: D_RED },
 };
 
-function DoctorHeader({ username, host, platform }: { username: string; host: string; platform: string }) {
+function DoctorHeader({
+  username,
+  host,
+  platform,
+  brand,
+}: {
+  username: string;
+  host: string;
+  platform: string;
+  brand: string;
+}) {
   const suffix = platform === "wsl" ? " (WSL)" : platform === "macos" ? " (macOS)" : "";
 
   return (
     <Box flexDirection="column">
-      <Logo />
+      <Logo brand={brand} />
       <Box marginBottom={1}>
         <Text>{"  "}</Text>
         <Text color={D_PURPLE} bold>
@@ -194,10 +205,11 @@ export function DoctorView({ flags }: { flags: DoctorFlags }) {
     const platform = detectPlatform();
     const wslVersion = detectWslVersion(platform);
     const context = buildModuleContext(platform, wslVersion);
-    return { platform, wslVersion, context };
+    const brand = resolveBrand(undefined, context.userHome);
+    return { platform, wslVersion, context, brand };
   });
 
-  const { platform, context } = envState;
+  const { platform, context, brand } = envState;
 
   const [phase, setPhase] = useState<Phase>("checking");
   const [checkingModule, setCheckingModule] = useState("");
@@ -321,7 +333,7 @@ export function DoctorView({ flags }: { flags: DoctorFlags }) {
 
   return (
     <Box flexDirection="column">
-      <DoctorHeader username={context.username} host={hostname()} platform={platform} />
+      <DoctorHeader username={context.username} host={hostname()} platform={platform} brand={brand} />
 
       {phase === "checking" && (
         <Box>

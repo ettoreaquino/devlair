@@ -18,6 +18,7 @@ import { useEffect, useRef, useState } from "react";
 import { Logo } from "../components/Logo.js";
 import { type ModuleRun, Progress } from "../components/Progress.js";
 import type { UpgradeFlags } from "../lib/args.js";
+import { resolveBrand } from "../lib/brand.js";
 import { buildModuleContext } from "../lib/context.js";
 import { REAPPLY_KEYS, resolveOrder } from "../lib/modules.js";
 import { moduleScriptPath } from "../lib/paths.js";
@@ -33,12 +34,22 @@ interface SelfUpdateResult {
   detail: string;
 }
 
-function UpgradeHeader({ username, host, platform }: { username: string; host: string; platform: string }) {
+function UpgradeHeader({
+  username,
+  host,
+  platform,
+  brand,
+}: {
+  username: string;
+  host: string;
+  platform: string;
+  brand: string;
+}) {
   const suffix = platform === "wsl" ? " (WSL)" : platform === "macos" ? " (macOS)" : "";
 
   return (
     <Box flexDirection="column">
-      <Logo />
+      <Logo brand={brand} />
       <Box marginBottom={1}>
         <Text>{"  "}</Text>
         <Text color={D_PURPLE} bold>
@@ -175,10 +186,11 @@ export function UpgradeView({ flags, version }: { flags: UpgradeFlags; version: 
     const platform = detectPlatform();
     const wslVersion = detectWslVersion(platform);
     const context = buildModuleContext(platform, wslVersion);
-    return { platform, wslVersion, context };
+    const brand = resolveBrand(undefined, context.userHome);
+    return { platform, wslVersion, context, brand };
   });
 
-  const { platform, context } = envState;
+  const { platform, context, brand } = envState;
 
   const [phase, setPhase] = useState<Phase>(flags.noSelf ? "tools" : "self-update");
   const [selfResult, setSelfResult] = useState<SelfUpdateResult | null>(
@@ -339,7 +351,7 @@ export function UpgradeView({ flags, version }: { flags: UpgradeFlags; version: 
 
   return (
     <Box flexDirection="column">
-      <UpgradeHeader username={context.username} host={hostname()} platform={platform} />
+      <UpgradeHeader username={context.username} host={hostname()} platform={platform} brand={brand} />
 
       {phase === "self-update" && !selfResult && (
         <Box marginBottom={1}>
