@@ -186,10 +186,11 @@ export function UpgradeView({ flags, version }: { flags: UpgradeFlags; version: 
     const platform = detectPlatform();
     const wslVersion = detectWslVersion(platform);
     const context = buildModuleContext(platform, wslVersion);
-    return { platform, wslVersion, context };
+    const brand = resolveBrand(undefined, context.userHome);
+    return { platform, wslVersion, context, brand };
   });
 
-  const { platform, context } = envState;
+  const { platform, context, brand } = envState;
 
   const [phase, setPhase] = useState<Phase>(flags.noSelf ? "tools" : "self-update");
   const [selfResult, setSelfResult] = useState<SelfUpdateResult | null>(
@@ -350,12 +351,7 @@ export function UpgradeView({ flags, version }: { flags: UpgradeFlags; version: 
 
   return (
     <Box flexDirection="column">
-      <UpgradeHeader
-        username={context.username}
-        host={hostname()}
-        platform={platform}
-        brand={resolveBrand(undefined, context.userHome)}
-      />
+      <UpgradeHeader username={context.username} host={hostname()} platform={platform} brand={brand} />
 
       {phase === "self-update" && !selfResult && (
         <Box marginBottom={1}>
