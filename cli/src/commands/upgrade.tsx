@@ -6,7 +6,8 @@
  * 3. Re-apply: re-run REAPPLY_KEYS modules to refresh configs.
  */
 
-import { chmodSync, mkdtempSync, renameSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
 import { useApp } from "ink";
@@ -146,16 +147,19 @@ async function checkSelfUpdate(currentVersion: string): Promise<SelfUpdateResult
     if (!binResp.ok) throw new Error(`Download failed: HTTP ${binResp.status}`);
     const buffer = Buffer.from(await binResp.arrayBuffer());
 
-    // Write to /usr/local/bin/devlair
+    // Write to a temp file, then install into /usr/local/bin/ via sudo -n
     const installPath = "/usr/local/bin/devlair";
     const tmpDir = mkdtempSync(join(tmpdir(), "devlair-update-"));
     const tmpPath = join(tmpDir, "devlair");
-    writeFileSync(tmpPath, buffer);
-    chmodSync(tmpPath, 0o755);
+    writeFileSync(tmpPath, buffer, { mode: 0o755 });
 
-    // Atomic replace
-    renameSync(tmpPath, installPath);
-    chmodSync(installPath, 0o755);
+    // Atomic replace — requires root on macOS; use cached sudo credentials.
+    const mv = spawnSync("sudo", ["-n", "mv", tmpPath, installPath]);
+    if (mv.error || mv.status !== 0) {
+      throw new Error(`Permission denied installing to ${installPath} — run: sudo devlair upgrade`);
+    }
+    const ch = spawnSync("sudo", ["-n", "chmod", "755", installPath]);
+    if (ch.error || ch.status !== 0) throw new Error("chmod failed on installed binary");
 
     return { status: "updated", detail: `devlair updated to v${latest}` };
   } catch (err) {
