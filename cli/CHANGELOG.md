@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.2.4](https://github.com/ettoreaquino/devlair/compare/v3.2.3...v3.2.4) (2026-07-01)
+
+
+### Bug Fixes
+
+* **upgrade:** install binary to user-owned ~/.devlair/bin, no root needed ([#267](https://github.com/ettoreaquino/devlair/issues/267)) ([d44f9ad](https://github.com/ettoreaquino/devlair/commit/d44f9adf04ef63ce0042dc4095ad6f6e0a37305e))
+
 ## [3.2.3](https://github.com/ettoreaquino/devlair/compare/v3.2.2...v3.2.3) (2026-07-01)
 
 
