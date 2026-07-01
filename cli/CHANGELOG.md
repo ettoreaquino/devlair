@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.2.3](https://github.com/ettoreaquino/devlair/compare/v3.2.2...v3.2.3) (2026-07-01)
+
+
+### Bug Fixes
+
+* **brand:** upgrade/doctor banners ignore custom --brand ([#265](https://github.com/ettoreaquino/devlair/issues/265)) ([d35883a](https://github.com/ettoreaquino/devlair/commit/d35883a28c6801440677144057ae4c4f124e0c0e))
+* **upgrade:** use sudo -n to install binary into root-owned /usr/local/bin ([#262](https://github.com/ettoreaquino/devlair/issues/262)) ([34d4a18](https://github.com/ettoreaquino/devlair/commit/34d4a183e4e5aef7580a3e6a1399671338aa3191))
+
 ## [3.2.2](https://github.com/ettoreaquino/devlair/compare/v3.2.1...v3.2.2) (2026-06-30)
 
 
