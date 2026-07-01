@@ -363,7 +363,7 @@ Verifies every component without making changes — checks installed tools, conf
 devlair upgrade
 ```
 
-Checks for a new devlair binary first — if a newer release is available, it downloads, replaces, and re-execs so the rest of the upgrade runs new code. Then upgrades system packages and any tools that were installed during init (Docker, GitHub CLI, AWS CLI, pyenv/Python, nvm/Node, Bun). After upgrading, automatically re-applies module configurations (hooks, settings, shell aliases) so new config shapes take effect immediately. Use `--no-self` to skip the binary update.
+Checks for a new devlair binary first — if a newer release is available, it downloads the binary to a temp file and installs it into `/usr/local/bin/` via `sudo`. On macOS, sudo credentials are prompted up front (before the Ink UI starts) so the install step can use cached credentials non-interactively; use `--no-self` to skip the binary update and the sudo prompt. After a successful self-update, devlair re-execs so the rest of the upgrade runs new code. Then upgrades system packages and any tools that were installed during init (Docker, GitHub CLI, AWS CLI, pyenv/Python, nvm/Node, Bun). After upgrading, automatically re-applies module configurations (hooks, settings, shell aliases) so new config shapes take effect immediately.
 
 ## Uninstall
 
