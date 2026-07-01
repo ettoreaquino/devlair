@@ -17,10 +17,22 @@ INSTALL_DIR="/usr/local/bin"
 SHARE_DIR="/usr/local/share/devlair"
 CHANNEL="v2"
 
-# Computed after we know INSTALL_DIR — reused for binary install, modules
-# install, and any apt-get fallbacks below so the sudo decision is made once.
+# macOS: install the binary into a user-owned dir so self-update never needs
+# root. The devlair shell module puts ~/.devlair/bin ahead of /usr/local/bin on
+# PATH; we also ensure that PATH entry below so `devlair` resolves before init.
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  INSTALL_DIR="$HOME/.devlair/bin"
+  mkdir -p "$INSTALL_DIR"
+fi
+
+# Privilege is decided per target: the binary dir and the shared modules dir may
+# have different owners (user-owned ~/.devlair/bin + root-owned /usr/local on
+# macOS). MAYBE_SUDO gates the binary + Linux apt/dpkg steps; SHARE_SUDO gates
+# the modules install under /usr/local/share.
 MAYBE_SUDO=""
 [[ ! -w "$INSTALL_DIR" ]] && MAYBE_SUDO="sudo"
+SHARE_SUDO=""
+[[ ! -w "/usr/local/share" ]] && SHARE_SUDO="sudo"
 
 # ── Dracula-styled output ─────────────────────────────────────────────────────
 # Keep in sync with Dracula palette (cli/src/lib/theme.ts) — drift produces
@@ -196,6 +208,17 @@ $MAYBE_SUDO mv "$TMP" "${INSTALL_DIR}/${BIN}"
 $MAYBE_SUDO chmod 755 "${INSTALL_DIR}/${BIN}"
 ok "${INSTALL_DIR}/${BIN}"
 
+# macOS: make ~/.devlair/bin reachable before `devlair init` runs (init's shell
+# module manages the canonical PATH line; this is the pre-init bootstrap). The
+# guard on ".devlair/bin" also matches that managed line, so we never duplicate.
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  ZSHRC="$HOME/.zshrc"
+  if ! grep -qsF '.devlair/bin' "$ZSHRC" 2>/dev/null; then
+    printf '\n# devlair\nexport PATH="$HOME/.devlair/bin:$PATH"\n' >> "$ZSHRC"
+    meta "added ~/.devlair/bin to PATH in ~/.zshrc"
+  fi
+fi
+
 # ── v2: fetch modules tarball ─────────────────────────────────────────────────
 # v2 shell modules live outside the compiled binary and ship as a separate
 # tarball. v1 is self-contained and does not need this step.
@@ -223,12 +246,12 @@ if [[ "$CHANNEL" != "v1" ]]; then
   chmod -R u=rwX,go=rX "$STAGE_DIR/modules"
   rm -f "$TMP_MODULES"
 
-  $MAYBE_SUDO rm -rf "${SHARE_DIR}.old" 2>/dev/null || true
-  [[ -d "$SHARE_DIR" ]] && $MAYBE_SUDO mv "$SHARE_DIR" "${SHARE_DIR}.old"
-  $MAYBE_SUDO mkdir -m 755 -p "$SHARE_DIR"
-  $MAYBE_SUDO mv "$STAGE_DIR/modules" "${SHARE_DIR}/modules"
-  $MAYBE_SUDO chmod 755 "${SHARE_DIR}/modules"
-  $MAYBE_SUDO rm -rf "${SHARE_DIR}.old"
+  $SHARE_SUDO rm -rf "${SHARE_DIR}.old" 2>/dev/null || true
+  [[ -d "$SHARE_DIR" ]] && $SHARE_SUDO mv "$SHARE_DIR" "${SHARE_DIR}.old"
+  $SHARE_SUDO mkdir -m 755 -p "$SHARE_DIR"
+  $SHARE_SUDO mv "$STAGE_DIR/modules" "${SHARE_DIR}/modules"
+  $SHARE_SUDO chmod 755 "${SHARE_DIR}/modules"
+  $SHARE_SUDO rm -rf "${SHARE_DIR}.old"
   rm -rf "$STAGE_DIR"
   ok "modules installed to ${SHARE_DIR}/modules"
 
@@ -280,6 +303,8 @@ printf "  %s%s%s\n\n" "$C_COMMENT" "${INSTALL_DIR}/${BIN}" "$C_RESET"
 
 printf "%sNext step:%s\n" "$C_BOLD" "$C_RESET"
 if [[ "$OS_SUFFIX" == "darwin" ]]; then
+  printf "  %sOpen a new terminal%s %s(or run: source ~/.zshrc)%s, then:\n" \
+    "$C_PURPLE" "$C_RESET" "$C_COMMENT" "$C_RESET"
   printf "  %sdevlair init%s\n\n" "$C_PURPLE" "$C_RESET"
 else
   printf "  %sdevlair init%s  %s(will prompt for sudo if needed)%s\n\n" \
