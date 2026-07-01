@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { existsSync } from "node:fs";
+import { homedir } from "node:os";
 import { Text, render } from "ink";
 import pkg from "../package.json" with { type: "json" };
 import { ClaudeView } from "./commands/claude.js";
@@ -25,6 +26,7 @@ import {
 } from "./lib/args.js";
 import { elevateIfNeeded, primeSudoForRootArtifacts } from "./lib/elevate.js";
 import { macOsPreFlight, macOsPurgeHomebrew } from "./lib/homebrew.js";
+import { isWritableDir, resolveInstallTarget } from "./lib/self-update.js";
 import { D_FG } from "./lib/theme.js";
 
 const VERSION = pkg.version;
@@ -128,7 +130,18 @@ async function main() {
         // no confirmation AND left brew gone before the modules could use it to
         // uninstall their packages. It must come last.
       } else if (command.type === "upgrade" && !command.flags.noSelf) {
-        primeSudoForRootArtifacts(["/usr/local/bin/devlair"]);
+        // Only cache sudo credentials when the self-update genuinely needs root
+        // (a legacy /usr/local/bin install that can't relocate). The common case
+        // installs into user-owned ~/.devlair/bin, so we no longer prompt for a
+        // password on every upgrade.
+        const target = resolveInstallTarget({
+          platform: process.platform,
+          execPath: process.execPath,
+          home: homedir(),
+          pathEnv: process.env.PATH ?? "",
+          isWritableDir,
+        });
+        if (target.allowSudo) primeSudoForRootArtifacts([target.path]);
         macOsPreFlight();
       } else {
         macOsPreFlight();

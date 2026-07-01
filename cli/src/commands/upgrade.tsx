@@ -7,9 +7,9 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { hostname, tmpdir } from "node:os";
-import { join } from "node:path";
+import { chmodSync, mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { homedir, hostname } from "node:os";
+import { dirname, join } from "node:path";
 import { useApp } from "ink";
 import { Box, Text } from "ink";
 import Spinner from "ink-spinner";
@@ -24,6 +24,7 @@ import { REAPPLY_KEYS, resolveOrder } from "../lib/modules.js";
 import { moduleScriptPath } from "../lib/paths.js";
 import { detectPlatform, detectWslVersion } from "../lib/platform.js";
 import { runModule } from "../lib/runner.js";
+import { isWritableDir, resolveInstallTarget } from "../lib/self-update.js";
 import { D_COMMENT, D_CYAN, D_FG, D_GREEN, D_ORANGE, D_PINK, D_PURPLE, D_RED } from "../lib/theme.js";
 import type { Status } from "../lib/types.js";
 
@@ -32,6 +33,8 @@ type Phase = "self-update" | "tools" | "reapply" | "done";
 interface SelfUpdateResult {
   status: "up-to-date" | "updated" | "skipped" | "error";
   detail: string;
+  /** Where the new binary was installed — the re-exec target after an update. */
+  installPath?: string;
 }
 
 function UpgradeHeader({
@@ -158,21 +161,63 @@ async function checkSelfUpdate(currentVersion: string): Promise<SelfUpdateResult
     if (!binResp.ok) throw new Error(`Download failed: HTTP ${binResp.status}`);
     const buffer = Buffer.from(await binResp.arrayBuffer());
 
-    // Write to a temp file, then install into /usr/local/bin/ via sudo -n
-    const installPath = "/usr/local/bin/devlair";
-    const tmpDir = mkdtempSync(join(tmpdir(), "devlair-update-"));
-    const tmpPath = join(tmpDir, "devlair");
+    // Decide where the new binary goes — prefer a user-owned location so the
+    // install needs no root at all (see lib/self-update.ts).
+    const target = resolveInstallTarget({
+      platform: process.platform,
+      execPath: process.execPath,
+      home: homedir(),
+      pathEnv: process.env.PATH ?? "",
+      isWritableDir,
+    });
+    const targetDir = dirname(target.path);
+    mkdirSync(targetDir, { recursive: true });
+
+    // Stage the download inside the target directory so the final swap is an
+    // atomic same-filesystem rename (a cross-device rename raises EACCES even
+    // with permission — the root cause of the historical upgrade failures).
+    const tmpPath = join(targetDir, `.devlair-update-${process.pid}`);
     writeFileSync(tmpPath, buffer, { mode: 0o755 });
 
-    // Atomic replace — requires root on macOS; use cached sudo credentials.
-    const mv = spawnSync("sudo", ["-n", "mv", tmpPath, installPath]);
-    if (mv.error || mv.status !== 0) {
-      throw new Error(`Permission denied installing to ${installPath} — run: sudo devlair upgrade`);
+    let installed = false;
+    try {
+      renameSync(tmpPath, target.path);
+      chmodSync(target.path, 0o755);
+      installed = true;
+    } catch {
+      // Direct write failed (root-owned legacy location). Try a privileged move
+      // only when allowed and sudo credentials are already cached.
+      if (target.allowSudo) {
+        const mv = spawnSync("sudo", ["-n", "mv", tmpPath, target.path]);
+        const ch = mv.status === 0 ? spawnSync("sudo", ["-n", "chmod", "755", target.path]) : null;
+        installed = mv.status === 0 && ch?.status === 0;
+      }
     }
-    const ch = spawnSync("sudo", ["-n", "chmod", "755", installPath]);
-    if (ch.error || ch.status !== 0) throw new Error("chmod failed on installed binary");
 
-    return { status: "updated", detail: `devlair updated to v${latest}` };
+    if (!installed) {
+      rmSync(tmpPath, { force: true });
+      return {
+        status: "skipped",
+        detail: `Update to v${latest} available — could not install to ${target.path}. Re-run \`devlair init\` then \`devlair upgrade\`, or reinstall.`,
+      };
+    }
+
+    // Retire a shadowed legacy binary so `devlair --version` is unambiguous.
+    // Best-effort: ~/.devlair/bin is ahead on PATH, so the new copy wins even if
+    // the old root-owned one can't be removed without cached credentials.
+    if (target.migrateFrom && target.migrateFrom !== target.path) {
+      try {
+        rmSync(target.migrateFrom, { force: true });
+      } catch {
+        spawnSync("sudo", ["-n", "rm", "-f", target.migrateFrom], { stdio: "ignore" });
+      }
+    }
+
+    return {
+      status: "updated",
+      detail: `devlair updated to v${latest}${target.note ? ` — ${target.note}` : ""}`,
+      installPath: target.path,
+    };
   } catch (err) {
     return { status: "error", detail: `Could not check for updates: ${err instanceof Error ? err.message : err}` };
   }
@@ -209,10 +254,11 @@ export function UpgradeView({ flags, version }: { flags: UpgradeFlags; version: 
       setSelfResult(result);
 
       if (result.status === "updated") {
-        // Re-exec with --no-self so the new binary runs the rest
+        // Re-exec the freshly installed binary with --no-self so it runs the rest.
         const { execFileSync } = await import("node:child_process");
+        const newBinary = result.installPath ?? process.execPath;
         try {
-          execFileSync("/usr/local/bin/devlair", ["upgrade", "--no-self"], { stdio: "inherit" });
+          execFileSync(newBinary, ["upgrade", "--no-self"], { stdio: "inherit" });
         } catch {
           // The new binary will handle output
         }
