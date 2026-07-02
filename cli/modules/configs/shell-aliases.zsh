@@ -70,6 +70,10 @@ if [ -n "$WSL_DISTRO_NAME" ] && command -v wslview &>/dev/null; then
 fi
 
 # ── Claude Code ───────────────────────────────────────────────────────────────
+# Owned here (not left to claude.ai/install.sh's own zshrc append) so it
+# survives shell.sh's refresh, which rewrites .zshrc as header+this block and
+# drops anything a third-party installer appended after it.
+export PATH="$HOME/.local/bin:$PATH"
 export CLAUDE_CODE_DISABLE_1M_CONTEXT=1
 # Use 1M context for a single session: CLAUDE_CODE_DISABLE_1M_CONTEXT=0 claude
 
