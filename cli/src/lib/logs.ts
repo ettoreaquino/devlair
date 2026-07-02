@@ -1,19 +1,19 @@
-// Per-run log directory for `devlair init`. Each module's stderr is streamed
-// to its own file so failures can be diagnosed without re-running with extra
-// flags.
+// Per-run log directory for `devlair init` / `uninstall` / `doctor`. Each
+// module's stderr is streamed to its own file so failures can be diagnosed
+// without re-running with extra flags. Directory names are prefixed per command
+// (`init-`, `doctor-`) so pruning keeps each command's history independently.
 
 import { chmodSync, chownSync, lstatSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const KEEP_RUNS = 10;
-const LOG_DIR_PREFIX = "init-";
 
-function runDirName(now: Date): string {
+function runDirName(now: Date, prefix: string): string {
   const iso = now
     .toISOString()
     .replace(/[:.]/g, "-")
     .replace(/-\d{3}Z$/, "Z");
-  return `${LOG_DIR_PREFIX}${iso}`;
+  return `${prefix}${iso}`;
 }
 
 /**
@@ -41,12 +41,14 @@ function rejectSymlink(path: string): void {
 }
 
 /**
- * Create `<userHome>/.devlair/logs/init-<ts>/` (mode 0700) and prune older
- * `init-*` directories to the most recent KEEP_RUNS, including the new one.
+ * Create `<userHome>/.devlair/logs/<prefix><ts>/` (mode 0700) and prune older
+ * `<prefix>*` directories to the most recent KEEP_RUNS, including the new one.
+ * Pruning is scoped to the given prefix, so `doctor-*` runs never evict
+ * `init-*` history and vice versa.
  *
  * Returns the absolute path to the new directory.
  */
-export function createInitLogDir(userHome: string, now: Date = new Date()): string {
+export function createRunLogDir(userHome: string, prefix = "init-", now: Date = new Date()): string {
   const devlairDir = join(userHome, ".devlair");
   const logsRoot = join(devlairDir, "logs");
 
@@ -61,7 +63,7 @@ export function createInitLogDir(userHome: string, now: Date = new Date()): stri
   // created dirs; an existing ~/.devlair/logs with 0755 would stay 0755.
   chmodSync(logsRoot, 0o700);
 
-  const runDir = join(logsRoot, runDirName(now));
+  const runDir = join(logsRoot, runDirName(now, prefix));
   mkdirSync(runDir, { mode: 0o700 });
   chmodSync(runDir, 0o700);
 
@@ -71,14 +73,14 @@ export function createInitLogDir(userHome: string, now: Date = new Date()): stri
     chownSync(runDir, ownership[0], ownership[1]);
   }
 
-  pruneOldRuns(logsRoot, KEEP_RUNS);
+  pruneOldRuns(logsRoot, prefix, KEEP_RUNS);
   return runDir;
 }
 
-function pruneOldRuns(logsRoot: string, keep: number): void {
+function pruneOldRuns(logsRoot: string, prefix: string, keep: number): void {
   let names: string[];
   try {
-    names = readdirSync(logsRoot).filter((name) => name.startsWith(LOG_DIR_PREFIX));
+    names = readdirSync(logsRoot).filter((name) => name.startsWith(prefix));
   } catch {
     return;
   }
