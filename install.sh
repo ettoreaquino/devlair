@@ -176,6 +176,30 @@ if [[ -z "${LATEST:-}" ]]; then
   exit 1
 fi
 
+# ── Guard: newest tag must have a published release ───────────────────────────
+# LATEST comes from the /releases API, which omits any tag whose GitHub Release
+# was deleted. When that happens the resolver silently falls back to an older
+# release and every fresh install is downgraded — with no error, because the
+# stale release still downloads fine. Cross-check against /tags: if a strictly
+# newer stable tag exists on this channel without a release, fail loudly rather
+# than install stale. Best-effort — a tags-API hiccup must not block installs
+# that already resolved a valid release.
+NEWEST_TAG=$(curl -fsSL "https://api.github.com/repos/${REPO}/tags?per_page=100" 2>/dev/null \
+  | grep -oE '"name": *"v[0-9]+\.[0-9]+\.[0-9]+"' \
+  | grep -o '"v[^"]*"' | tr -d '"' \
+  | { if [[ "$CHANNEL" == "v1" ]]; then grep '^v1\.'; else grep -v '^v1\.'; fi; } \
+  | sort -V | tail -1) || true
+if [[ -n "${NEWEST_TAG:-}" && "$NEWEST_TAG" != "$LATEST" ]]; then
+  # Only fail when the tag is strictly newer than the resolved release; sort -V
+  # puts the greater version last, so a trailing NEWEST_TAG means release is behind.
+  if [[ "$(printf '%s\n%s\n' "$LATEST" "$NEWEST_TAG" | sort -V | tail -1)" == "$NEWEST_TAG" ]]; then
+    err "Tag ${NEWEST_TAG} exists but has no published GitHub Release."
+    meta "Refusing to install stale ${LATEST} — a release was likely deleted."
+    meta "Please report this at https://github.com/${REPO}/issues"
+    exit 1
+  fi
+fi
+
 ASSET="${ASSET_PREFIX}-${OS_SUFFIX}-${ARCH_SUFFIX}"
 ok "release ${LATEST}"
 meta "asset: ${ASSET}"
