@@ -136,7 +136,7 @@ done
 # channel so asset naming and the v1/macOS guard below stay consistent.
 if [[ -n "$PIN_VERSION" ]]; then
   [[ "$PIN_VERSION" =~ ^[0-9] ]] && PIN_VERSION="v${PIN_VERSION}"   # allow "3.2.1" → "v3.2.1"
-  if [[ ! "$PIN_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9] ]]; then
+  if [[ ! "$PIN_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
     err "Invalid --version '${PIN_VERSION}' — expected a v-prefixed release, e.g. v3.2.1"
     exit 1
   fi
