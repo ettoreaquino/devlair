@@ -30,6 +30,7 @@ _clean_zshrc() {
     /^export BUN_INSTALL=/ { next }
     /\[ -s "\$BUN_INSTALL\/bin\/bun" \]/ { next }
     /# bun/ { next }
+    /^export PATH="\$HOME\/\.local\/bin:\$PATH"$/ { next }
     { print }
   ' <<< "$text"
 }

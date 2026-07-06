@@ -15,6 +15,7 @@ import { Logo } from "../components/Logo.js";
 import type { DoctorFlags } from "../lib/args.js";
 import { resolveBrand } from "../lib/brand.js";
 import { buildModuleContext } from "../lib/context.js";
+import { createRunLogDir, invokerOwnership, moduleLogPath } from "../lib/logs.js";
 import { MODULE_SPECS, REAPPLY_KEYS, resolveOrder } from "../lib/modules.js";
 import { moduleScriptPath } from "../lib/paths.js";
 import { detectPlatform, detectWslVersion } from "../lib/platform.js";
@@ -219,6 +220,15 @@ export function DoctorView({ flags }: { flags: DoctorFlags }) {
   // Phase 1: Run all modules in check mode
   useEffect(() => {
     const abortController = new AbortController();
+    // Per-run log dir so a failed `doctor` leaves something to inspect, matching
+    // `init`/`uninstall`. Best-effort — never block the run because we couldn't mkdir.
+    let runLogDir: string | null = null;
+    try {
+      runLogDir = createRunLogDir(context.userHome, "doctor-");
+    } catch {
+      // Logging is best-effort.
+    }
+    const ownership = invokerOwnership();
 
     async function runChecks() {
       const specs = MODULE_SPECS.filter((s) => s.platforms.has(platform));
@@ -230,7 +240,11 @@ export function DoctorView({ flags }: { flags: DoctorFlags }) {
 
         try {
           const scriptPath = moduleScriptPath(spec.key);
-          const iter = runModule(scriptPath, context, "check", { signal: abortController.signal });
+          const iter = runModule(scriptPath, context, "check", {
+            signal: abortController.signal,
+            logFile: runLogDir ? moduleLogPath(runLogDir, spec.key) : undefined,
+            chownUidGid: ownership ?? undefined,
+          });
 
           let first = true;
           while (true) {
@@ -297,7 +311,12 @@ export function DoctorView({ flags }: { flags: DoctorFlags }) {
 
         try {
           const scriptPath = moduleScriptPath(spec.key);
-          const iter = runModule(scriptPath, ctx, "run", { signal });
+          const iter = runModule(scriptPath, ctx, "run", {
+            signal,
+            // Distinct from the check-phase log so a --fix re-apply doesn't clobber it.
+            logFile: runLogDir ? moduleLogPath(runLogDir, `${spec.key}-fix`) : undefined,
+            chownUidGid: ownership ?? undefined,
+          });
 
           while (true) {
             const { value, done } = await iter.next();

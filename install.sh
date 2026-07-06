@@ -7,6 +7,10 @@
 # Usage (macOS):
 #   curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | bash
 #
+# Install a specific release (default: latest published release):
+#   curl -fsSL .../install.sh | bash -s -- --version v3.2.1
+#   curl -fsSL .../install.sh | DEVLAIR_VERSION=v3.2.1 bash
+#
 # The script auto-elevates only when /usr/local/bin is not writable.
 # On macOS with Homebrew, sudo is usually not required.
 set -euo pipefail
@@ -16,6 +20,9 @@ BIN="devlair"
 INSTALL_DIR="/usr/local/bin"
 SHARE_DIR="/usr/local/share/devlair"
 CHANNEL="v2"
+# Optional pin to a specific release tag (e.g. v3.2.1). Empty = resolve latest.
+# Settable via env for the pipe-to-bash case, or --version for the -s -- case.
+PIN_VERSION="${DEVLAIR_VERSION:-}"
 
 # macOS: install the binary into a user-owned dir so self-update never needs
 # root. The devlair shell module puts ~/.devlair/bin ahead of /usr/local/bin on
@@ -98,21 +105,43 @@ verify_checksum() {
 }
 
 # ── Parse flags ───────────────────────────────────────────────────────────────
-for arg in "$@"; do
-  case "$arg" in
+while [[ $# -gt 0 ]]; do
+  case "$1" in
     --v1)    CHANNEL="v1" ;;
     --pre)   ;;                # no-op: v2 is now the default
+    --version)
+      PIN_VERSION="${2:-}"
+      [[ -z "$PIN_VERSION" ]] && { err "--version requires an argument, e.g. --version v3.2.1"; exit 1; }
+      shift
+      ;;
+    --version=*)
+      PIN_VERSION="${1#--version=}"
+      ;;
     -h|--help)
-      sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
+      # Print the leading comment block (everything after the shebang up to the
+      # first non-comment line), so usage stays in sync with the header above.
+      awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "$0"
       exit 0
       ;;
     *)
-      err "Unknown option: $arg"
+      err "Unknown option: $1"
       err "Run with --help for usage."
       exit 1
       ;;
   esac
+  shift
 done
+
+# Normalize + validate a pinned version, then let the pinned major pick the
+# channel so asset naming and the v1/macOS guard below stay consistent.
+if [[ -n "$PIN_VERSION" ]]; then
+  [[ "$PIN_VERSION" =~ ^[0-9] ]] && PIN_VERSION="v${PIN_VERSION}"   # allow "3.2.1" → "v3.2.1"
+  if [[ ! "$PIN_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+    err "Invalid --version '${PIN_VERSION}' — expected a v-prefixed release, e.g. v3.2.1"
+    exit 1
+  fi
+  if [[ "$PIN_VERSION" =~ ^v1\. ]]; then CHANNEL="v1"; else CHANNEL="v2"; fi
+fi
 
 # ── Detect OS + architecture ──────────────────────────────────────────────────
 OS=$(uname -s)
@@ -147,8 +176,12 @@ printf "\n%s%s devlair installer%s  %s· channel: %s · os: %s · arch: %s%s\n\n
 
 # ── Channel configuration ─────────────────────────────────────────────────────
 section "Resolving release"
-if [[ "$CHANNEL" == "v1" ]]; then
-  ASSET_PREFIX="devlair"
+ASSET_PREFIX=$([[ "$CHANNEL" == "v1" ]] && echo "devlair" || echo "devlair-cli")
+if [[ -n "$PIN_VERSION" ]]; then
+  # Explicit pin — skip "latest" resolution and the tag/release guard entirely
+  # (the guard only makes sense for latest; pinning an older release is valid).
+  LATEST="$PIN_VERSION"
+elif [[ "$CHANNEL" == "v1" ]]; then
   LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases?per_page=30" \
     | grep -o '"tag_name": *"v1\.[^"]*"' \
     | head -1 \
@@ -157,7 +190,6 @@ if [[ "$CHANNEL" == "v1" ]]; then
     err "Unexpected version format: $LATEST"; exit 1
   fi
 else
-  ASSET_PREFIX="devlair-cli"
   # Default channel = the latest non-v1 release (v2, v3, …). Don't hardcode a
   # major here, or the installer silently pins to the previous line after a
   # major bump (e.g. v3.0.0 ships but `v2\.` keeps resolving the old v2.x).
@@ -176,6 +208,32 @@ if [[ -z "${LATEST:-}" ]]; then
   exit 1
 fi
 
+# ── Guard: newest tag must have a published release ───────────────────────────
+# LATEST comes from the /releases API, which omits any tag whose GitHub Release
+# was deleted. When that happens the resolver silently falls back to an older
+# release and every fresh install is downgraded — with no error, because the
+# stale release still downloads fine. Cross-check against /tags: if a strictly
+# newer stable tag exists on this channel without a release, fail loudly rather
+# than install stale. Best-effort — a tags-API hiccup must not block installs
+# that already resolved a valid release. Skipped entirely when PIN_VERSION is set.
+if [[ -z "$PIN_VERSION" ]]; then
+  NEWEST_TAG=$(curl -fsSL "https://api.github.com/repos/${REPO}/tags?per_page=100" 2>/dev/null \
+    | grep -oE '"name": *"v[0-9]+\.[0-9]+\.[0-9]+"' \
+    | grep -o '"v[^"]*"' | tr -d '"' \
+    | { if [[ "$CHANNEL" == "v1" ]]; then grep '^v1\.'; else grep -v '^v1\.'; fi; } \
+    | sort -V | tail -1) || true
+  if [[ -n "${NEWEST_TAG:-}" && "$NEWEST_TAG" != "$LATEST" ]]; then
+    # Only fail when the tag is strictly newer than the resolved release; sort -V
+    # puts the greater version last, so a trailing NEWEST_TAG means release is behind.
+    if [[ "$(printf '%s\n%s\n' "$LATEST" "$NEWEST_TAG" | sort -V | tail -1)" == "$NEWEST_TAG" ]]; then
+      err "Tag ${NEWEST_TAG} exists but has no published GitHub Release."
+      meta "Refusing to install stale ${LATEST} — a release was likely deleted."
+      meta "Please report this at https://github.com/${REPO}/issues"
+      exit 1
+    fi
+  fi
+fi
+
 ASSET="${ASSET_PREFIX}-${OS_SUFFIX}-${ARCH_SUFFIX}"
 ok "release ${LATEST}"
 meta "asset: ${ASSET}"
@@ -187,7 +245,11 @@ TMP=$(mktemp)
 TMP_CHECKSUMS=$(mktemp)
 cleanup() { rm -f "${TMP:-}" "${TMP_CHECKSUMS:-}" "${TMP_MODULES:-}"; rm -rf "${STAGE_DIR:-}"; }
 trap cleanup EXIT
-curl -fsSL "${BASE_URL}/${ASSET}" -o "$TMP"
+if ! curl -fsSL "${BASE_URL}/${ASSET}" -o "$TMP"; then
+  err "Could not download ${ASSET} for ${LATEST}."
+  meta "Check that release ${LATEST} exists at https://github.com/${REPO}/releases"
+  exit 1
+fi
 curl -fsSL "${BASE_URL}/checksums.txt" -o "$TMP_CHECKSUMS"
 ok "downloaded ${ASSET}"
 

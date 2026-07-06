@@ -2,9 +2,6 @@
 export EDITOR=vim
 export LANG=en_US.UTF-8
 
-# Path
-export PATH="$HOME/.local/bin:$PATH"
-
 # zimfw
 ZIM_HOME="$HOME/.zim"
 if [[ ! -e "$ZIM_HOME/zimfw.zsh" ]]; then

@@ -17,7 +17,7 @@ import { OptionalHint, Summary } from "../components/Summary.js";
 import type { InitFlags } from "../lib/args.js";
 import { resolveBrand } from "../lib/brand.js";
 import { buildModuleContext } from "../lib/context.js";
-import { createInitLogDir, invokerOwnership, moduleLogPath } from "../lib/logs.js";
+import { createRunLogDir, invokerOwnership, moduleLogPath } from "../lib/logs.js";
 import type { Group, ModuleSpec } from "../lib/modules.js";
 import { moduleScriptPath } from "../lib/paths.js";
 import { detectPlatform, detectWslVersion } from "../lib/platform.js";
@@ -141,7 +141,7 @@ function useModuleExecution(specs: ModuleSpec[], context: ModuleContext, autoSta
     // Avoid creating empty dirs when the wizard is cancelled before running.
     let runLogDir: string | null = null;
     try {
-      runLogDir = createInitLogDir(context.userHome);
+      runLogDir = createRunLogDir(context.userHome);
       setLogDir(runLogDir);
     } catch {
       // Logging is best-effort — never block a run because we couldn't mkdir.

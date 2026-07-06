@@ -22,7 +22,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { type ModuleRun, Progress } from "../components/Progress.js";
 import type { UninstallFlags } from "../lib/args.js";
 import { buildModuleContext, resolveInvokingUser } from "../lib/context.js";
-import { createInitLogDir, invokerOwnership, moduleLogPath } from "../lib/logs.js";
+import { createRunLogDir, invokerOwnership, moduleLogPath } from "../lib/logs.js";
 import { resolveTeardownOrder } from "../lib/modules.js";
 import { moduleScriptPath } from "../lib/paths.js";
 import { detectPlatform, detectWslVersion } from "../lib/platform.js";
@@ -219,7 +219,7 @@ export function UninstallView({
     const abort = new AbortController();
     let logDir: string | null = null;
     try {
-      logDir = createInitLogDir(userHome);
+      logDir = createRunLogDir(userHome);
     } catch {
       // best-effort logging
     }

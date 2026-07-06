@@ -31,6 +31,16 @@ curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.s
 
 The installer downloads the `devlair` binary to `/usr/local/bin` and auto-elevates with `sudo` when that path is not writable — so the same command works on macOS, Linux, and WSL.
 
+By default the installer resolves the latest published release. To install a specific version, pass a `v`-prefixed tag — either via the `--version` flag (needs `bash -s --`) or the `DEVLAIR_VERSION` environment variable:
+
+```bash
+# Pin a release with the environment variable
+curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | DEVLAIR_VERSION=v3.2.1 bash
+
+# ...or with the --version flag
+curl -fsSL https://raw.githubusercontent.com/ettoreaquino/devlair/main/install.sh | bash -s -- --version v3.2.1
+```
+
 **2. Provision the machine**
 
 ```bash
