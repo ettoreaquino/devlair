@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.0](https://github.com/ettoreaquino/devlair/compare/v3.2.4...v3.3.0) (2026-07-06)
+
+
+### Features
+
+* pin releases, fix macOS install drift + doctor logs ([#270](https://github.com/ettoreaquino/devlair/issues/270)) ([65e5088](https://github.com/ettoreaquino/devlair/commit/65e50884c514e7cd71593507136eb8fbe7841e52))
+
 ## [3.2.4](https://github.com/ettoreaquino/devlair/compare/v3.2.3...v3.2.4) (2026-07-01)
 
 
