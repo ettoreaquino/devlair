@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.1](https://github.com/ettoreaquino/devlair/compare/v3.3.0...v3.3.1) (2026-07-06)
+
+
+### Bug Fixes
+
+* **macos:** minimal arrow prompt + robust VS Code code CLI symlink ([#273](https://github.com/ettoreaquino/devlair/issues/273)) ([cfc6843](https://github.com/ettoreaquino/devlair/commit/cfc684336883b7caa44bc2cc798ba904a752295c))
+
 ## [3.3.0](https://github.com/ettoreaquino/devlair/compare/v3.2.4...v3.3.0) (2026-07-06)
 
 
