@@ -13,6 +13,11 @@ if [[ ! "$ZIM_HOME/init.zsh" -nt "$HOME/.zimrc" ]]; then
 fi
 source "$ZIM_HOME/init.zsh"
 
+# Minimal arrow prompt (Dracula palette) — overrides the dracula/zsh theme's
+# default `user@host path %` format. Must come after init.zsh so it wins over
+# the theme's own PROMPT assignment.
+PROMPT='%(?.%F{#50fa7b}.%F{#ff5555})➜%f %F{#8be9fd}%1~%f '
+
 # zimfw's `environment` module turns on NO_CLOBBER, which makes `>>` to a
 # *nonexistent* file an error (e.g. Homebrew's `... >> ~/.zprofile` on a clean
 # machine). APPEND_CREATE lets `>>` create the file while keeping NO_CLOBBER's
