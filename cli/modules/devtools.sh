@@ -15,6 +15,21 @@ MODE=${1:-run}
 
 _AWS_CLI_GPG_KEY_URL="https://awscli.amazonaws.com/awscli-exe-linux-public-key.asc"
 
+# _link_vscode_cli -- symlink the `code` CLI into ~/.devlair/bin, which is
+# unconditionally first on PATH (see shell-aliases.zsh). This is more robust
+# than depending on Homebrew's own cask shim or a shell-startup-time alias:
+# it works regardless of PATH ordering, and re-runs (VS Code installed
+# manually, pre-existing app, doctor/upgrade) always keep it up to date.
+_link_vscode_cli() {
+  local app_cli="/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+  [[ -x "$app_cli" ]] || return 0
+  local bin_dir="$USER_HOME/.devlair/bin"
+  mkdir -p "$bin_dir"
+  ln -sf "$app_cli" "$bin_dir/code"
+  chown_user "$bin_dir/code"
+  chown_user "$bin_dir"
+}
+
 do_run() {
   local -a installed=() skipped=()
 
@@ -222,10 +237,12 @@ do_run() {
   # ── VS Code ──────────────────────────────────────────────────────────────────
   if cmd_exists code || [[ -d "/Applications/Visual Studio Code.app" ]]; then
     skipped+=(vscode)
+    [[ "$PLATFORM" == "macos" ]] && _link_vscode_cli
   elif [[ "$PLATFORM" == "macos" ]]; then
     brew_install --cask visual-studio-code
     json_install "vscode" "brew:cask:visual-studio-code" true
     installed+=(vscode)
+    _link_vscode_cli
   elif [[ "$PLATFORM" == "linux" ]]; then
     json_progress "installing vscode"
     install -m 0755 -d /etc/apt/keyrings
@@ -297,6 +314,7 @@ do_uninstall() {
   rm_user_path "$USER_HOME/.fzf"
   rm_user_path "$USER_HOME/.local/bin/uv"
   rm_user_path "$USER_HOME/.local/bin/uvx"
+  [[ "$PLATFORM" == "macos" ]] && rm_user_path "$USER_HOME/.devlair/bin/code"
 
   if [[ "$remove_packages" == "true" ]]; then
     if [[ "$PLATFORM" == "macos" ]]; then
