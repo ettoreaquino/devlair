@@ -98,7 +98,7 @@ EOF
     # `--only zsh` run doesn't drop aliases that shell.sh isn't there to rewrite).
     local aliases_block
     aliases_block=$(awk -v m="$aliases_marker" 'index($0, m){seen=1} seen' "$zshrc")
-    { cat "$SCRIPT_DIR/configs/zshrc-header.sh"; printf '%s\n' "$aliases_block"; } > "$zshrc"
+    { cat "$SCRIPT_DIR/configs/zshrc-header.sh"; printf '%s\n' "$aliases_block"; } > "${zshrc}.tmp" && mv "${zshrc}.tmp" "$zshrc"
   else
     cp "$SCRIPT_DIR/configs/zshrc-header.sh" "$zshrc"
   fi
