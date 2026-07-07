@@ -38,4 +38,23 @@ describe("managed zsh config", () => {
     expect(header).toContain("setopt APPEND_CREATE");
     expect(header.indexOf("setopt APPEND_CREATE")).toBeGreaterThan(header.indexOf('source "$ZIM_HOME/init.zsh"'));
   });
+
+  // The minimal-arrow prompt only wins if its PROMPT assignment runs AFTER the
+  // dracula/zsh theme (sourced by init.zsh) sets its own. Guards the template so
+  // the override can't be silently dropped again (issue #272 follow-up).
+  test("zshrc-header overrides PROMPT after sourcing init.zsh", () => {
+    const header = readFileSync(join(import.meta.dir, "../../modules/configs/zshrc-header.sh"), "utf8");
+    expect(header).toMatch(/^PROMPT=/m);
+    expect(header.search(/^PROMPT=/m)).toBeGreaterThan(header.indexOf('source "$ZIM_HOME/init.zsh"'));
+  });
+
+  // zsh.sh must RE-APPLY the header on every run (keyed off shell.sh's aliases
+  // marker), not skip when .zshrc already contains "devlair" — otherwise a
+  // template change never reaches a machine an older devlair provisioned, which
+  // is exactly why the #273 prompt fix didn't land on upgrade.
+  test("zsh.sh refreshes the managed header instead of skipping when managed", () => {
+    const zsh = readFileSync(join(import.meta.dir, "../../modules/zsh.sh"), "utf8");
+    expect(zsh).not.toContain('! grep -q "devlair" "$zshrc"');
+    expect(zsh).toContain("aliases_marker");
+  });
 });
