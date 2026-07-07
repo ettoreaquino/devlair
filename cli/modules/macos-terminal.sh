@@ -18,38 +18,28 @@ _DRACULA_COMMIT="9ca4acf67fa43c51b21248a243407fd1549f4268"
 _DRACULA_URL="https://raw.githubusercontent.com/dracula/terminal-app/${_DRACULA_COMMIT}/Dracula.terminal"
 _DRACULA_SHA256="2d29ed73a31c343098cb405f12fdb48462382b37eb793300c2109e4a281b794d"
 
-_defaults_read_profile() {
+# _user_defaults ARGS... -- run `defaults ARGS...` against the target user's GUI
+# (Aqua) preferences session, where Terminal.app reads and writes its settings.
+# As root we bridge into that session with `launchctl asuser` (a bare `sudo -u`
+# lands in the wrong per-user context, so Terminal never sees the change); as the
+# user we call defaults directly. Registering the theme through `defaults` —
+# rather than `open`ing the .terminal file — is what avoids spawning a stray
+# Terminal window during init.
+_user_defaults() {
   if _is_root; then
-    sudo -u "$USERNAME" defaults read com.apple.Terminal "Default Window Settings" 2>/dev/null || true
+    launchctl asuser "$(id -u "$USERNAME")" sudo -u "$USERNAME" defaults "$@"
   else
-    defaults read com.apple.Terminal "Default Window Settings" 2>/dev/null || true
+    defaults "$@"
   fi
 }
 
-# Terminal.app registers profiles by filename stem, not the plist name key.
-_terminal_prefs_path() {
-  if _is_root; then
-    echo "/Users/$USERNAME/Library/Preferences/com.apple.Terminal.plist"
-  else
-    echo "$HOME/Library/Preferences/com.apple.Terminal.plist"
-  fi
+_defaults_read_profile() {
+  _user_defaults read com.apple.Terminal "Default Window Settings" 2>/dev/null || true
 }
 
 _dracula_profile_registered() {
-  /usr/libexec/PlistBuddy -c "Print :'Window Settings':Dracula" "$(_terminal_prefs_path)" > /dev/null 2>&1
-}
-
-_open_terminal_file() {
-  local path=$1
-  if _is_root; then
-    local uid
-    uid=$(id -u "$USERNAME")
-    # launchctl asuser bridges to the user's Aqua/GUI session so Terminal.app
-    # registers the imported theme (plain sudo -u cannot reach the GUI session).
-    launchctl asuser "$uid" /usr/bin/open "$path" >&2
-  else
-    /usr/bin/open "$path" >&2
-  fi
+  _user_defaults read com.apple.Terminal "Window Settings" 2>/dev/null \
+    | grep -qE '^[[:space:]]+Dracula = '
 }
 
 do_run() {
@@ -61,16 +51,14 @@ do_run() {
   fi
 
   json_progress "downloading Dracula.terminal"
-  # The file must be named Dracula.terminal — Terminal.app uses the filename stem
-  # as the registered profile name, ignoring the name key inside the plist.
   local tmpdir tmp
   tmpdir=$(mktemp -d)
   tmp="$tmpdir/Dracula.terminal"
 
   curl -fsSL "$_DRACULA_URL" -o "$tmp" >&2
 
-  # Verify SHA-256 before handing to Terminal.app — .terminal plists support
-  # CommandString which Terminal.app executes as a shell on every new window.
+  # Verify SHA-256 before importing — .terminal plists support CommandString,
+  # which Terminal.app executes as a shell on every new window.
   local actual
   actual=$(shasum -a 256 "$tmp" | awk '{print $1}')
   if [[ "$actual" != "$_DRACULA_SHA256" ]]; then
@@ -80,14 +68,13 @@ do_run() {
   fi
 
   json_progress "importing Dracula theme"
-  _open_terminal_file "$tmp"
-  # Terminal.app needs a moment to register the imported profile before defaults write can reference it by name
-  sleep 1
-
-  run_shell_as "$USERNAME" "
-    defaults write com.apple.Terminal 'Default Window Settings' 'Dracula'
-    defaults write com.apple.Terminal 'Startup Window Settings' 'Dracula'
-  " >&2
+  # A .terminal file is a complete Window-Settings dict, so -dict-add stores it
+  # verbatim under the "Dracula" profile name. Importing through `defaults` this
+  # way (instead of `open`ing the file) registers the theme WITHOUT popping open
+  # a new Terminal window, and needs no settle delay.
+  _user_defaults write com.apple.Terminal "Window Settings" -dict-add "Dracula" "$(cat "$tmp")" >&2
+  _user_defaults write com.apple.Terminal "Default Window Settings" "Dracula" >&2
+  _user_defaults write com.apple.Terminal "Startup Window Settings" "Dracula" >&2
 
   rm -rf "$tmpdir"
   json_result "ok" "Dracula theme imported and set as default"
@@ -104,10 +91,8 @@ do_check() {
 }
 
 do_uninstall() {
-  run_shell_as "$USERNAME" "
-    defaults delete com.apple.Terminal 'Default Window Settings' 2>/dev/null || true
-    defaults delete com.apple.Terminal 'Startup Window Settings' 2>/dev/null || true
-  " >&2
+  _user_defaults delete com.apple.Terminal "Default Window Settings" 2>/dev/null || true
+  _user_defaults delete com.apple.Terminal "Startup Window Settings" 2>/dev/null || true
   json_result "ok" "Terminal.app default profile reset"
 }
 

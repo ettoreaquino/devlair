@@ -85,11 +85,24 @@ EOF
     chown_user "$zshenv"
   fi
 
-  # Write .zshrc header (only if not already managed by devlair)
-  if [[ ! -f "$zshrc" ]] || ! grep -q "devlair" "$zshrc"; then
+  # Write / refresh the devlair-managed .zshrc header. Devlair owns the region
+  # above shell.sh's aliases marker, so the header is re-applied on every run —
+  # otherwise template changes (e.g. the minimal-arrow prompt) never reach a
+  # machine that an older devlair already provisioned. shell.sh owns everything
+  # from the aliases marker down and rewrites it on its own pass; here we only
+  # refresh the header above it.
+  json_progress "writing .zshrc header"
+  local aliases_marker="# ── devlair aliases ─"  # must match shell.sh's MARKER
+  if [[ -f "$zshrc" ]] && grep -qF "$aliases_marker" "$zshrc"; then
+    # Refresh the header in place, preserving the aliases block below it (so a
+    # `--only zsh` run doesn't drop aliases that shell.sh isn't there to rewrite).
+    local aliases_block
+    aliases_block=$(awk -v m="$aliases_marker" 'index($0, m){seen=1} seen' "$zshrc")
+    { cat "$SCRIPT_DIR/configs/zshrc-header.sh"; printf '%s\n' "$aliases_block"; } > "${zshrc}.tmp" && mv "${zshrc}.tmp" "$zshrc"
+  else
     cp "$SCRIPT_DIR/configs/zshrc-header.sh" "$zshrc"
-    chown_user "$zshrc"
   fi
+  chown_user "$zshrc"
 
   # Bootstrap zimfw and install modules as the user
   json_progress "installing zimfw plugins"
