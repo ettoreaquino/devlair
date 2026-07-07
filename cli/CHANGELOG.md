@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.2](https://github.com/ettoreaquino/devlair/compare/v3.3.1...v3.3.2) (2026-07-07)
+
+
+### Bug Fixes
+
+* **macos:** prompt lands on upgrade + no Terminal window during init ([#276](https://github.com/ettoreaquino/devlair/issues/276)) ([e0efad5](https://github.com/ettoreaquino/devlair/commit/e0efad5eee275d927d4424eca1fb997ee835f52e))
+
 ## [3.3.1](https://github.com/ettoreaquino/devlair/compare/v3.3.0...v3.3.1) (2026-07-06)
 
 
