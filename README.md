@@ -348,7 +348,7 @@ Applies the full 16-color Dracula palette to your default GNOME Terminal profile
 <details>
 <summary><b>Terminal.app</b> — Dracula color scheme (macOS)</summary>
 
-Downloads the official [Dracula theme for Terminal.app](https://draculatheme.com/terminal) from the `dracula/terminal-app` release, imports it via `open`, sets it as the default profile, and applies it as the startup (on-open) window profile. macOS-only — auto-skipped on Linux and WSL. The `reapply` flag ensures the theme is re-applied during `devlair upgrade` if it has drifted.
+Downloads the official [Dracula theme for Terminal.app](https://draculatheme.com/terminal) from the `dracula/terminal-app` release, registers it via `defaults write` (no `open`, so no stray Terminal window appears during init), sets it as the default profile, and applies it as the startup (on-open) window profile. macOS-only — auto-skipped on Linux and WSL. The `reapply` flag ensures the theme is re-applied during `devlair upgrade` if it has drifted.
 
 </details>
 
