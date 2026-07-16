@@ -175,10 +175,15 @@ do_uninstall() {
   # the distinctive devlair header is present.
   if [[ -f "$zshrc" ]] && head -1 "$zshrc" | grep -q "devlair — managed zsh config"; then
     json_progress "removing devlair header from .zshrc"
-    # Drop lines from the header marker through the final `source "$ZIM_HOME/init.zsh"`.
-    awk '
-      /devlair — managed zsh config/ { skip=1; next }
-      skip && /source "\$ZIM_HOME\/init\.zsh"/ { skip=0; next }
+    # Drop the entire devlair-managed header region: from the header marker down
+    # to (but not including) shell.sh's aliases marker, or EOF if the aliases
+    # block is already gone. Stripping the whole region — not just up to
+    # `source init.zsh` — keeps teardown symmetric with do_run, so no managed
+    # lines (e.g. the prompt function) are left orphaned in the user's .zshrc.
+    local aliases_marker="# ── devlair aliases ─"  # must match shell.sh's MARKER
+    awk -v am="$aliases_marker" '
+      index($0, "devlair — managed zsh config") { skip=1 }
+      skip && am != "" && index($0, am) { skip=0 }
       skip { next }
       { print }
     ' "$zshrc" > "${zshrc}.tmp" && mv "${zshrc}.tmp" "$zshrc"
