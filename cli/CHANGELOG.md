@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.4.0](https://github.com/ettoreaquino/devlair/compare/v3.3.2...v3.4.0) (2026-07-16)
+
+
+### Features
+
+* **zsh:** show git branch in prompt arrow ([#279](https://github.com/ettoreaquino/devlair/issues/279)) ([37225c3](https://github.com/ettoreaquino/devlair/commit/37225c37c022230f2c6a8fbe5f7b6d214464d593))
+
 ## [3.3.2](https://github.com/ettoreaquino/devlair/compare/v3.3.1...v3.3.2) (2026-07-07)
 
 
