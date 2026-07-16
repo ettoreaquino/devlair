@@ -1,16 +1,23 @@
 /** Module script path resolution. */
 
 import { existsSync } from "node:fs";
+import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 
 let _modulesDir: string | undefined;
 
+// User-owned copy written by `devlair upgrade` on macOS (see lib/self-update.ts
+// resolveModulesTarget). Preferred over the install location so a self-update's
+// fresh modules win — mirroring how the relocated ~/.devlair/bin binary shadows
+// a legacy /usr/local/bin one.
+const USER_MODULES_DIR = join(homedir(), ".devlair", "modules");
 const INSTALL_MODULES_DIR = "/usr/local/share/devlair/modules";
 
 /**
  * Return the absolute path to the modules/ directory.
  *
- * Production: install.sh extracts modules.tar.gz to /usr/local/share/devlair/modules/.
+ * Production: install.sh extracts modules.tar.gz to /usr/local/share/devlair/modules/,
+ * and `devlair upgrade` on macOS refreshes a user-owned copy at ~/.devlair/modules/.
  * Development: cli/src/lib/paths.ts → ../../modules/ in the repo (cli/modules/).
  *
  * The compiled-binary path can't be derived from process.argv[0] (which is the
@@ -21,9 +28,11 @@ const INSTALL_MODULES_DIR = "/usr/local/share/devlair/modules";
 export function modulesDir(): string {
   if (_modulesDir) return _modulesDir;
 
-  if (existsSync(join(INSTALL_MODULES_DIR, "_lib.sh"))) {
-    _modulesDir = INSTALL_MODULES_DIR;
-    return _modulesDir;
+  for (const dir of [USER_MODULES_DIR, INSTALL_MODULES_DIR]) {
+    if (existsSync(join(dir, "_lib.sh"))) {
+      _modulesDir = dir;
+      return _modulesDir;
+    }
   }
 
   const devPath = resolve(import.meta.dir, "../../modules");
@@ -32,7 +41,16 @@ export function modulesDir(): string {
     return _modulesDir;
   }
 
-  throw new Error(`Cannot find modules/ directory (tried ${INSTALL_MODULES_DIR} and ${devPath})`);
+  throw new Error(`Cannot find modules/ directory (tried ${USER_MODULES_DIR}, ${INSTALL_MODULES_DIR} and ${devPath})`);
+}
+
+/**
+ * Clear the cached modules dir. Call after a self-update relocates the modules
+ * tree mid-process so the next modulesDir() re-resolves to the fresh copy
+ * instead of returning a path resolved before the refresh.
+ */
+export function resetModulesDirCache(): void {
+  _modulesDir = undefined;
 }
 
 /**

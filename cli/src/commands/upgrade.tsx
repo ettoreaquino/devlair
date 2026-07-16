@@ -7,8 +7,9 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { homedir, hostname } from "node:os";
+import { createHash } from "node:crypto";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { homedir, hostname, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { useApp } from "ink";
 import { Box, Text } from "ink";
@@ -21,10 +22,10 @@ import type { UpgradeFlags } from "../lib/args.js";
 import { resolveBrand } from "../lib/brand.js";
 import { buildModuleContext } from "../lib/context.js";
 import { REAPPLY_KEYS, resolveOrder } from "../lib/modules.js";
-import { moduleScriptPath } from "../lib/paths.js";
+import { moduleScriptPath, resetModulesDirCache } from "../lib/paths.js";
 import { detectPlatform, detectWslVersion } from "../lib/platform.js";
 import { runModule } from "../lib/runner.js";
-import { isWritableDir, resolveInstallTarget } from "../lib/self-update.js";
+import { isWritableDir, resolveInstallTarget, resolveModulesTarget } from "../lib/self-update.js";
 import { D_COMMENT, D_CYAN, D_FG, D_GREEN, D_ORANGE, D_PINK, D_PURPLE, D_RED } from "../lib/theme.js";
 import type { Status } from "../lib/types.js";
 
@@ -133,6 +134,107 @@ interface ToolCheckRow {
   detail: string;
 }
 
+/**
+ * Refresh the on-disk modules tree to match the just-installed binary.
+ *
+ * The v2 shell modules ship as a separate `modules.tar.gz`, so a self-update
+ * that only swaps the binary leaves the modules stale and Phase 3 re-applies
+ * OLD configs. This downloads + checksum-verifies the release's modules tarball
+ * and atomically swaps it into the resolved target dir. Best-effort: a failure
+ * is reported (so the user knows configs may be stale) but does not abort the
+ * upgrade — the binary is already updated.
+ */
+async function refreshModules(latest: string, platform: NodeJS.Platform): Promise<{ ok: boolean; detail: string }> {
+  const base = `https://github.com/ettoreaquino/devlair/releases/download/v${latest}`;
+
+  const [tarResp, sumResp] = await Promise.all([
+    fetch(`${base}/modules.tar.gz`, { signal: AbortSignal.timeout(60_000), redirect: "follow" }),
+    fetch(`${base}/checksums.txt`, { signal: AbortSignal.timeout(30_000), redirect: "follow" }),
+  ]);
+  if (!tarResp.ok) return { ok: false, detail: `modules download failed (HTTP ${tarResp.status})` };
+  if (!sumResp.ok) return { ok: false, detail: `checksums download failed (HTTP ${sumResp.status})` };
+
+  const tarBuf = Buffer.from(await tarResp.arrayBuffer());
+  const checksums = await sumResp.text();
+
+  // Verify SHA-256 before extracting — never run scripts from an unverified
+  // archive (same guarantee install.sh's verify_checksum provides).
+  const expected = checksums
+    .split("\n")
+    .map((line) => line.trim().split(/\s+/))
+    .find((parts) => parts[1] === "modules.tar.gz")?.[0];
+  if (!expected) return { ok: false, detail: "modules checksum entry missing" };
+  const actual = createHash("sha256").update(tarBuf).digest("hex");
+  if (actual !== expected) return { ok: false, detail: "modules checksum mismatch — refusing to install" };
+
+  const target = resolveModulesTarget({ platform, home: homedir() });
+  const work = mkdtempSync(join(tmpdir(), "devlair-mods-"));
+  try {
+    const tarPath = join(work, "modules.tar.gz");
+    const stage = join(work, "stage");
+    writeFileSync(tarPath, tarBuf);
+    mkdirSync(stage, { recursive: true });
+
+    // --no-same-owner/-permissions: ignore uid/gid/mode from the archive so a
+    // tampered tarball can't plant setuid bits; chmod below pins a safe mode.
+    const tarOpts = ["--no-same-owner"];
+    if (platform === "linux") tarOpts.push("--no-same-permissions");
+    const extract = spawnSync("tar", ["-xzf", tarPath, "-C", stage, ...tarOpts]);
+    if (extract.status !== 0) return { ok: false, detail: "modules extraction failed" };
+
+    const staged = join(stage, "modules");
+    if (!existsSync(join(staged, "_lib.sh"))) return { ok: false, detail: "modules archive malformed" };
+    spawnSync("chmod", ["-R", "u=rwX,go=rX", staged]);
+
+    const finalDir = join(target.dir, "modules");
+    const backup = `${finalDir}.old`;
+    const installDirect = (): boolean => {
+      try {
+        mkdirSync(target.dir, { recursive: true });
+        rmSync(backup, { recursive: true, force: true });
+        if (existsSync(finalDir)) renameSync(finalDir, backup);
+        // tmp → target is likely cross-device (EXDEV on rename), so copy the tree.
+        cpSync(staged, finalDir, { recursive: true });
+        chmodSync(finalDir, 0o755);
+        rmSync(backup, { recursive: true, force: true });
+        return true;
+      } catch {
+        // Restore the previous tree if the swap failed partway.
+        if (!existsSync(finalDir) && existsSync(backup)) {
+          try {
+            renameSync(backup, finalDir);
+          } catch {
+            /* leave the backup for manual recovery */
+          }
+        }
+        return false;
+      }
+    };
+
+    if (installDirect()) {
+      resetModulesDirCache();
+      return { ok: true, detail: target.allowSudo ? "modules refreshed" : "modules refreshed (~/.devlair/modules)" };
+    }
+
+    // Root-owned in-place refresh with no direct write permission (rare: an
+    // unelevated Linux upgrade). Try a cached-credential sudo swap.
+    if (target.allowSudo) {
+      spawnSync("sudo", ["-n", "rm", "-rf", backup]);
+      const moved = existsSync(finalDir) ? spawnSync("sudo", ["-n", "mv", finalDir, backup]).status === 0 : true;
+      const copied = moved && spawnSync("sudo", ["-n", "cp", "-R", staged, finalDir]).status === 0;
+      const chmod = copied && spawnSync("sudo", ["-n", "chmod", "755", finalDir]).status === 0;
+      if (chmod) {
+        spawnSync("sudo", ["-n", "rm", "-rf", backup]);
+        resetModulesDirCache();
+        return { ok: true, detail: "modules refreshed" };
+      }
+    }
+    return { ok: false, detail: `could not write modules to ${finalDir}` };
+  } finally {
+    rmSync(work, { recursive: true, force: true });
+  }
+}
+
 async function checkSelfUpdate(currentVersion: string): Promise<SelfUpdateResult> {
   if (currentVersion.includes("alpha") || currentVersion.includes("dev")) {
     return { status: "skipped", detail: "Dev/pre-release install — skipping self-update." };
@@ -213,9 +315,14 @@ async function checkSelfUpdate(currentVersion: string): Promise<SelfUpdateResult
       }
     }
 
+    // Refresh the modules tree so Phase 3 re-applies configs from the NEW
+    // release, not the stale on-disk copy that shipped with the old binary.
+    const mods = await refreshModules(latest, process.platform);
+    const modsNote = mods.ok ? `; ${mods.detail}` : `; modules NOT refreshed (${mods.detail}) — configs may be stale`;
+
     return {
       status: "updated",
-      detail: `devlair updated to v${latest}${target.note ? ` — ${target.note}` : ""}`,
+      detail: `devlair updated to v${latest}${target.note ? ` — ${target.note}` : ""}${modsNote}`,
       installPath: target.path,
     };
   } catch (err) {

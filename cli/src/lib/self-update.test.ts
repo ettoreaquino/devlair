@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-import { resolveInstallTarget } from "./self-update.js";
+import { resolveInstallTarget, resolveModulesTarget } from "./self-update.js";
 
 const HOME = "/Users/dev";
 const USER_BIN = "/Users/dev/.devlair/bin";
@@ -78,5 +78,24 @@ describe("resolveInstallTarget", () => {
       isWritableDir: () => false,
     });
     expect(t).toEqual({ path: "/usr/local/bin/devlair", allowSudo: true });
+  });
+});
+
+describe("resolveModulesTarget", () => {
+  it("relocates to user-owned ~/.devlair on macOS (no sudo, no root-owned dir)", () => {
+    const t = resolveModulesTarget({ platform: "darwin", home: "/Users/dev" });
+    expect(t).toEqual({ dir: "/Users/dev/.devlair", allowSudo: false });
+  });
+
+  it("refreshes /usr/local/share/devlair in place on Linux (upgrade runs as root)", () => {
+    const t = resolveModulesTarget({ platform: "linux", home: "/root" });
+    expect(t).toEqual({ dir: "/usr/local/share/devlair", allowSudo: true });
+  });
+
+  it("lands the modules tree next to the relocated binary on macOS", () => {
+    // Both the binary (~/.devlair/bin) and modules (~/.devlair/modules) live
+    // under ~/.devlair, so uninstall's `rm -rf ~/.devlair` reverses both.
+    const t = resolveModulesTarget({ platform: "darwin", home: "/Users/alice" });
+    expect(`${t.dir}/modules`).toBe("/Users/alice/.devlair/modules");
   });
 });

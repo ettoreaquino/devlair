@@ -84,6 +84,36 @@ export function resolveInstallTarget(opts: ResolveOptions): InstallTarget {
   return { path: execPath, allowSudo: true };
 }
 
+export interface ModulesTarget {
+  /** Directory that should CONTAIN the `modules/` tree (tree lands at `${dir}/modules`). */
+  dir: string;
+  /** Whether a `sudo -n` fallback may be attempted if the direct write fails. */
+  allowSudo: boolean;
+}
+
+/**
+ * Decide where `devlair upgrade` should write the refreshed modules tree.
+ *
+ * The v2 shell modules ship as a separate `modules.tar.gz` (not baked into the
+ * binary), so a self-update that only replaces the binary leaves stale modules
+ * on disk — and Phase 3's config re-apply then runs the OLD scripts. This
+ * resolves where the fresh tree goes, mirroring the binary's own strategy:
+ *
+ * - macOS: the process never elevates (Homebrew refuses root), and the default
+ *   modules dir `/usr/local/share/devlair/modules` is root-owned. Relocate to
+ *   user-owned `~/.devlair/modules` — no sudo, no password prompt — exactly as
+ *   the binary relocates to `~/.devlair/bin`. `modulesDir()` prefers this copy.
+ * - Linux: `devlair upgrade` re-execs as root (see lib/elevate.ts), so the
+ *   install location is writable directly; refresh it in place. A `sudo -n`
+ *   fallback is allowed for the rare unelevated path.
+ */
+export function resolveModulesTarget(opts: { platform: NodeJS.Platform; home: string }): ModulesTarget {
+  if (opts.platform === "darwin") {
+    return { dir: join(opts.home, ".devlair"), allowSudo: false };
+  }
+  return { dir: "/usr/local/share/devlair", allowSudo: true };
+}
+
 /** Real writability check used in production (injected as a predicate in tests). */
 export function isWritableDir(dir: string): boolean {
   try {
