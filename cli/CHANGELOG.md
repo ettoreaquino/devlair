@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.4.1](https://github.com/ettoreaquino/devlair/compare/v3.4.0...v3.4.1) (2026-07-16)
+
+
+### Bug Fixes
+
+* **upgrade:** refresh modules on self-update so config changes ship ([#282](https://github.com/ettoreaquino/devlair/issues/282)) ([92c87e4](https://github.com/ettoreaquino/devlair/commit/92c87e4b606c9d7acec41110eda3a9e14d6faa11))
+
 ## [3.4.0](https://github.com/ettoreaquino/devlair/compare/v3.3.2...v3.4.0) (2026-07-16)
 
 
