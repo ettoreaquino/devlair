@@ -373,7 +373,7 @@ Verifies every component without making changes — checks installed tools, conf
 devlair upgrade
 ```
 
-Checks for a new devlair binary first — if a newer release is available, it downloads the binary to a temp file and installs it into `/usr/local/bin/` via `sudo`. On macOS, sudo credentials are prompted up front (before the Ink UI starts) so the install step can use cached credentials non-interactively; use `--no-self` to skip the binary update and the sudo prompt. After a successful self-update, devlair re-execs so the rest of the upgrade runs new code. Then upgrades system packages and any tools that were installed during init (Docker, GitHub CLI, AWS CLI, pyenv/Python, nvm/Node, Bun). After upgrading, automatically re-applies module configurations (hooks, settings, shell aliases) so new config shapes take effect immediately.
+Checks for a new devlair binary first — if a newer release is available, it downloads the binary to a temp file, verifies its SHA-256 checksum, and installs it into `/usr/local/bin/` via `sudo`. On macOS, sudo credentials are prompted up front (before the Ink UI starts) so the install step can use cached credentials non-interactively; use `--no-self` to skip the binary update and the sudo prompt. Self-update also refreshes the on-disk shell modules: it downloads `modules.tar.gz` from the release, verifies its checksum, and atomically swaps in the new modules tree — on macOS this relocates modules to a user-owned `~/.devlair/modules` (no sudo needed for the module refresh itself), while on Linux it refreshes `/usr/local/share/devlair/modules` in place. After a successful self-update, devlair re-execs so the rest of the upgrade runs new code. Then upgrades system packages and any tools that were installed during init (Docker, GitHub CLI, AWS CLI, pyenv/Python, nvm/Node, Bun). After upgrading, automatically re-applies module configurations (hooks, settings, shell aliases) so new config shapes take effect immediately.
 
 ## Uninstall
 
@@ -422,7 +422,10 @@ cli/                    # TypeScript CLI
     lib/                # theme, types, runner, modules, platform detection,
                         # args, selection, profiles, jsonConfig, elevate, homebrew, brand
   modules/              # shell modules executed by the binary
-                        # (packaged into modules.tar.gz on release)
+                        # (packaged into modules.tar.gz on release, installed to
+                        # /usr/local/share/devlair/modules; `devlair upgrade`
+                        # refreshes them in place on Linux and relocates them to
+                        # a user-owned ~/.devlair/modules on macOS)
 assets/
   logo.svg              # brand mark (dark background)
   logo-light.svg        # brand mark (light background variant)
