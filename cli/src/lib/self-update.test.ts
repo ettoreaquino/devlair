@@ -1,6 +1,8 @@
 import { describe, expect, it } from "bun:test";
 
-import { resolveInstallTarget, resolveModulesTarget } from "./self-update.js";
+import { createHash } from "node:crypto";
+
+import { resolveInstallTarget, resolveModulesTarget, verifyChecksum } from "./self-update.js";
 
 const HOME = "/Users/dev";
 const USER_BIN = "/Users/dev/.devlair/bin";
@@ -82,14 +84,14 @@ describe("resolveInstallTarget", () => {
 });
 
 describe("resolveModulesTarget", () => {
-  it("relocates to user-owned ~/.devlair on macOS (no sudo, no root-owned dir)", () => {
+  it("relocates to user-owned ~/.devlair on macOS (no root-owned dir)", () => {
     const t = resolveModulesTarget({ platform: "darwin", home: "/Users/dev" });
-    expect(t).toEqual({ dir: "/Users/dev/.devlair", allowSudo: false });
+    expect(t).toEqual({ dir: "/Users/dev/.devlair" });
   });
 
   it("refreshes /usr/local/share/devlair in place on Linux (upgrade runs as root)", () => {
     const t = resolveModulesTarget({ platform: "linux", home: "/root" });
-    expect(t).toEqual({ dir: "/usr/local/share/devlair", allowSudo: true });
+    expect(t).toEqual({ dir: "/usr/local/share/devlair" });
   });
 
   it("lands the modules tree next to the relocated binary on macOS", () => {
@@ -97,5 +99,31 @@ describe("resolveModulesTarget", () => {
     // under ~/.devlair, so uninstall's `rm -rf ~/.devlair` reverses both.
     const t = resolveModulesTarget({ platform: "darwin", home: "/Users/alice" });
     expect(`${t.dir}/modules`).toBe("/Users/alice/.devlair/modules");
+  });
+});
+
+describe("verifyChecksum", () => {
+  const buf = Buffer.from("devlair release artifact");
+  const sum = createHash("sha256").update(buf).digest("hex");
+  const checksums = `${sum}  modules.tar.gz\ndeadbeef${"0".repeat(56)}  other-file\n`;
+
+  it("accepts a matching checksum for the named file", () => {
+    expect(verifyChecksum(buf, "modules.tar.gz", checksums)).toBe(true);
+  });
+
+  it("rejects when the file's entry is missing", () => {
+    expect(verifyChecksum(buf, "not-listed.tar.gz", checksums)).toBe(false);
+  });
+
+  it("rejects a mismatched checksum (tampered artifact)", () => {
+    expect(verifyChecksum(Buffer.from("tampered"), "modules.tar.gz", checksums)).toBe(false);
+  });
+
+  it("rejects a malformed (non-64-hex) checksum entry", () => {
+    expect(verifyChecksum(buf, "modules.tar.gz", "notahash  modules.tar.gz\n")).toBe(false);
+  });
+
+  it("is case-insensitive on the hex digest", () => {
+    expect(verifyChecksum(buf, "modules.tar.gz", `${sum.toUpperCase()}  modules.tar.gz\n`)).toBe(true);
   });
 });

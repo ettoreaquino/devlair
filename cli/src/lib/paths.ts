@@ -10,6 +10,13 @@ let _modulesDir: string | undefined;
 // resolveModulesTarget). Preferred over the install location so a self-update's
 // fresh modules win — mirroring how the relocated ~/.devlair/bin binary shadows
 // a legacy /usr/local/bin one.
+//
+// SECURITY: this is trusted ONLY on macOS. On Linux, init/upgrade re-exec as
+// root via sudo (lib/elevate.ts) without forcing HOME, so homedir() can still
+// resolve to the invoking *unprivileged* user's home. Preferring a user-owned
+// ~/.devlair/modules there would let any local process that can write that dir
+// plant scripts the root process then executes — a privilege-escalation path.
+// Linux always uses the root-owned install dir below.
 const USER_MODULES_DIR = join(homedir(), ".devlair", "modules");
 const INSTALL_MODULES_DIR = "/usr/local/share/devlair/modules";
 
@@ -28,7 +35,9 @@ const INSTALL_MODULES_DIR = "/usr/local/share/devlair/modules";
 export function modulesDir(): string {
   if (_modulesDir) return _modulesDir;
 
-  for (const dir of [USER_MODULES_DIR, INSTALL_MODULES_DIR]) {
+  // macOS only for the user-owned copy (see SECURITY note above).
+  const candidates = process.platform === "darwin" ? [USER_MODULES_DIR, INSTALL_MODULES_DIR] : [INSTALL_MODULES_DIR];
+  for (const dir of candidates) {
     if (existsSync(join(dir, "_lib.sh"))) {
       _modulesDir = dir;
       return _modulesDir;
