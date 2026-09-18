@@ -216,6 +216,7 @@ devlair  claude  max5x
 | `gnome_terminal` — Dracula palette | ✓ | — | — |
 | `macos_terminal` — Terminal.app Dracula | — | — | ✓ |
 | `claude` — Claude Code | ○ | ○ | ○ |
+| `chrome` — Chrome browser | ○ | — | ○ |
 
 Legend: ✓ runs by default · ○ available, opt-in (`--only`) · — not applicable
 
@@ -356,6 +357,23 @@ Downloads the official [Dracula theme for Terminal.app](https://draculatheme.com
 <summary><b>Claude Code</b> — install + settings</summary>
 
 Always opt-in (`--only claude`). Installs Claude Code (if absent) and merges devlair-managed keys into `~/.claude/settings.json` (model, effort level). Deploys the `tmx-new` helper for launching named tmux sessions (`tmx new --name <n> [--claude]`). Use `devlair claude` to view the current plan/model, `--plan TIER` to set the subscription tier, and `--1m on|off` to toggle 1M-token context.
+
+</details>
+
+<details>
+<summary><b>Chrome</b> — browser for AI-driven front-end validation</summary>
+
+Always opt-in (`--only chrome`), Linux and macOS only (no WSL GUI layer — use your Windows-side Chrome there). Installs `google-chrome-stable` via Google's official apt repo (GPG-signed keyring) on Linux, or `brew install --cask google-chrome` on macOS. Not for headless test runners — Playwright/Puppeteer manage their own project-scoped browser binaries. This installs a real, persistent Chrome for tools like Claude Code's `claude-in-chrome` skill to validate front-end work against a running local dev server.
+
+**Already have devlair installed?** Opt-in modules like `chrome` only exist once you're on the version that ships them — `devlair upgrade` patches already-installed tools but never runs new opt-in modules automatically. To get Chrome on an existing machine:
+
+```bash
+sudo devlair upgrade            # update the devlair binary itself
+sudo devlair init --only chrome # opt in to the new module
+devlair doctor                  # verify it installed
+```
+
+If you provision from a `setup.yaml` profile, add `chrome` to its `modules:` (or `ai` to `groups:`) so future re-runs of `devlair init --config ...` pick it up too.
 
 </details>
 
