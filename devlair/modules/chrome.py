@@ -29,7 +29,6 @@ def run(ctx: SetupContext) -> ModuleResult:
         safe_log_install(ctx.user_home, tool="chrome", source="brew:cask:google-chrome", verified=True)
         return ModuleResult(status="ok", detail="installed via brew cask")
 
-    # linux
     if _linux_chrome_installed():
         return ModuleResult(status="ok", detail="already installed")
 
@@ -44,8 +43,8 @@ def run(ctx: SetupContext) -> ModuleResult:
         curl -fsSL https://dl.google.com/linux/linux_signing_key.pub \
             | gpg --dearmor -o {_CHROME_LINUX_KEYRING}
         chmod a+r {_CHROME_LINUX_KEYRING}
-        echo "deb [arch=amd64 signed-by={_CHROME_LINUX_KEYRING}] \
-            http://dl.google.com/linux/chrome/deb/ stable main" \
+        echo "deb [arch=$(dpkg --print-architecture) signed-by={_CHROME_LINUX_KEYRING}] \
+            https://dl.google.com/linux/chrome/deb/ stable main" \
             | tee /etc/apt/sources.list.d/google-chrome.list > /dev/null
         apt-get update -qq
         apt-get install -y -qq google-chrome-stable
