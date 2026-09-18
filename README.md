@@ -85,7 +85,7 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
 
 **Composable**
 
-14 modules you can run individually with `--only` or skip with `--skip`. Each module is self-contained and does one thing well.
+15 modules you can run individually with `--only` or skip with `--skip`. Each module is self-contained and does one thing well.
 
 </td>
 </tr>
