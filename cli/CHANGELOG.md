@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.5.0](https://github.com/ettoreaquino/devlair/compare/v3.4.1...v3.5.0) (2026-09-22)
+
+
+### Features
+
+* **ai:** add Chrome module for AI-driven front-end validation ([bf547b5](https://github.com/ettoreaquino/devlair/commit/bf547b572e797be5e042edf4c543c4ddcb57564a)), closes [#287](https://github.com/ettoreaquino/devlair/issues/287)
+
 ## [3.4.1](https://github.com/ettoreaquino/devlair/compare/v3.4.0...v3.4.1) (2026-07-16)
 
 
