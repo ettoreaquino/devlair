@@ -10,8 +10,8 @@ import {
 } from "../lib/modules.js";
 
 describe("MODULE_SPECS", () => {
-  test("has 14 modules", () => {
-    expect(MODULE_SPECS).toHaveLength(14);
+  test("has 15 modules", () => {
+    expect(MODULE_SPECS).toHaveLength(15);
   });
 
   test("all keys are unique", () => {
@@ -62,15 +62,20 @@ describe("keysForGroups", () => {
     expect(keys).toEqual(new Set(["system", "timezone", "homebrew", "zsh", "shell", "tmux", "devtools", "github"]));
   });
 
+  test("returns ai modules", () => {
+    const keys = keysForGroups(new Set(["ai"]));
+    expect(keys).toEqual(new Set(["claude", "chrome"]));
+  });
+
   test("returns empty set for unknown group", () => {
     expect(keysForGroups(new Set(["nonexistent"]))).toEqual(new Set());
   });
 });
 
 describe("resolveOrder", () => {
-  test("returns all 14 modules when no keys are specified", () => {
+  test("returns all 15 modules when no keys are specified", () => {
     const specs = resolveOrder();
-    expect(specs).toHaveLength(14);
+    expect(specs).toHaveLength(15);
   });
 
   test("preserves topological order", () => {
@@ -163,6 +168,7 @@ describe("resolveOrder", () => {
       "gnome_terminal",
       "macos_terminal",
       "claude",
+      "chrome",
     ];
     const actualOrder = resolveOrder().map((s) => s.key);
     expect(actualOrder).toEqual(expectedOrder);

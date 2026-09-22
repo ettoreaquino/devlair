@@ -57,6 +57,7 @@ export const MODULE_SPECS: readonly ModuleSpec[] = [
     defaultOn: [],
     platforms: ["linux", "wsl", "macos"],
   }),
+  spec("chrome", "Chrome", "ai", { defaultOn: [], platforms: ["linux", "macos"] }),
 ];
 
 export const REAPPLY_KEYS: ReadonlySet<string> = new Set(MODULE_SPECS.filter((s) => s.reapply).map((s) => s.key));
