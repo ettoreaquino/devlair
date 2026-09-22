@@ -2,7 +2,6 @@ from dataclasses import dataclass, field
 from types import ModuleType
 
 from devlair.modules import (
-    chrome,
     claude,
     devtools,
     firewall,
@@ -50,7 +49,6 @@ MODULE_SPECS: list[ModuleSpec] = [
     ModuleSpec("gnome_terminal", "Gnome Terminal Dracula", gnome_terminal, "desktop",     reapply=True,              platforms={"linux"}),
     ModuleSpec("macos_terminal", "Terminal.app Dracula",  macos_terminal, "desktop",     reapply=True,              platforms={"macos"}),
     ModuleSpec("claude",         "Claude Code",            claude,         "ai",          deps=["devtools"], reapply=True, default_on=set(),                         platforms={"linux", "wsl", "macos"}),
-    ModuleSpec("chrome",         "Chrome",                 chrome,         "ai",                                           default_on=set(),                         platforms={"linux", "macos"}),
 ]
 # fmt: on
 
