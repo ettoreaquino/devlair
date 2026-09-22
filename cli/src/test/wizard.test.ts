@@ -37,7 +37,8 @@ describe("GroupSelect logic", () => {
 
     const aiKeys = keysForGroups(new Set(["ai"]));
     expect(aiKeys).toContain("claude");
-    expect(aiKeys.size).toBe(1);
+    expect(aiKeys).toContain("chrome");
+    expect(aiKeys.size).toBe(2);
   });
 });
 
