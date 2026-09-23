@@ -36,7 +36,7 @@ class TestModuleSpecs:
         assert REAPPLY_KEYS == {s.key for s in MODULE_SPECS if s.reapply}
 
     def test_spec_count(self):
-        assert len(MODULE_SPECS) == 15
+        assert len(MODULE_SPECS) == 14
 
     def test_all_specs_have_valid_platforms(self):
         valid = {"linux", "wsl", "macos"}
@@ -52,7 +52,7 @@ class TestModuleSpecs:
 class TestResolveOrder:
     def test_all_modules_when_none(self):
         result = resolve_order(None)
-        assert len(result) == 15
+        assert len(result) == 14
         assert result == MODULE_SPECS
 
     def test_single_module_no_deps(self):
@@ -98,11 +98,11 @@ class TestResolveOrder:
 
     def test_filters_by_platform_linux(self):
         result = resolve_order(platform="linux")
-        assert len(result) == 14
+        assert len(result) == 13
 
     def test_no_platform_returns_all(self):
         result = resolve_order(platform=None)
-        assert len(result) == 15
+        assert len(result) == 14
 
     def test_platform_filtered_deps_not_pulled_in(self):
         """Requesting firewall on WSL returns empty — firewall is excluded."""
@@ -124,7 +124,7 @@ class TestKeysForGroups:
         assert keys_for_groups({"coding"}) == {"tmux", "devtools", "github"}
 
     def test_ai_group(self):
-        assert keys_for_groups({"ai"}) == {"claude", "chrome"}
+        assert keys_for_groups({"ai"}) == {"claude"}
 
     def test_multiple_groups(self):
         result = keys_for_groups({"core", "network"})
