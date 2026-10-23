@@ -46,6 +46,11 @@ config:
     expect(() => parseProfile("name: x\n")).toThrow(/Unsupported profile version/);
   });
 
+  test("rejects oversized lists (CVE-2023-54404 hardening)", () => {
+    const yaml = `version: 1\nskip:\n${"  - system\n".repeat(257)}`;
+    expect(() => parseProfile(yaml)).toThrow(/skip/);
+  });
+
   test("rejects wrong version", () => {
     expect(() => parseProfile("version: 2\n")).toThrow(/expected 1/);
   });
