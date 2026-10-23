@@ -1,4 +1,4 @@
-// Dracula palette — matches devlair/console.py
+// Dracula palette
 export const D_BG = "#282a36";
 export const D_CURRENT = "#44475a";
 export const D_FG = "#f8f8f2";

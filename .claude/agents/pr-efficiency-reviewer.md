@@ -30,7 +30,7 @@ Read the PR diff and flag inefficiencies a maintainer would want fixed. Be conse
 {
   "findings": [
     {
-      "file": "path/to/file.py",
+      "file": "path/to/file.ts",
       "line": 42,
       "severity": "low|medium|high",
       "category": "efficiency",

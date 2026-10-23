@@ -13,8 +13,8 @@ Read the PR diff the orchestrator gives you, then search the rest of the repo fo
 
 ## Where to look
 
-- Python: `devlair/`, especially `devlair/runner.py`, `devlair/console.py`, `devlair/context.py`, `devlair/features/`
-- TypeScript v2: `cli/src/lib/`, `cli/src/components/`, `cli/src/wizard/`
+- TypeScript: `cli/src/lib/`, `cli/src/components/`, `cli/src/wizard/`
+- Bash modules: `cli/modules/_lib.sh` (shared helpers every module sources)
 - Shell: `install.sh`, `cli/modules/` shell scripts
 
 Use `Grep` aggressively — search for the function names, signatures, and patterns the diff introduces. If an inline regex/parse/path helper is added, see if a util already does it.
@@ -38,12 +38,12 @@ Return exactly this shape, nothing else:
 {
   "findings": [
     {
-      "file": "path/to/new.py",
+      "file": "path/to/new.ts",
       "line": 42,
       "severity": "low|medium|high",
       "category": "reuse",
       "description": "short reason",
-      "existing": "path/to/existing/util.py:func_name",
+      "existing": "path/to/existing/util.ts:funcName",
       "suggested_fix": "use existing util"
     }
   ],

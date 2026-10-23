@@ -25,7 +25,7 @@ Read the PR diff the orchestrator gives you and flag quality issues that a maint
 
 - Three similar lines that don't justify an abstraction.
 - Defensive validation at system boundaries (user input, external APIs) — that's allowed.
-- Style nitpicks already handled by ruff/biome.
+- Style nitpicks already handled by biome.
 
 ## Output format — JSON only, no prose
 

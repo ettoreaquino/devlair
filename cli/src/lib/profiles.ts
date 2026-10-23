@@ -107,7 +107,7 @@ export function parseProfile(text: string, sourceLabel = "profile"): Profile {
   return result.data;
 }
 
-/** Derive (want, skip) from a validated profile. Mirrors Python's resolve_profile_keys. */
+/** Derive (want, skip) from a validated profile. */
 export function resolveProfileKeys(profile: Profile): ProfileSelection {
   let want: Set<string> | null = null;
   if (profile.modules) {

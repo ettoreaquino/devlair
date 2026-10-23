@@ -18,9 +18,6 @@
     "enabled": true,
     "schedule": ["before 6am on monday"]
   },
-  "pep621": {
-    "enabled": false
-  },
   "packageRules": [
     {
       "description": "Automerge safe updates after CI passes and the required human approval is given",

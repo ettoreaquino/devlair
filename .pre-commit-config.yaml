@@ -1,24 +1,6 @@
 repos:
   - repo: local
     hooks:
-      - id: syntax-warnings
-        name: Python SyntaxWarning check
-        language: system
-        entry: python3 -W error::SyntaxWarning -c "import ast, sys; [ast.parse(open(f).read(), filename=f) for f in sys.argv[1:]]"
-        types: [python]
-
-      - id: ruff-check
-        name: ruff lint
-        language: system
-        entry: uv run ruff check --force-exclude
-        types: [python]
-
-      - id: ruff-format
-        name: ruff format check
-        language: system
-        entry: uv run ruff format --check --force-exclude
-        types: [python]
-
       - id: conventional-commit
         name: Conventional Commits check
         language: script
