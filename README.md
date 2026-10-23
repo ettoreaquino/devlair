@@ -432,6 +432,10 @@ assets/
 install.sh              # curl-pipe installer
 ```
 
+## Security
+
+To report a vulnerability, see [SECURITY.md](SECURITY.md). Please use GitHub's private vulnerability reporting rather than a public issue.
+
 ## License
 
 [MIT](LICENSE)
