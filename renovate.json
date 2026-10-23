@@ -21,7 +21,6 @@
   "pep621": {
     "enabled": false
   },
-  "ignorePaths": [".github/workflows/release.yml"],
   "packageRules": [
     {
       "description": "Automerge safe updates after CI passes and the required human approval is given",
