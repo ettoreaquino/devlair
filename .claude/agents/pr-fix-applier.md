@@ -104,6 +104,8 @@ Scope: pick the most-affected directory (`cli`, `devlair`, `hooks`, etc.).
 
 ## Push
 
+**Before any push, confirm the branch still exists on origin:** `git ls-remote --exit-code --heads origin <branch>`. A non-zero exit means the PR was merged (or closed) and GitHub auto-deleted the branch. Do **not** push — pushing would recreate a stale branch. Stop and report `failed` with reason `branch deleted on origin (PR merged or closed)`.
+
 `git push` to the PR branch (no force, no flags). If the push is rejected (someone else pushed), pull with `--rebase` — then, **before re-running gates or re-pushing**, verify the rebase did not silently introduce files outside the allowlist:
 
 ```bash

@@ -1,0 +1,84 @@
+name: Stale branch cleanup
+
+# GitHub deletes a PR's head branch on merge, but any later push to that branch
+# (a local clone, a post-merge review agent) silently recreates it. This sweep
+# deletes branches whose PR is merged or closed AND whose tip is still exactly
+# the PR's head commit, so no unreviewed work is ever removed. Branches with
+# commits newer than their closed PR, or with no PR at all, are only reported.
+# A deleted branch stays recoverable from the PR's refs/pull/<N>/head.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Report only, delete nothing"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: stale-branches
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      OWNER: ${{ github.repository_owner }}
+      DEFAULT: ${{ github.event.repository.default_branch }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+    steps:
+      - name: Sweep merged and closed branches
+        run: |
+          set -euo pipefail
+          now=$(date -u +%s)
+          {
+            echo "## Stale branch sweep (dry run: $DRY_RUN)"
+            echo
+            echo "| Branch | PR | Action |"
+            echo "|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          gh api --paginate "repos/$REPO/branches?per_page=100" \
+            --jq '.[] | select(.protected | not) | "\(.name)\t\(.commit.sha)"' |
+          while IFS=$'\t' read -r branch sha; do
+            [ "$branch" = "$DEFAULT" ] && continue
+            enc=$(jq -rn --arg b "$OWNER:$branch" '$b|@uri')
+            prs=$(gh api "repos/$REPO/pulls?state=all&head=$enc&per_page=100")
+
+            if [ "$(jq length <<<"$prs")" = 0 ]; then
+              echo "| \`$branch\` | none | kept, no PR |" >> "$GITHUB_STEP_SUMMARY"; continue
+            fi
+            if jq -e 'any(.state == "open")' <<<"$prs" >/dev/null; then
+              continue
+            fi
+
+            pr=$(jq -c 'sort_by(.closed_at) | last' <<<"$prs")
+            num=$(jq -r .number <<<"$pr")
+            head=$(jq -r .head.sha <<<"$pr")
+            closed=$(date -u -d "$(jq -r .closed_at <<<"$pr")" +%s)
+            state=$(jq -r 'if .merged_at then "merged" else "closed" end' <<<"$pr")
+
+            if [ "$sha" != "$head" ]; then
+              echo "| \`$branch\` | #$num $state | kept, has commits after the PR closed; review by hand |" >> "$GITHUB_STEP_SUMMARY"; continue
+            fi
+            if [ $((now - closed)) -lt 86400 ]; then
+              echo "| \`$branch\` | #$num $state | kept, closed under 24h ago |" >> "$GITHUB_STEP_SUMMARY"; continue
+            fi
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "| \`$branch\` | #$num $state | would delete |" >> "$GITHUB_STEP_SUMMARY"; continue
+            fi
+            if gh api -X DELETE "repos/$REPO/git/refs/heads/$branch" >/dev/null; then
+              echo "| \`$branch\` | #$num $state | deleted |" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "| \`$branch\` | #$num $state | delete failed |" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done

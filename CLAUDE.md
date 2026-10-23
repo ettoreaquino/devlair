@@ -108,7 +108,7 @@ Audit logging writes JSON Lines to `~/.devlair/audit.json` (0600 permissions):
 - **Output:** Use `console.print()` with Rich markup. Use `_print_header(command, subtitle)` for command headers.
 - **Lint:** ruff with `E`, `F`, `W`, `I` rules. `E501` and `E701` are intentionally ignored.
 - **Commits:** Conventional Commits — `feat(scope):`, `fix(scope):`, `docs:`, `refactor:`. Enforced by commit-msg hook.
-- **Branches:** GitHub Flow — `feat/name`, `fix/name` branches, PR to main, squash merge. Branches auto-delete on merge.
+- **Branches:** GitHub Flow — `feat/name`, `fix/name` branches, PR to main, squash merge. Branches auto-delete on merge. Never push to a branch after its PR merges, because the push recreates it on origin. The weekly `stale-branches.yml` workflow deletes merged or closed branches whose tip still matches the PR head, and lists the rest for manual review.
 
 ## Quality gates
 
