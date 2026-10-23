@@ -124,6 +124,15 @@ Every commit and PR must pass these gates:
 
 Setup: `pre-commit install && pre-commit install --hook-type commit-msg`
 
+## Dependency updates
+
+Renovate (Mend-hosted GitHub App, config in `renovate.json`) keeps `cli/package.json`, GitHub Actions digests and the `bun-version` pins in workflows current, and opens `[SECURITY]` PRs for OSV-listed vulnerabilities in Bun dependencies (Dependabot cannot do this for `bun.lock`).
+
+- Minor, patch, pin and digest updates are set to automerge, but branch protection still requires one human approval, so the maintainer approves and Renovate merges once checks are green.
+- Major updates do not open PRs until approved in the Dependency Dashboard issue.
+- Commit prefixes: `fix(deps)` for runtime deps (triggers a patch release), `chore(deps)` for dev deps, `chore(ci)` for actions.
+- Do not hand-edit Renovate branches except to fix a broken update; Renovate stops updating a branch it detects was modified.
+
 ## Release process
 
 Releases are automated via [release-please](https://github.com/googleapis/release-please). **Never tag manually.**
