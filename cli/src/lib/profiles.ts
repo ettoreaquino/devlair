@@ -31,30 +31,35 @@ export class ProfileError extends Error {
 
 const moduleKeySchema = z.string().superRefine((k, ctx) => {
   if (!MODULE_KEY_SET.has(k)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Unknown module '${k}'` });
+    ctx.addIssue({ code: "custom", message: `Unknown module '${k}'` });
   }
 });
 
 const groupSchema = z.string().superRefine((g, ctx) => {
   if (!GROUP_SET.has(g)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Unknown group '${g}'` });
+    ctx.addIssue({ code: "custom", message: `Unknown group '${g}'` });
   }
 });
 
+// Upper bound for list fields. Real profiles list a few dozen keys at most; the
+// cap stops an oversized remote profile from forcing unbounded validation work
+// (see CVE-2023-54404, fixed in zod 4.6.6).
+const MAX_LIST = 256;
+
 const profileSchema = z
   .object({
-    version: z.literal(1, { errorMap: () => ({ message: "Unsupported profile version (expected 1)" }) }),
+    version: z.literal(1, { error: "Unsupported profile version (expected 1)" }),
     name: z.string().optional(),
-    groups: z.array(groupSchema).optional(),
-    modules: z.array(moduleKeySchema).optional(),
-    skip: z.array(moduleKeySchema).optional(),
+    groups: z.array(groupSchema).max(MAX_LIST).optional(),
+    modules: z.array(moduleKeySchema).max(MAX_LIST).optional(),
+    skip: z.array(moduleKeySchema).max(MAX_LIST).optional(),
     config: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
   })
   .strict()
   .superRefine((data, ctx) => {
     if (data.modules !== undefined && data.groups !== undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "'modules' and 'groups' are mutually exclusive — use one or the other",
         path: ["modules"],
       });
@@ -63,7 +68,7 @@ const profileSchema = z
       for (const key of Object.keys(data.config)) {
         if (!MODULE_KEY_SET.has(key)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: `Unknown module '${key}' in config section`,
             path: ["config", key],
           });
