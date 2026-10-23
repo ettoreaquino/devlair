@@ -41,7 +41,7 @@ Subagents do not have access to the working tree's running tests, so this step s
 
 Parse the PR body for a `## Test plan` checklist. For each `- [ ]` item:
 
-1. **Automated** items ("tests pass", "lint passes", "typecheck passes") — run the actual command (`bun test`, `bun run lint`, `bun run typecheck`, `uv run pytest tests/unit/`, `uv run ruff check`). Run independent commands in parallel. Check the box only if the command exits 0.
+1. **Automated** items ("tests pass", "lint passes", "typecheck passes") — run the actual command (`bun test`, `bun run lint`, `bun run typecheck`). Run independent commands in parallel. Check the box only if the command exits 0.
 2. **Code-verifiable** items (behavior claims) — read the relevant files, trace the code path, cite `file:line`. Check only if the code confirms the behavior.
 3. **Manual-only** items (visual or environment-specific) — leave unchecked, append `<!-- needs-manual: brief reason -->`.
 
@@ -65,9 +65,8 @@ Skip this step only when `pr-fix-applier` returned `pushed: false` **and** its `
 
 **Compute `scope` here, not inside the updater**, using the PR's file list from Step 1:
 
-- `scope = "v2"` if any path matches `cli/src/**` **and** no path matches `devlair/**`.
-- `scope = "v1"` if any path matches `devlair/**` **and** no path matches `cli/src/**`.
-- `scope = "none"` otherwise (meta-only changes like `.claude/`, `CLAUDE.md`, or PRs that straddle both surfaces — those need a human, not an auto-edit).
+- `scope = "cli"` if any path matches `cli/src/**` or `cli/modules/**`.
+- `scope = "none"` otherwise (meta-only changes like `.claude/`, `CLAUDE.md` or workflows).
 
 If `scope == "none"`, you can either skip Step 5 entirely or invoke the updater for symmetry — it will short-circuit and return `committed: false`.
 
@@ -75,7 +74,7 @@ Invoke `pr-readme-updater` as a single Agent call. Pass:
 
 - The PR number, branch name, and head SHA (after Step 4's push, if any).
 - The PR's file list from Step 1.
-- The deterministic `scope` literal you just computed (`"v1"`, `"v2"`, or `"none"`).
+- The deterministic `scope` literal you just computed (`"cli"` or `"none"`).
 - The branch diff. **If `pr-fix-applier` pushed new commits in Step 4**, do **not** simply re-fetch via `gh pr diff <N>` — that diff includes the applier's own commits, daisy-chaining a trust boundary. Instead, compute the original-PR diff that excludes the applier's commits:
   ```bash
   git fetch origin main
