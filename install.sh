@@ -107,7 +107,11 @@ verify_checksum() {
 # ── Parse flags ───────────────────────────────────────────────────────────────
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --v1)    CHANNEL="v1" ;;
+    --v1)
+      err "The v1 channel is retired (v1 was the Python CLI)."
+      meta "To install an old v1 binary on Linux, pin it: --version v1.3.1"
+      exit 1
+      ;;
     --pre)   ;;                # no-op: v2 is now the default
     --version)
       PIN_VERSION="${2:-}"
@@ -181,16 +185,8 @@ if [[ -n "$PIN_VERSION" ]]; then
   # Explicit pin — skip "latest" resolution and the tag/release guard entirely
   # (the guard only makes sense for latest; pinning an older release is valid).
   LATEST="$PIN_VERSION"
-elif [[ "$CHANNEL" == "v1" ]]; then
-  LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases?per_page=30" \
-    | grep -o '"tag_name": *"v1\.[^"]*"' \
-    | head -1 \
-    | grep -o '"v[^"]*"' | tr -d '"')
-  if [[ -n "${LATEST:-}" && ! "$LATEST" =~ ^v[0-9]+\.[0-9]+\.[0-9] ]]; then
-    err "Unexpected version format: $LATEST"; exit 1
-  fi
 else
-  # Default channel = the latest non-v1 release (v2, v3, …). Don't hardcode a
+  # Latest non-v1 release (v2, v3, …). Don't hardcode a
   # major here, or the installer silently pins to the previous line after a
   # major bump (e.g. v3.0.0 ships but `v2\.` keeps resolving the old v2.x).
   LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases?per_page=30" \
@@ -213,14 +209,14 @@ fi
 # was deleted. When that happens the resolver silently falls back to an older
 # release and every fresh install is downgraded — with no error, because the
 # stale release still downloads fine. Cross-check against /tags: if a strictly
-# newer stable tag exists on this channel without a release, fail loudly rather
+# newer stable tag exists (excluding retired v1) without a release, fail loudly rather
 # than install stale. Best-effort — a tags-API hiccup must not block installs
 # that already resolved a valid release. Skipped entirely when PIN_VERSION is set.
 if [[ -z "$PIN_VERSION" ]]; then
   NEWEST_TAG=$(curl -fsSL "https://api.github.com/repos/${REPO}/tags?per_page=100" 2>/dev/null \
     | grep -oE '"name": *"v[0-9]+\.[0-9]+\.[0-9]+"' \
     | grep -o '"v[^"]*"' | tr -d '"' \
-    | { if [[ "$CHANNEL" == "v1" ]]; then grep '^v1\.'; else grep -v '^v1\.'; fi; } \
+    | grep -v '^v1\.' \
     | sort -V | tail -1) || true
   if [[ -n "${NEWEST_TAG:-}" && "$NEWEST_TAG" != "$LATEST" ]]; then
     # Only fail when the tag is strictly newer than the resolved release; sort -V
@@ -254,7 +250,7 @@ curl -fsSL "${BASE_URL}/checksums.txt" -o "$TMP_CHECKSUMS"
 ok "downloaded ${ASSET}"
 
 # ── Verify SHA-256 checksum ──────────────────────────────────────────────────
-# v1: soft-warn on missing entry (pre-existing behavior). Mismatches always abort.
+# v1 (pinned only): soft-warn on missing entry (pre-existing behavior). Mismatches always abort.
 # v2: hard-fail — the release CI always publishes checksums.
 if [[ "$CHANNEL" == "v1" ]]; then
   verify_checksum "$TMP" "$ASSET" "$TMP_CHECKSUMS" 0
