@@ -9,6 +9,11 @@
 set -euo pipefail
 
 CONTEXT=""
+_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# AWS CLI team signing key (primary fingerprint, as published in the AWS CLI
+# install guide). The key itself is vendored in configs/aws-cli-public-key.asc.
+AWS_CLI_GPG_FPR="FB5DB77FD5C118B80511ADA8A6310ACC4672475C"
 
 # json_escape STRING -- emit a JSON-encoded string (including the quotes).
 # Prefers jq for full correctness; falls back to a minimal sed-based escape
@@ -91,6 +96,25 @@ ctx_get_config() {
 # ── Shell helpers ────────────────────────────────────────────────────────────
 
 # cmd_exists NAME -- check if a command is available on PATH.
+# json_step LABEL BEFORE AFTER RC [REASON] -- emit an upgrade row from version
+# readbacks taken before and after a step. A non-zero RC is always a warn, so a
+# failed upgrade can never show as ok. Sets STEP_WARNED=1 on every warn.
+STEP_WARNED=0
+json_step() {
+  local label=$1 before=$2 after=$3 rc=$4 reason=${5:-}
+  if [[ "$rc" != 0 ]]; then
+    STEP_WARNED=1
+    json_check "$label" "warn" "${reason:-upgrade failed (exit $rc)}${after:+; still $after}"
+  elif [[ -z "$after" ]]; then
+    STEP_WARNED=1
+    json_check "$label" "warn" "version unreadable after upgrade"
+  elif [[ "$before" == "$after" ]]; then
+    json_check "$label" "ok" "unchanged ($after)"
+  else
+    json_check "$label" "ok" "${before:-none} -> $after"
+  fi
+}
+
 cmd_exists() { command -v "$1" >/dev/null 2>&1; }
 
 # _is_root -- true when the effective UID is 0.
@@ -122,6 +146,15 @@ brew_install() {
     sudo -u "${USERNAME:?USERNAME not set}" brew install --quiet "$@" >&2
   else
     brew install --quiet "$@" >&2
+  fi
+}
+
+# brew_run ARGS... -- run brew, dropping to the target user when root.
+brew_run() {
+  if _is_root; then
+    sudo -u "${USERNAME:?USERNAME not set}" brew "$@"
+  else
+    brew "$@"
   fi
 }
 
@@ -214,6 +247,46 @@ download_script() {
   curl -fsSL "$url" -o "$tmp" >&2
   chmod a+r "$tmp"
   printf '%s' "$tmp"
+}
+
+# verify_gpg_sig FILE SIG KEYFILE FPR -- verify a detached signature against a
+# single pinned key. Uses a throwaway keyring so the result neither depends on
+# nor pollutes root's keyring, and requires VALIDSIG to name FPR as the primary
+# key, so a swapped key file or a signature by any other key fails.
+verify_gpg_sig() {
+  local file=$1 sig=$2 key=$3 fpr=$4 home status rc=1
+  cmd_exists gpg || { echo "gpg not installed" >&2; return 1; }
+  home=$(mktemp -d)
+  if gpg --homedir "$home" --batch --quiet --import "$key" >&2; then
+    status=$(gpg --homedir "$home" --batch --status-fd 1 --verify "$sig" "$file" 2>/dev/null) || true
+    grep -qE "^\[GNUPG:\] VALIDSIG .* ${fpr}\$" <<<"$status" && rc=0
+  fi
+  rm -rf "$home"
+  return $rc
+}
+
+# aws_cli_install [INSTALL_ARGS...] -- download the AWS CLI v2 bundle for this
+# arch, verify it against the vendored AWS key, then run its installer (pass
+# --update to upgrade). Works in a private mktemp dir, never a fixed /tmp path.
+# Returns 3 when the signature does not verify, 4 when a download fails (nothing
+# is installed in either case), else the installer's exit code. Linux only.
+aws_cli_install() {
+  local aws_arch work rc=0
+  cmd_exists gpg || apt_install gnupg
+  [[ "$(uname -m)" == "x86_64" ]] && aws_arch="x86_64" || aws_arch="aarch64"
+  local base="https://awscli.amazonaws.com/awscli-exe-linux-${aws_arch}.zip"
+  work=$(mktemp -d)
+  if ! curl -fsSL "$base" -o "$work/awscliv2.zip" >&2 || ! curl -fsSL "${base}.sig" -o "$work/awscliv2.zip.sig" >&2; then
+    rc=4
+  elif ! verify_gpg_sig "$work/awscliv2.zip" "$work/awscliv2.zip.sig" \
+    "$_LIB_DIR/configs/aws-cli-public-key.asc" "$AWS_CLI_GPG_FPR"; then
+    echo "AWS CLI signature did not verify against $AWS_CLI_GPG_FPR" >&2
+    rc=3
+  else
+    { unzip -qo "$work/awscliv2.zip" -d "$work" && "$work/aws/install" "$@"; } >&2 || rc=$?
+  fi
+  rm -rf "$work"
+  return $rc
 }
 
 # chown_user FILE -- chown a file to the module's target user, owner only.

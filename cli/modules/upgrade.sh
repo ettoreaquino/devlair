@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # modules/upgrade.sh — System and tool upgrades
 # Not a regular init module — invoked by `devlair upgrade`.
+#
+# Every step reads the tool's version before and after and reports the diff via
+# json_step, so a step that fails shows as warn with the version still in place
+# instead of a blanket "updated".
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -19,88 +23,155 @@ if [[ "$MODE" == "check" ]]; then
   exit 0
 fi
 
+# _version TEXT -- first dotted version number in TEXT (empty when none).
+_version() { grep -oE '[0-9]+(\.[0-9]+)+' <<<"$1" | head -1 || true; }
+
+# tool_version CMD -- version of CMD as the current user, empty when missing.
+tool_version() {
+  cmd_exists "$1" || return 0
+  _version "$("$1" --version 2>/dev/null || true)"
+}
+
+# user_version SCRIPT -- version printed by SCRIPT run as the target user.
+user_version() { _version "$(_run_as_user "$1" 2>/dev/null || true)"; }
+
 # ── System packages ──────────────────────────────────────────────────────────
 
-json_progress "updating package lists"
-apt-get update -qq >&2 || true
+_apt_upgradable() { apt list --upgradable 2>/dev/null | grep -c 'upgradable from' || true; }
 
-json_progress "upgrading system packages"
-apt-get upgrade -y -qq >&2 || true
+upgrade_apt() {
+  local rc=0 pending held gh_before docker_before
+  gh_before=$(tool_version gh)
+  docker_before=$(tool_version docker)
 
-# WSL extras
-if [[ "$PLATFORM" == "wsl" ]]; then
-  apt-get install -y -qq wslu >&2 || true
-fi
-json_check "system packages" "ok" "updated"
+  json_progress "updating package lists"
+  if ! apt-get update -qq >&2; then
+    json_step "system packages" "" "" 1 "apt-get update failed"
+  else
+    pending=$(_apt_upgradable)
+    json_progress "upgrading $pending system packages"
+    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -qq -o Dpkg::Options::=--force-confold >&2 || rc=$?
+    held=$(_apt_upgradable)
+    if [[ $rc -ne 0 ]]; then
+      json_step "system packages" "" "" "$rc" "apt-get upgrade failed (exit $rc)"
+    else
+      local detail="$((pending - held)) upgraded"
+      [[ $held -gt 0 ]] && detail+=", $held held back (run: sudo apt-get full-upgrade)"
+      json_check "system packages" "ok" "$detail"
+    fi
+  fi
 
-# ── GitHub CLI ────────────────────────────────────────────────────────────────
+  if [[ "$PLATFORM" == "wsl" ]]; then
+    apt-get install -y -qq wslu >&2 || json_step "wslu" "" "" $? "apt-get install wslu failed"
+  fi
 
-if cmd_exists gh; then
-  json_progress "upgrading GitHub CLI"
-  apt-get install -y -qq gh >&2 || true
-  json_check "GitHub CLI" "ok" "$(gh --version 2>/dev/null | head -1 || echo 'updated')"
-fi
+  # gh and docker come from apt repos, so the system upgrade above moved them.
+  [[ -n "$gh_before" ]] && json_step "GitHub CLI" "$gh_before" "$(tool_version gh)" 0
+  [[ -n "$docker_before" ]] && json_step "Docker" "$docker_before" "$(tool_version docker)" 0
 
-# ── AWS CLI ───────────────────────────────────────────────────────────────────
+  if [[ -f /var/run/reboot-required ]]; then
+    STEP_WARNED=1
+    json_check "reboot" "warn" "required to finish applying updates"
+  fi
+  return 0
+}
 
-if cmd_exists aws; then
+upgrade_aws_linux() {
+  # Only the bundled installer's layout; a distro or pip aws is left alone.
+  [[ -d /usr/local/aws-cli ]] || return 0
+  local before rc=0 reason=""
+  before=$(tool_version aws)
   json_progress "upgrading AWS CLI"
-  arch=$(dpkg --print-architecture 2>/dev/null || echo "amd64")
-  aws_arch="x86_64"
-  [[ "$arch" != "amd64" ]] && aws_arch="aarch64"
-  (
-    curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-${aws_arch}.zip" -o /tmp/awscliv2.zip
-    unzip -qo /tmp/awscliv2.zip -d /tmp
-    /tmp/aws/install --update
-    rm -rf /tmp/awscliv2.zip /tmp/aws
-  ) >&2 || true
-  json_check "AWS CLI" "ok" "$(aws --version 2>/dev/null | cut -d' ' -f1 || echo 'updated')"
-fi
+  aws_cli_install --update || rc=$?
+  case $rc in
+    3) reason="signature did not verify; not installed" ;;
+    4) reason="download failed" ;;
+  esac
+  json_step "AWS CLI" "$before" "$(tool_version aws)" "$rc" "$reason"
+}
 
-# ── Docker ────────────────────────────────────────────────────────────────────
+# ── Homebrew (macOS) ─────────────────────────────────────────────────────────
 
-if cmd_exists docker; then
-  json_progress "upgrading Docker"
-  apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin >&2 || true
-  json_check "Docker" "ok" "$(docker --version 2>/dev/null || echo 'updated')"
-fi
+upgrade_brew() {
+  if ! cmd_exists brew; then
+    json_step "Homebrew" "" "" 1 "brew not found"
+    return 0
+  fi
+  # Indexed arrays only: macOS /bin/bash is 3.2 (no associative arrays).
+  local rc=0 pending i
+  local -a tools=(gh aws uv bun fzf pyenv) before=()
+  for i in "${!tools[@]}"; do before[i]=$(tool_version "${tools[i]}"); done
 
-# ── pyenv + Python ────────────────────────────────────────────────────────────
+  json_progress "updating Homebrew"
+  brew_run update --quiet >&2 || rc=$?
+  if [[ $rc -ne 0 ]]; then
+    json_step "Homebrew" "" "" "$rc" "brew update failed (exit $rc)"
+    return 0
+  fi
+  pending=$(brew_run outdated --quiet 2>/dev/null | wc -l | tr -d ' ' || true)
+  json_progress "upgrading $pending Homebrew packages"
+  brew_run upgrade >&2 || rc=$?
+  if [[ $rc -ne 0 ]]; then
+    json_step "Homebrew" "" "" "$rc" "brew upgrade failed (exit $rc)"
+  else
+    json_check "Homebrew" "ok" "$pending formulae/casks upgraded"
+  fi
+  for i in "${!tools[@]}"; do
+    [[ -n "${before[i]}" ]] && json_step "${tools[i]}" "${before[i]}" "$(tool_version "${tools[i]}")" 0
+  done
+  return 0
+}
 
-if [[ -d "$USER_HOME/.pyenv" ]]; then
+# ── User-level toolchains ────────────────────────────────────────────────────
+
+upgrade_pyenv() {
+  [[ -d "$USER_HOME/.pyenv" ]] || return 0
+  local env="export PYENV_ROOT=\"$USER_HOME/.pyenv\" PATH=\"$USER_HOME/.pyenv/bin:\$PATH\";"
+  local before rc=0 update="pyenv update &&"
+  # Homebrew owns pyenv itself on macOS; `pyenv update` is the git-plugin path.
+  [[ "$PLATFORM" == "macos" ]] && update=""
+  before=$(user_version "$env pyenv global")
   json_progress "upgrading pyenv + Python"
-  run_shell_as "$USERNAME" \
-    "export PYENV_ROOT=\"$USER_HOME/.pyenv\" && export PATH=\"\$PYENV_ROOT/bin:\$PATH\" \
-    && pyenv update && pyenv install -s 3 && pyenv global \"\$(pyenv latest 3)\"" \
-    >&2 || true
-  json_check "pyenv + Python" "ok" "updated"
-fi
+  _run_as_user "$env $update pyenv install -s 3 && pyenv global \"\$(pyenv latest 3)\"" >&2 || rc=$?
+  json_step "pyenv + Python" "$before" "$(user_version "$env pyenv global")" "$rc"
+}
 
-# ── nvm + Node ────────────────────────────────────────────────────────────────
-
-if [[ -d "$USER_HOME/.nvm" ]]; then
+upgrade_nvm() {
+  [[ -d "$USER_HOME/.nvm" ]] || return 0
+  local env="export NVM_DIR=\"$USER_HOME/.nvm\"; source \"\$NVM_DIR/nvm.sh\";"
+  local before rc=0
+  before=$(user_version "$env nvm version 'lts/*'")
   json_progress "upgrading nvm + Node LTS"
-  run_shell_as "$USERNAME" \
-    "export NVM_DIR=\"$USER_HOME/.nvm\" && source \"\$NVM_DIR/nvm.sh\" && nvm install --lts" \
-    >&2 || true
-  json_check "nvm + Node LTS" "ok" "updated"
+  _run_as_user "$env nvm install --lts" >&2 || rc=$?
+  json_step "nvm + Node LTS" "$before" "$(user_version "$env nvm version 'lts/*'")" "$rc"
+}
+
+upgrade_user_bin() {
+  local label=$1 bin=$2 cmd=$3 before rc=0
+  [[ -x "$bin" ]] || return 0
+  before=$(user_version "\"$bin\" --version")
+  json_progress "upgrading $label"
+  _run_as_user "\"$bin\" $cmd" >&2 || rc=$?
+  json_step "$label" "$before" "$(user_version "\"$bin\" --version")" "$rc"
+}
+
+# ── Run ──────────────────────────────────────────────────────────────────────
+
+if [[ "$PLATFORM" == "macos" ]]; then
+  upgrade_brew
+else
+  upgrade_apt
+  upgrade_aws_linux
+  # On macOS bun and uv come from Homebrew and were covered above.
+  upgrade_user_bin "Bun" "$USER_HOME/.bun/bin/bun" "upgrade"
+  upgrade_user_bin "uv" "$USER_HOME/.local/bin/uv" "self update"
 fi
+upgrade_pyenv
+upgrade_nvm
 
-# ── Bun ───────────────────────────────────────────────────────────────────────
-
-if [[ -x "$USER_HOME/.bun/bin/bun" ]]; then
-  json_progress "upgrading Bun"
-  run_shell_as "$USERNAME" "$USER_HOME/.bun/bin/bun upgrade" >&2 || true
-  json_check "Bun" "ok" "$("$USER_HOME/.bun/bin/bun" --version 2>/dev/null || echo 'updated')"
+if [[ $STEP_WARNED -eq 1 ]]; then
+  json_result "warn" "upgrade finished with warnings"
+else
+  json_result "ok" "upgrade complete"
 fi
-
-# ── uv ────────────────────────────────────────────────────────────────────────
-
-if cmd_exists uv; then
-  json_progress "upgrading uv"
-  run_shell_as "$USERNAME" "uv self update" >&2 || true
-  json_check "uv" "ok" "$(uv --version 2>/dev/null || echo 'updated')"
-fi
-
-json_result "ok" "upgrade complete"
 exit 0
