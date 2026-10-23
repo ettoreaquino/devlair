@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.5.1](https://github.com/ettoreaquino/devlair/compare/v3.5.0...v3.5.1) (2026-10-23)
+
+
+### Bug Fixes
+
+* **deps:** upgrade zod to v4 for CVE-2023-54404 ([#314](https://github.com/ettoreaquino/devlair/issues/314)) ([e6d6ec9](https://github.com/ettoreaquino/devlair/commit/e6d6ec94171d9e177c1083665a790facd8cf1887)), closes [#313](https://github.com/ettoreaquino/devlair/issues/313)
+
 ## [3.5.0](https://github.com/ettoreaquino/devlair/compare/v3.4.1...v3.5.0) (2026-09-22)
 
 
