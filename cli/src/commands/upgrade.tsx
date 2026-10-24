@@ -20,6 +20,7 @@ import { type ModuleRun, Progress } from "../components/Progress.js";
 import type { UpgradeFlags } from "../lib/args.js";
 import { resolveBrand } from "../lib/brand.js";
 import { buildModuleContext } from "../lib/context.js";
+import { createRunLogDir, invokerOwnership, moduleLogPath } from "../lib/logs.js";
 import { REAPPLY_KEYS, resolveOrder } from "../lib/modules.js";
 import { moduleScriptPath, resetModulesDirCache } from "../lib/paths.js";
 import { detectPlatform, detectWslVersion } from "../lib/platform.js";
@@ -99,7 +100,12 @@ function ToolUpgradeStatus({ rows, running }: { rows: ToolCheckRow[]; running: s
   return (
     <Box flexDirection="column">
       {rows.map((row) => {
-        const icon = row.status === "ok" ? { char: "✓", color: D_GREEN } : { char: "✗", color: D_RED };
+        const icon =
+          row.status === "ok"
+            ? { char: "✓", color: D_GREEN }
+            : row.status === "warn"
+              ? { char: "!", color: D_ORANGE }
+              : { char: "✗", color: D_RED };
         return (
           <Box key={row.label}>
             <Text color={icon.color}>
@@ -361,6 +367,7 @@ export function UpgradeView({ flags, version }: { flags: UpgradeFlags; version: 
   );
   const [toolRows, setToolRows] = useState<ToolCheckRow[]>([]);
   const [toolRunning, setToolRunning] = useState("");
+  const [toolLogFile, setToolLogFile] = useState<string | null>(null);
   const [reapplyModules, setReapplyModules] = useState<ModuleRun[]>([]);
 
   // Phase 1: Self-update
@@ -399,12 +406,33 @@ export function UpgradeView({ flags, version }: { flags: UpgradeFlags; version: 
     async function runToolUpgrades() {
       const scriptPath = moduleScriptPath("upgrade");
 
+      let logFile: string | undefined;
       try {
-        const iter = runModule(scriptPath, context, "run", { signal: abortController.signal });
+        logFile = moduleLogPath(createRunLogDir(context.userHome, "upgrade-"), "upgrade");
+        setToolLogFile(logFile);
+      } catch {
+        // Best-effort: a missing log dir must not block the upgrade.
+      }
+
+      try {
+        const iter = runModule(scriptPath, context, "run", {
+          signal: abortController.signal,
+          logFile,
+          chownUidGid: invokerOwnership() ?? undefined,
+        });
 
         while (true) {
           const { value, done } = await iter.next();
-          if (done) break;
+          if (done) {
+            // A script that dies before its result row must not read as success.
+            if (value.status === "fail") {
+              setToolRows((prev) => [
+                ...prev,
+                { label: "upgrade script", status: "fail" as Status, detail: `exited with code ${value.exitCode}` },
+              ]);
+            }
+            break;
+          }
           if (value.type === "progress") {
             setToolRunning(value.message);
           } else if (value.type === "check") {
@@ -535,6 +563,11 @@ export function UpgradeView({ flags, version }: { flags: UpgradeFlags; version: 
             {"  "}Tool upgrades
           </Text>
           <ToolUpgradeStatus rows={toolRows} running={toolRunning} />
+          {toolLogFile && !toolRunning && toolRows.some((r) => r.status !== "ok") && (
+            <Text color={D_COMMENT}>
+              {"  "}Details: {toolLogFile}
+            </Text>
+          )}
         </Box>
       )}
 

@@ -13,7 +13,6 @@ USER_HOME=$(ctx_get userHome)
 PLATFORM=$(ctx_get platform)
 MODE=${1:-run}
 
-_AWS_CLI_GPG_KEY_URL="https://awscli.amazonaws.com/awscli-exe-linux-public-key.asc"
 _VSCODE_APP_DIR="/Applications/Visual Studio Code.app"
 
 # _link_vscode_cli -- symlink the `code` CLI into ~/.devlair/bin, which is
@@ -34,7 +33,7 @@ _link_vscode_cli() {
 }
 
 do_run() {
-  local -a installed=() skipped=()
+  local -a installed=() skipped=() failed=()
 
   if [[ "$PLATFORM" == "macos" ]]; then
     ARCH=$(uname -m)
@@ -193,30 +192,20 @@ do_run() {
     skipped+=(aws)
   else
     json_progress "installing aws cli"
+    local aws_rc=0
     if [[ "$PLATFORM" == "macos" ]]; then
       brew_install awscli
       json_install "aws" "brew:awscli" true
     else
-      local aws_arch aws_base gpg_verified=false
-      [[ "$ARCH" == "amd64" ]] && aws_arch="x86_64" || aws_arch="aarch64"
-      aws_base="https://awscli.amazonaws.com/awscli-exe-linux-${aws_arch}"
-
-      curl -fsSL "${aws_base}.zip" -o /tmp/awscliv2.zip >&2
-      if cmd_exists gpg \
-        && curl -fsSL "${aws_base}.zip.sig" -o /tmp/awscliv2.zip.sig 2>/dev/null \
-        && curl -fsSL "$_AWS_CLI_GPG_KEY_URL" -o /tmp/aws-cli-key.asc 2>/dev/null; then
-        gpg --batch --import /tmp/aws-cli-key.asc >&2 2>&1 || true
-        if gpg --batch --verify /tmp/awscliv2.zip.sig /tmp/awscliv2.zip >&2 2>&1; then
-          gpg_verified=true
-        fi
-      fi
-      rm -f /tmp/awscliv2.zip.sig /tmp/aws-cli-key.asc
-      unzip -qo /tmp/awscliv2.zip -d /tmp >&2
-      /tmp/aws/install >&2
-      rm -rf /tmp/awscliv2.zip /tmp/aws
-      json_install "aws" "awscli.amazonaws.com" "$gpg_verified"
+      aws_cli_install || aws_rc=$?
+      case $aws_rc in
+        0) json_install "aws" "awscli.amazonaws.com" true ;;
+        "$AWS_RC_BADSIG") failed+=("aws (signature did not verify)") ;;
+        "$AWS_RC_DOWNLOAD") failed+=("aws (download failed)") ;;
+        *) failed+=("aws (installer exit $aws_rc)") ;;
+      esac
     fi
-    installed+=(aws)
+    [[ $aws_rc -eq 0 ]] && installed+=(aws)
   fi
 
   # ── Bun ─────────────────────────────────────────────────────────────────────
@@ -268,7 +257,8 @@ do_run() {
   local parts=()
   [[ ${#installed[@]} -gt 0 ]] && parts+=("installed: $(IFS=,; echo "${installed[*]}")")
   [[ ${#skipped[@]} -gt 0 ]] && parts+=("skipped: $(IFS=,; echo "${skipped[*]}")")
-  json_result "ok" "$(IFS=' | '; echo "${parts[*]}")"
+  [[ ${#failed[@]} -gt 0 ]] && parts+=("failed: $(IFS=,; echo "${failed[*]}")")
+  json_result "$([[ ${#failed[@]} -gt 0 ]] && echo warn || echo ok)" "$(IFS=' | '; echo "${parts[*]}")"
 }
 
 do_check() {
