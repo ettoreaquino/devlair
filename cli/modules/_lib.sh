@@ -95,7 +95,6 @@ ctx_get_config() {
 
 # ── Shell helpers ────────────────────────────────────────────────────────────
 
-# cmd_exists NAME -- check if a command is available on PATH.
 # json_step LABEL BEFORE AFTER RC [REASON] -- emit an upgrade row from version
 # readbacks taken before and after a step. A non-zero RC is always a warn, so a
 # failed upgrade can never show as ok. Sets STEP_WARNED=1 on every warn.
@@ -115,6 +114,7 @@ json_step() {
   fi
 }
 
+# cmd_exists NAME -- check if a command is available on PATH.
 cmd_exists() { command -v "$1" >/dev/null 2>&1; }
 
 # _is_root -- true when the effective UID is 0.
@@ -259,16 +259,23 @@ verify_gpg_sig() {
   home=$(mktemp -d)
   if gpg --homedir "$home" --batch --quiet --import "$key" >&2; then
     status=$(gpg --homedir "$home" --batch --status-fd 1 --verify "$sig" "$file" 2>/dev/null) || true
-    grep -qE "^\[GNUPG:\] VALIDSIG .* ${fpr}\$" <<<"$status" && rc=0
+    # A signature by an expired or revoked key must fail even if VALIDSIG is also emitted.
+    # Refresh configs/aws-cli-public-key.asc before the pinned key expires (2027).
+    if ! grep -qE '^\[GNUPG:\] (EXPKEYSIG|REVKEYSIG|EXPSIG) ' <<<"$status"; then
+      grep -qE "^\[GNUPG:\] VALIDSIG .* ${fpr}\$" <<<"$status" && rc=0
+    fi
   fi
   rm -rf "$home"
   return $rc
 }
 
+AWS_RC_BADSIG=3    # aws_cli_install: signature did not verify
+AWS_RC_DOWNLOAD=4  # aws_cli_install: download failed
+
 # aws_cli_install [INSTALL_ARGS...] -- download the AWS CLI v2 bundle for this
 # arch, verify it against the vendored AWS key, then run its installer (pass
 # --update to upgrade). Works in a private mktemp dir, never a fixed /tmp path.
-# Returns 3 when the signature does not verify, 4 when a download fails (nothing
+# Returns AWS_RC_BADSIG when the signature does not verify, AWS_RC_DOWNLOAD when a download fails (nothing
 # is installed in either case), else the installer's exit code. Linux only.
 aws_cli_install() {
   local aws_arch work rc=0
@@ -277,11 +284,11 @@ aws_cli_install() {
   local base="https://awscli.amazonaws.com/awscli-exe-linux-${aws_arch}.zip"
   work=$(mktemp -d)
   if ! curl -fsSL "$base" -o "$work/awscliv2.zip" >&2 || ! curl -fsSL "${base}.sig" -o "$work/awscliv2.zip.sig" >&2; then
-    rc=4
+    rc=$AWS_RC_DOWNLOAD
   elif ! verify_gpg_sig "$work/awscliv2.zip" "$work/awscliv2.zip.sig" \
     "$_LIB_DIR/configs/aws-cli-public-key.asc" "$AWS_CLI_GPG_FPR"; then
     echo "AWS CLI signature did not verify against $AWS_CLI_GPG_FPR" >&2
-    rc=3
+    rc=$AWS_RC_BADSIG
   else
     { unzip -qo "$work/awscliv2.zip" -d "$work" && "$work/aws/install" "$@"; } >&2 || rc=$?
   fi

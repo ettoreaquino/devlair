@@ -84,8 +84,8 @@ upgrade_aws_linux() {
   json_progress "upgrading AWS CLI"
   aws_cli_install --update || rc=$?
   case $rc in
-    3) reason="signature did not verify; not installed" ;;
-    4) reason="download failed" ;;
+    "$AWS_RC_BADSIG") reason="signature did not verify; not installed" ;;
+    "$AWS_RC_DOWNLOAD") reason="download failed" ;;
   esac
   json_step "AWS CLI" "$before" "$(tool_version aws)" "$rc" "$reason"
 }
@@ -99,7 +99,7 @@ upgrade_brew() {
   fi
   # Indexed arrays only: macOS /bin/bash is 3.2 (no associative arrays).
   local rc=0 pending i
-  local -a tools=(gh aws uv bun fzf pyenv) before=()
+  local -a tools=(gh aws uv bun fzf pyenv) labels=("GitHub CLI" "AWS CLI" uv Bun fzf pyenv) before=()
   for i in "${!tools[@]}"; do before[i]=$(tool_version "${tools[i]}"); done
 
   json_progress "updating Homebrew"
@@ -114,10 +114,10 @@ upgrade_brew() {
   if [[ $rc -ne 0 ]]; then
     json_step "Homebrew" "" "" "$rc" "brew upgrade failed (exit $rc)"
   else
-    json_check "Homebrew" "ok" "$pending formulae/casks upgraded"
+    json_check "Homebrew" "ok" "$pending outdated before upgrade"
   fi
   for i in "${!tools[@]}"; do
-    [[ -n "${before[i]}" ]] && json_step "${tools[i]}" "${before[i]}" "$(tool_version "${tools[i]}")" 0
+    [[ -n "${before[i]}" ]] && json_step "${labels[i]}" "${before[i]}" "$(tool_version "${tools[i]}")" 0
   done
   return 0
 }
@@ -146,6 +146,8 @@ upgrade_nvm() {
   json_step "nvm + Node LTS" "$before" "$(user_version "$env nvm version 'lts/*'")" "$rc"
 }
 
+# upgrade_user_bin LABEL BIN CMD -- BIN and CMD are interpolated into a shell
+# string run as the user, so callers must pass trusted literals only.
 upgrade_user_bin() {
   local label=$1 bin=$2 cmd=$3 before rc=0
   [[ -x "$bin" ]] || return 0

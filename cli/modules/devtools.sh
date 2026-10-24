@@ -200,8 +200,8 @@ do_run() {
       aws_cli_install || aws_rc=$?
       case $aws_rc in
         0) json_install "aws" "awscli.amazonaws.com" true ;;
-        3) failed+=("aws (signature did not verify)") ;;
-        4) failed+=("aws (download failed)") ;;
+        "$AWS_RC_BADSIG") failed+=("aws (signature did not verify)") ;;
+        "$AWS_RC_DOWNLOAD") failed+=("aws (download failed)") ;;
         *) failed+=("aws (installer exit $aws_rc)") ;;
       esac
     fi
