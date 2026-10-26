@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.5.2](https://github.com/ettoreaquino/devlair/compare/v3.5.1...v3.5.2) (2026-10-26)
+
+
+### Bug Fixes
+
+* **upgrade:** verify AWS CLI signature and report real per-tool results ([#319](https://github.com/ettoreaquino/devlair/issues/319)) ([e3d4a86](https://github.com/ettoreaquino/devlair/commit/e3d4a86d66745679f556d5461d91dc1a428ab855))
+
 ## [3.5.1](https://github.com/ettoreaquino/devlair/compare/v3.5.0...v3.5.1) (2026-10-23)
 
 
