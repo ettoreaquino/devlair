@@ -298,6 +298,19 @@ async function checkSelfUpdate(currentVersion: string): Promise<SelfUpdateResult
     const tmpPath = join(targetDir, `.devlair-update-${process.pid}`);
     writeFileSync(tmpPath, buffer, { mode: 0o755 });
 
+    // Launch the staged binary before it replaces a working one: a release that
+    // can't start (e.g. macOS SIGKILLs an invalid code signature) must not brick
+    // the install, since the broken binary could never self-update again.
+    const probe = spawnSync(tmpPath, ["--version"], { timeout: 15_000, stdio: "ignore" });
+    if (probe.status !== 0) {
+      rmSync(tmpPath, { force: true });
+      const why = probe.signal ? `killed by ${probe.signal}` : (probe.error?.message ?? `exit ${probe.status}`);
+      return {
+        status: "error",
+        detail: `Update to v${latest} aborted — the new binary failed to start (${why}). Keeping v${currentVersion}.`,
+      };
+    }
+
     let installed = false;
     try {
       renameSync(tmpPath, target.path);
@@ -384,8 +397,18 @@ export function UpgradeView({ flags, version }: { flags: UpgradeFlags; version: 
         const newBinary = result.installPath ?? process.execPath;
         try {
           execFileSync(newBinary, ["upgrade", "--no-self"], { stdio: "inherit" });
-        } catch {
-          // The new binary will handle output
+        } catch (err) {
+          // A non-zero exit means the new binary ran and printed its own output;
+          // a signal means it never got that far, so say so instead of exiting silently.
+          const signal = (err as { signal?: string | null }).signal;
+          if (signal) {
+            setSelfResult({
+              status: "error",
+              detail: `${result.detail} — but ${newBinary} was ${signal === "SIGKILL" ? "killed on launch (SIGKILL)" : `terminated by ${signal}`}`,
+            });
+            setTimeout(() => exitRef.current(), 0);
+            return;
+          }
         }
         exitRef.current();
         return;
