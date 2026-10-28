@@ -7,6 +7,7 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, hostname, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -295,12 +296,13 @@ async function checkSelfUpdate(currentVersion: string): Promise<SelfUpdateResult
     // Stage the download inside the target directory so the final swap is an
     // atomic same-filesystem rename (a cross-device rename raises EACCES even
     // with permission — the root cause of the historical upgrade failures).
-    const tmpPath = join(targetDir, `.devlair-update-${process.pid}`);
-    writeFileSync(tmpPath, buffer, { mode: 0o755 });
+    const tmpPath = join(targetDir, `.devlair-update-${process.pid}-${randomBytes(6).toString("hex")}`);
+    writeFileSync(tmpPath, buffer, { mode: 0o755, flag: "wx" });
 
     // Launch the staged binary before it replaces a working one: a release that
     // can't start (e.g. macOS SIGKILLs an invalid code signature) must not brick
     // the install, since the broken binary could never self-update again.
+    // This is a liveness check only, not an integrity check: the checksum above is the integrity gate.
     const probe = spawnSync(tmpPath, ["--version"], { timeout: 15_000, stdio: "ignore" });
     if (probe.status !== 0) {
       rmSync(tmpPath, { force: true });
@@ -404,7 +406,7 @@ export function UpgradeView({ flags, version }: { flags: UpgradeFlags; version: 
           if (signal) {
             setSelfResult({
               status: "error",
-              detail: `${result.detail} — but ${newBinary} was ${signal === "SIGKILL" ? "killed on launch (SIGKILL)" : `terminated by ${signal}`}`,
+              detail: `${result.detail} — but ${newBinary} was terminated by ${signal}`,
             });
             setTimeout(() => exitRef.current(), 0);
             return;
