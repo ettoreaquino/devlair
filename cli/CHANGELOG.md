@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.5.3](https://github.com/ettoreaquino/devlair/compare/v3.5.2...v3.5.3) (2026-10-28)
+
+
+### Bug Fixes
+
+* **release:** build with Bun 1.4.4 and refuse updates that can't launch ([#322](https://github.com/ettoreaquino/devlair/issues/322)) ([5298cdf](https://github.com/ettoreaquino/devlair/commit/5298cdf3cd02accb60d65b5539a56549a7ebaf05))
+
 ## [3.5.2](https://github.com/ettoreaquino/devlair/compare/v3.5.1...v3.5.2) (2026-10-26)
 
 
