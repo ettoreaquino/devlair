@@ -1,5 +1,5 @@
-import { describe, expect, test } from "bun:test";
-import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import pins from "../../modules/pins.json" with { type: "json" };
@@ -32,7 +32,6 @@ describe("installer pins", () => {
     for (const [, src] of moduleSources()) {
       for (const m of src.matchAll(/download_pinned ([a-z-]+)/g)) used.add(m[1]);
     }
-    used.delete("no-such-tool");
     expect(used.size).toBeGreaterThan(0);
     for (const tool of used) expect(Object.keys(pins), tool).toContain(tool);
   });
@@ -47,9 +46,15 @@ describe("installer pins", () => {
 });
 
 describe("downloadPinned (Homebrew pre-flight)", () => {
-  const fixture = join(tmpdir(), `devlair-pin-fixture-${process.pid}.sh`);
-  writeFileSync(fixture, "echo brew\n");
-  const url = `file://${fixture}`;
+  let dir: string;
+  let url: string;
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), "devlair-pin-fixture-"));
+    const fixture = join(dir, "fixture.sh");
+    writeFileSync(fixture, "echo brew\n");
+    url = `file://${fixture}`;
+  });
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
   test("returns the file when the SHA-256 matches", () => {
     const sha256 = new Bun.CryptoHasher("sha256").update("echo brew\n").digest("hex");

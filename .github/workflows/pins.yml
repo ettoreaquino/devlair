@@ -30,6 +30,8 @@ jobs:
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -39,6 +41,7 @@ jobs:
         id: pins
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        shell: bash
         run: |
           scripts/update-pins.sh | tee "$RUNNER_TEMP/changes.txt"
           if git diff --quiet; then

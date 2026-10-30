@@ -276,7 +276,7 @@ sha256_file() {
 download_verified() {
   local url=$1 want=$2 tmp got
   tmp=$(mktemp /tmp/devlair.XXXXXX.sh 2>/dev/null || mktemp)
-  if ! curl -fsSL "$url" -o "$tmp" >&2; then
+  if ! curl -fsSL --proto '=https,file' --proto-redir '=https' --retry 3 --max-time 300 "$url" -o "$tmp" >&2; then
     rm -f "$tmp"
     echo "download failed: $url" >&2
     return 1
