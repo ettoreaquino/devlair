@@ -3,15 +3,17 @@ export EDITOR=vim
 export LANG=en_US.UTF-8
 
 # zimfw
+# zimfw.zsh is installed (pinned and checksum-verified) by `devlair init`;
+# the shell never downloads it on its own.
 ZIM_HOME="$HOME/.zim"
-if [[ ! -e "$ZIM_HOME/zimfw.zsh" ]]; then
-  curl -fsSL --create-dirs -o "$ZIM_HOME/zimfw.zsh" \
-    https://github.com/zimfw/zimfw/releases/latest/download/zimfw.zsh
+if [[ -e "$ZIM_HOME/zimfw.zsh" ]]; then
+  if [[ ! "$ZIM_HOME/init.zsh" -nt "$HOME/.zimrc" ]]; then
+    source "$ZIM_HOME/zimfw.zsh" init -q
+  fi
+  source "$ZIM_HOME/init.zsh"
+else
+  print -u2 "devlair: $ZIM_HOME/zimfw.zsh is missing; run 'devlair init --only zsh' to restore it"
 fi
-if [[ ! "$ZIM_HOME/init.zsh" -nt "$HOME/.zimrc" ]]; then
-  source "$ZIM_HOME/zimfw.zsh" init -q
-fi
-source "$ZIM_HOME/init.zsh"
 
 # Git branch in the prompt (oh-my-zsh dracula style) via zsh's built-in
 # vcs_info. formats carries only the raw branch/action — no color escapes — so

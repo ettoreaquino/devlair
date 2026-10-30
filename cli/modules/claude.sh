@@ -34,10 +34,13 @@ do_run() {
   if ! cmd_exists claude; then
     json_progress "installing claude code"
     local script
-    script=$(download_script "https://claude.ai/install.sh")
+    script=$(download_pinned claude) || {
+      json_result "fail" "Claude Code installer failed verification"
+      exit 1
+    }
     _run_as_user "bash \"$script\"" >&2
     rm -f "$script"
-    json_install "claude" "claude.ai" false
+    json_install "claude" "$(pin_get claude url)" true
     install_detail="claude code installed"
   fi
 

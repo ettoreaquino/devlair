@@ -106,14 +106,20 @@ EOF
 
   # Bootstrap zimfw and install modules as the user
   json_progress "installing zimfw plugins"
+  local zimfw
+  zimfw=$(download_pinned zimfw) || {
+    json_result "fail" "zimfw failed verification"
+    exit 1
+  }
   _run_as_user "
     export ZIM_HOME=\"$zim_home\"
     export ZDOTDIR=\"$USER_HOME\"
     mkdir -p \"\$ZIM_HOME\"
-    curl -fsSL --create-dirs -o \"\$ZIM_HOME/zimfw.zsh\" \
-        https://github.com/zimfw/zimfw/releases/latest/download/zimfw.zsh
+    cp \"$zimfw\" \"\$ZIM_HOME/zimfw.zsh\"
     zsh -c 'source \"\$ZIM_HOME/zimfw.zsh\" install' 2>&1 || true
   " >&2 || true
+  rm -f "$zimfw"
+  json_install "zimfw" "$(pin_get zimfw url)" true
 
   chown_user "$zim_home"
 

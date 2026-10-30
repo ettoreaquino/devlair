@@ -310,7 +310,7 @@ Installs (skipping any that already exist):
 | [Bun](https://bun.sh/) | JavaScript runtime |
 | [VS Code](https://code.visualstudio.com/) | Code editor (macOS + Linux only) |
 
-On Linux/WSL these install via apt/curl/git (AWS CLI v2 is GPG-verified against a vendored public key with a pinned fingerprint, and nothing is installed if verification fails; VS Code installs via the Microsoft apt repository with GPG key verification on Linux and is skipped on WSL). On macOS, `uv`, `pyenv`, `fzf`, `gh`, `aws`, `bun`, and `VS Code` install via `brew` (plus pyenv's build deps), while `nvm` uses its official install script. **Docker is not installed on WSL or macOS** — the module prints guidance to install Docker Desktop and continues without error.
+On Linux/WSL these install via apt, git or the vendor's install script. Each install script is pinned to an immutable URL and checked against a SHA-256 in `cli/modules/pins.json` before it runs, and nothing runs if it doesn't match (AWS CLI v2 is GPG-verified against a vendored public key with a pinned fingerprint, and nothing is installed if verification fails; VS Code installs via the Microsoft apt repository with GPG key verification on Linux and is skipped on WSL). On macOS, `uv`, `pyenv`, `fzf`, `gh`, `aws`, `bun`, and `VS Code` install via `brew` (plus pyenv's build deps), while `nvm` uses its official install script. **Docker is not installed on WSL or macOS** — the module prints guidance to install Docker Desktop and continues without error.
 
 </details>
 

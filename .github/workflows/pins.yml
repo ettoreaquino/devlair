@@ -1,0 +1,75 @@
+name: Installer pins
+
+# Every third-party installer the modules execute is pinned by URL and SHA-256
+# in cli/modules/pins.json (#299). This checks upstream weekly and opens (or
+# refreshes) one PR bumping every pin that moved. The App token makes CI run on
+# that PR; the `fix(modules):` prefix cuts a patch release once it merges.
+
+on:
+  schedule:
+    - cron: "0 7 * * 1" # Mondays 07:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pins
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BRANCH: fix/bump-installer-pins
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Refresh pins
+        id: pins
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          scripts/update-pins.sh | tee "$RUNNER_TEMP/changes.txt"
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open or update the bump PR
+        if: steps.pins.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          git config user.name "devlair-pins[bot]"
+          git config user.email "devlair-pins[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git commit -qam "fix(modules): bump installer pins"
+          # The branch only ever holds this generated commit, so replacing it is safe.
+          git push --force origin "$BRANCH"
+          {
+            echo "Weekly refresh of \`cli/modules/pins.json\` (#299)."
+            echo
+            echo "| Tool | Change |"
+            echo "|------|--------|"
+            sed -E 's/^([^ ]+) (.*)$/| \1 | `\2` |/' "$RUNNER_TEMP/changes.txt"
+            echo
+            echo "Review each new installer before merging: every URL is an immutable tag or commit,"
+            echo "except claude.ai/install.sh, whose content changed under the same URL."
+          } > "$RUNNER_TEMP/body.md"
+          if gh pr view "$BRANCH" --json state --jq .state 2>/dev/null | grep -q OPEN; then
+            gh pr edit "$BRANCH" --body-file "$RUNNER_TEMP/body.md"
+          else
+            gh pr create --head "$BRANCH" --title "fix(modules): bump installer pins" --body-file "$RUNNER_TEMP/body.md"
+          fi

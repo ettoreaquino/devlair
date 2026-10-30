@@ -99,10 +99,13 @@ do_run() {
   if ! cmd_exists tailscale; then
     json_progress "installing tailscale"
     local script
-    script=$(download_script "https://tailscale.com/install.sh")
+    script=$(download_pinned tailscale) || {
+      json_result "fail" "Tailscale installer failed verification"
+      exit 1
+    }
     bash "$script" >&2
     rm -f "$script"
-    json_install "tailscale" "tailscale.com" false
+    json_install "tailscale" "$(pin_get tailscale url)" true
   fi
 
   TS_AUTH_URL=""
