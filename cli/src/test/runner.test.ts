@@ -293,6 +293,11 @@ json_escape "$input"
     expect(parsed).toBe('He said "hi"\nline2\ttab\\back');
   });
 
+  test("join_by joins with the full multi-character separator", () => {
+    const { stdout } = runLibScript(`join_by " | " "a: 1" "b: 2" "c"; echo; join_by ", "; echo "<end>"`);
+    expect(stdout).toBe("a: 1 | b: 2 | c\n<end>\n");
+  });
+
   test("json_progress with and without percent", () => {
     const { stdout } = runLibScript(`json_progress "hello"
 json_progress "halfway" 50`);

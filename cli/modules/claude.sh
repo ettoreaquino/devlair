@@ -61,7 +61,7 @@ do_run() {
   local parts=()
   [[ -n "$install_detail" ]] && parts+=("$install_detail")
   parts+=("settings merged, scripts deployed")
-  json_result "ok" "$(IFS=', '; echo "${parts[*]}")"
+  json_result "ok" "$(join_by ', ' "${parts[@]}")"
 }
 
 do_check() {
@@ -135,7 +135,7 @@ do_uninstall() {
     json_result "skip" "nothing to remove"
     exit 2
   fi
-  json_result "ok" "removed: $(IFS=', '; echo "${removed[*]}")"
+  json_result "ok" "removed: $(join_by ', ' "${removed[@]}")"
 }
 
 case "$MODE" in
