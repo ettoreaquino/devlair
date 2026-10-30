@@ -65,7 +65,7 @@ case "$MODE" in
 esac
 ```
 
-Protocol: stdout carries JSON Lines events only (`json_progress`, `json_result`, `json_check`, `json_install`, `json_auth_url`); everything else goes to stderr, which the runner tees to a per-run log under `~/.devlair/logs/`. Per-module config comes from `ctx_get_config <key>`. Use the `_lib.sh` helpers (`cmd_exists`, `apt_install`, `brew_install`, `run_as`, `run_shell_as`, `download_script`, `update_json`, `cfg_bool`, `rm_user_path`, ...) instead of re-implementing them.
+Protocol: stdout carries JSON Lines events only (`json_progress`, `json_result`, `json_check`, `json_install`, `json_auth_url`); everything else goes to stderr, which the runner tees to a per-run log under `~/.devlair/logs/`. Per-module config comes from `ctx_get_config <key>`. Use the `_lib.sh` helpers (`cmd_exists`, `apt_install`, `brew_install`, `run_as`, `run_shell_as`, `download_pinned`, `update_json`, `cfg_bool`, `rm_user_path`, ...) instead of re-implementing them.
 
 Module groups and dependencies are defined in `cli/src/lib/modules.ts` via `MODULE_SPECS` (listed in dependency order; `validateDag()` enforces it):
 
@@ -115,7 +115,7 @@ Tool installs follow a download-then-execute pattern instead of piping curl to s
 - **AWS CLI v2** — GPG signature verification using AWS's published public key (devtools)
 - **Docker, gh, Chrome** — installed via apt with GPG-signed keyrings
 - **fzf** — installed via git clone (git provides integrity)
-- **uv, pyenv, nvm, Claude Code** — `download_script` to a temp file, then execute (no pipe)
+- **uv, pyenv, nvm, bun, Claude Code, Tailscale, Homebrew, zimfw** — `download_pinned <tool>` fetches the installer from the immutable URL in `cli/modules/pins.json` and checks its SHA-256 before anything runs; a mismatch fails the module closed. The weekly `pins.yml` workflow (via `scripts/update-pins.sh`) opens a `fix(modules): bump installer pins` PR when upstream moves. Never add a raw `curl` to an installer; add a pin instead (`pins.test.ts` enforces this). Pins cover the installer script only: pyenv-installer, Homebrew's install.sh and zimfw still fetch their payloads (git clones / plugin modules) from upstream at run time, as do bun's zip and Claude Code's binary (the latter verified against Anthropic's manifest).
 
 Per-run logs are written to `~/.devlair/logs/<command>-<timestamp>/` (directory 0700, files 0600, last 10 runs kept), owned by the invoking user under sudo.
 

@@ -22,14 +22,18 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import pins from "../../modules/pins.json" with { type: "json" };
 
 const BREW_PATHS = ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"];
-const BREW_INSTALL_URL = "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh";
-const BREW_UNINSTALL_URL = "https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh";
-const MANUAL_INSTALL_CMD = `/bin/bash -c "$(curl -fsSL ${BREW_INSTALL_URL})"`;
+// Shown to humans (e.g. an IT admin) as Homebrew's documented install command.
+const MANUAL_INSTALL_CMD =
+  '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"';
+
+type Pin = { url: string; sha256: string };
 
 function isMacAdmin(): boolean {
   const r = spawnSync("id", ["-Gn"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
@@ -109,16 +113,23 @@ export function decidePreFlight(state: {
 }
 
 /**
- * Download a script to a temp file (no `curl | bash`), returning its path.
- * Caller is responsible for removing the parent temp dir.
+ * Download a pinned script to a temp file (no `curl | bash`) and verify its
+ * SHA-256 against cli/modules/pins.json, returning its path. Throws, leaving
+ * nothing behind, on a download error or hash mismatch. Caller is responsible
+ * for removing the parent temp dir.
  */
-function downloadScript(url: string): string {
+export function downloadPinned(pin: Pin): string {
   const dir = mkdtempSync(join(tmpdir(), "devlair-"));
   const file = join(dir, "script.sh");
-  const r = spawnSync("curl", ["-fsSL", url, "-o", file], { stdio: ["ignore", "ignore", "inherit"] });
+  const r = spawnSync("curl", ["-fsSL", pin.url, "-o", file], { stdio: ["ignore", "ignore", "inherit"] });
   if (r.status !== 0) {
     rmSync(dir, { recursive: true, force: true });
-    throw new Error(`failed to download ${url}`);
+    throw new Error(`failed to download ${pin.url}`);
+  }
+  const actual = createHash("sha256").update(readFileSync(file)).digest("hex");
+  if (actual !== pin.sha256) {
+    rmSync(dir, { recursive: true, force: true });
+    throw new Error(`checksum mismatch for ${pin.url}: expected ${pin.sha256}, got ${actual}`);
   }
   return file;
 }
@@ -182,8 +193,9 @@ export function macOsPreFlight(): void {
 
       let status: number;
       try {
-        status = runScriptInteractive(downloadScript(BREW_INSTALL_URL));
-      } catch {
+        status = runScriptInteractive(downloadPinned(pins.homebrew));
+      } catch (err) {
+        process.stderr.write(`\n${(err as Error).message}\n`);
         status = 1;
       }
 
@@ -227,8 +239,9 @@ export function macOsPurgeHomebrew(): void {
   try {
     // --force skips the interactive "are you sure?" confirmation; the user
     // already committed by passing --purge. sudo still prompts over the TTY.
-    status = runScriptInteractive(downloadScript(BREW_UNINSTALL_URL), ["--force"]);
-  } catch {
+    status = runScriptInteractive(downloadPinned(pins["homebrew-uninstall"]), ["--force"]);
+  } catch (err) {
+    process.stderr.write(`\n${(err as Error).message}\n`);
     status = 1;
   }
   if (status !== 0) {

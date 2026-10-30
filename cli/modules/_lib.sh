@@ -172,7 +172,7 @@ brew_run() {
 }
 
 # brew_ensure -- ensure Homebrew is on PATH, installing it if absent.
-# Uses download-then-execute to avoid piping curl to bash directly.
+# Runs the pinned, checksum-verified installer (download_pinned).
 # After install, sources brew shellenv so subsequent brew calls work.
 # When running as root, installs and invokes brew as the target user.
 brew_ensure() {
@@ -196,13 +196,17 @@ brew_ensure() {
   done
   json_progress "installing Homebrew"
   local tmp
-  tmp=$(download_script "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh")
+  tmp=$(download_pinned homebrew) || {
+    json_result "fail" "Homebrew installer failed verification"
+    exit 1
+  }
   if _is_root; then
     sudo -u "${USERNAME:?USERNAME not set}" NONINTERACTIVE=1 bash "$tmp" >&2
   else
     NONINTERACTIVE=1 bash "$tmp" >&2
   fi
   rm -f "$tmp"
+  json_install "homebrew" "$(pin_get homebrew url)" true
   # Add brew to PATH for the remainder of this script session
   if [[ -x /opt/homebrew/bin/brew ]]; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
@@ -238,8 +242,24 @@ _run_as_user() {
   fi
 }
 
-# download_script URL -- download an installer script to a temp file.
-# Prints the temp file path; caller is responsible for cleanup.
+# PINS_FILE -- per-tool installer pins (version, URL, SHA-256), refreshed by
+# scripts/update-pins.sh and the weekly pins workflow.
+PINS_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/pins.json"
+
+# pin_get TOOL FIELD -- print FIELD (version, url or sha256) of TOOL's pin.
+pin_get() {
+  jq -er --arg t "$1" --arg f "$2" '.[$t][$f]' "$PINS_FILE"
+}
+
+# sha256_file FILE -- print FILE's SHA-256 (sha256sum on Linux, shasum on macOS).
+sha256_file() {
+  if cmd_exists sha256sum; then sha256sum "$1"; else shasum -a 256 "$1"; fi | awk '{print $1}'
+}
+
+# download_verified URL SHA256 -- download an installer to a temp file and
+# print its path; the caller removes it. Fails closed: on a download error or
+# hash mismatch the file is deleted, nothing is printed and the return code is
+# non-zero, so a tampered installer is never executed.
 #
 # mktemp creates the file 0600. Under `sudo devlair init` it is root-owned,
 # but some installers run as the target user via `sudo -u` (uv/pyenv/nvm/bun
@@ -253,13 +273,32 @@ _run_as_user() {
 # root runs it (TOCTOU privilege escalation). Keeping root ownership + write
 # and adding only read closes that window. The scripts are public installers,
 # so world-readable leaks nothing.
-download_script() {
-  local url=$1
-  local tmp
+download_verified() {
+  local url=$1 want=$2 tmp got
   tmp=$(mktemp /tmp/devlair.XXXXXX.sh 2>/dev/null || mktemp)
-  curl -fsSL "$url" -o "$tmp" >&2
+  if ! curl -fsSL --proto '=https,file' --proto-redir '=https' --retry 3 --max-time 300 "$url" -o "$tmp" >&2; then
+    rm -f "$tmp"
+    echo "download failed: $url" >&2
+    return 1
+  fi
+  got=$(sha256_file "$tmp")
+  if [[ "$got" != "$want" ]]; then
+    rm -f "$tmp"
+    echo "checksum mismatch for $url: expected $want, got $got" >&2
+    return 1
+  fi
   chmod a+r "$tmp"
   printf '%s' "$tmp"
+}
+
+# download_pinned TOOL -- download_verified TOOL's installer as pinned in PINS_FILE.
+download_pinned() {
+  local url sha
+  url=$(pin_get "$1" url) && sha=$(pin_get "$1" sha256) || {
+    echo "no pin for $1 in $PINS_FILE" >&2
+    return 1
+  }
+  download_verified "$url" "$sha"
 }
 
 # verify_gpg_sig FILE SIG KEYFILE FPR -- verify a detached signature against a

@@ -230,7 +230,7 @@ Before the wizard UI starts, a pre-flight verifies you're a local admin and inst
 <details>
 <summary><b>Homebrew</b> — package-manager bootstrap (macOS)</summary>
 
-macOS-only. Before the wizard UI starts, a pre-flight (`macOsPreFlight()`) checks that the user is a local admin (exiting with guidance if not) and requires an interactive terminal. If Homebrew is missing it runs Homebrew's official installer interactively — Homebrew prompts for your password over the real TTY. This is the single point of Homebrew installation; the `homebrew` module step itself just confirms `brew` is on `PATH`. `homebrew` is a dependency of `system`, `zsh`, `tmux`, and `devtools` on macOS.
+macOS-only. Before the wizard UI starts, a pre-flight (`macOsPreFlight()`) checks that the user is a local admin (exiting with guidance if not) and requires an interactive terminal. If Homebrew is missing it runs Homebrew's official installer interactively (pinned to an immutable ref and SHA-256 verified before it runs; a mismatch aborts) — Homebrew prompts for your password over the real TTY. This is the single point of Homebrew installation; the `homebrew` module step itself just confirms `brew` is on `PATH`. `homebrew` is a dependency of `system`, `zsh`, `tmux`, and `devtools` on macOS.
 
 </details>
 
@@ -251,7 +251,7 @@ Displays the current timezone and prompts for a new one. Uses `timedatectl set-t
 <details>
 <summary><b>Tailscale</b> — VPN for secure remote access</summary>
 
-Installs [Tailscale](https://tailscale.com) and walks you through browser-based authentication. On Linux your Tailscale IP is used to restrict SSH access. Runs by default on Linux; **opt-in on WSL and macOS** (`--only tailscale`). During the browser flow, press **Enter** to skip waiting and verify later with `devlair doctor`.
+Installs [Tailscale](https://tailscale.com) (pinned, SHA-256-verified installer) and walks you through browser-based authentication. On Linux your Tailscale IP is used to restrict SSH access. Runs by default on Linux; **opt-in on WSL and macOS** (`--only tailscale`). During the browser flow, press **Enter** to skip waiting and verify later with `devlair doctor`.
 
 </details>
 
@@ -284,6 +284,8 @@ Installs zsh, sets it as default, and configures [zimfw](https://zimfw.sh) with:
 - `zsh-syntax-highlighting`
 - `zsh-completions`
 
+`zimfw.zsh` is a pinned release, SHA-256 verified and installed by `devlair init`; the shell never downloads it on startup. If it goes missing, a new shell prints a hint to run `devlair init --only zsh`.
+
 </details>
 
 <details>
@@ -310,7 +312,7 @@ Installs (skipping any that already exist):
 | [Bun](https://bun.sh/) | JavaScript runtime |
 | [VS Code](https://code.visualstudio.com/) | Code editor (macOS + Linux only) |
 
-On Linux/WSL these install via apt/curl/git (AWS CLI v2 is GPG-verified against a vendored public key with a pinned fingerprint, and nothing is installed if verification fails; VS Code installs via the Microsoft apt repository with GPG key verification on Linux and is skipped on WSL). On macOS, `uv`, `pyenv`, `fzf`, `gh`, `aws`, `bun`, and `VS Code` install via `brew` (plus pyenv's build deps), while `nvm` uses its official install script. **Docker is not installed on WSL or macOS** — the module prints guidance to install Docker Desktop and continues without error.
+On Linux/WSL these install via apt, git or the vendor's install script. Each install script is pinned to an immutable URL and checked against a SHA-256 in `cli/modules/pins.json` before it runs, and nothing runs if it doesn't match (AWS CLI v2 is GPG-verified against a vendored public key with a pinned fingerprint, and nothing is installed if verification fails; VS Code installs via the Microsoft apt repository with GPG key verification on Linux and is skipped on WSL). On macOS, `uv`, `pyenv`, `fzf`, `gh`, `aws`, `bun`, and `VS Code` install via `brew` (plus pyenv's build deps), while `nvm` uses its official install script. **Docker is not installed on WSL or macOS** — the module prints guidance to install Docker Desktop and continues without error.
 
 </details>
 
@@ -355,7 +357,7 @@ Downloads the official [Dracula theme for Terminal.app](https://draculatheme.com
 <details>
 <summary><b>Claude Code</b> — install + settings</summary>
 
-Always opt-in (`--only claude`). Installs Claude Code (if absent) and merges devlair-managed keys into `~/.claude/settings.json` (model, effort level). Deploys the `tmx-new` helper for launching named tmux sessions (`tmx new --name <n> [--claude]`). Use `devlair claude` to view the current plan/model, `--plan TIER` to set the subscription tier, and `--1m on|off` to toggle 1M-token context.
+Always opt-in (`--only claude`). Installs Claude Code (if absent, via a SHA-256-verified installer; nothing runs on a mismatch) and merges devlair-managed keys into `~/.claude/settings.json` (model, effort level). Deploys the `tmx-new` helper for launching named tmux sessions (`tmx new --name <n> [--claude]`). Use `devlair claude` to view the current plan/model, `--plan TIER` to set the subscription tier, and `--1m on|off` to toggle 1M-token context.
 
 </details>
 
@@ -425,7 +427,10 @@ cli/                    # TypeScript CLI
                         # (packaged into modules.tar.gz on release, installed to
                         # /usr/local/share/devlair/modules; `devlair upgrade`
                         # refreshes them in place on Linux and relocates them to
-                        # a user-owned ~/.devlair/modules on macOS)
+                        # a user-owned ~/.devlair/modules on macOS);
+                        # pins.json pins each third-party installer by URL + SHA-256
+scripts/
+  update-pins.sh        # refreshes pins.json (run weekly by the pins workflow)
 assets/
   logo.svg              # brand mark (dark background)
   logo-light.svg        # brand mark (light background variant)

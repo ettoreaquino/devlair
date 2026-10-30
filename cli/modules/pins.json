@@ -1,0 +1,47 @@
+{
+  "uv": {
+    "version": "0.13.6",
+    "url": "https://github.com/astral-sh/uv/releases/download/0.13.6/uv-installer.sh",
+    "sha256": "f7a56e7afaec49a3bcbc3ac3cdbe917e7c6ce30e0d815308a12e531aa5ef23b7"
+  },
+  "pyenv": {
+    "version": "bdd89156f0e591558ca901c5984387dd993157f9",
+    "url": "https://raw.githubusercontent.com/pyenv/pyenv-installer/bdd89156f0e591558ca901c5984387dd993157f9/bin/pyenv-installer",
+    "sha256": "2bf587665219d2ed3e262fc2c3d9e6843b48f64435bc489d936f03e68b5f610d"
+  },
+  "nvm": {
+    "version": "v0.40.8",
+    "url": "https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.8/install.sh",
+    "sha256": "48a0eee9a60e07422dce0eb5774754c83889570ca1ee2566c516acbe8af03a9e"
+  },
+  "bun": {
+    "version": "bun-v1.4.4",
+    "url": "https://raw.githubusercontent.com/oven-sh/bun/bun-v1.4.4/src/runtime/cli/install.sh",
+    "sha256": "04882bf41679d49d9af108657a1e5515bf04fdf2940d12c0d0b1e5d79dc53be8"
+  },
+  "claude": {
+    "version": "",
+    "url": "https://claude.ai/install.sh",
+    "sha256": "3a68d3406cf674e17bed1733a4dcf37805e2e47d87417700007d7e1aa766a944"
+  },
+  "tailscale": {
+    "version": "v1.104.4",
+    "url": "https://raw.githubusercontent.com/tailscale/tailscale/v1.104.4/scripts/installer.sh",
+    "sha256": "4207f322e10ad26b3054abe7c99dfb54da09843c8d0a50d0a82f8eff4972a0d1"
+  },
+  "homebrew": {
+    "version": "8c82c081753d4263da0cfe615ef8d9433425f22b",
+    "url": "https://raw.githubusercontent.com/Homebrew/install/8c82c081753d4263da0cfe615ef8d9433425f22b/install.sh",
+    "sha256": "5f333bbe53bc490e51e7ccb1df8779b3dd6ee73a1a7379efda216edb08ccb148"
+  },
+  "homebrew-uninstall": {
+    "version": "8c82c081753d4263da0cfe615ef8d9433425f22b",
+    "url": "https://raw.githubusercontent.com/Homebrew/install/8c82c081753d4263da0cfe615ef8d9433425f22b/uninstall.sh",
+    "sha256": "60cd24138f98095ae6e34fd5e5fae46a0f04971ef6ebb12cea6dac7bc681d25e"
+  },
+  "zimfw": {
+    "version": "v1.20.2",
+    "url": "https://github.com/zimfw/zimfw/releases/download/v1.20.2/zimfw.zsh",
+    "sha256": "918e8948d08346d5f1373ec628d858e4732fbbb9991b25c22d1a9b3443a2edc2"
+  }
+}
