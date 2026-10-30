@@ -257,9 +257,9 @@ do_run() {
 
   # Build result detail
   local parts=()
-  [[ ${#installed[@]} -gt 0 ]] && parts+=("installed: $(IFS=,; echo "${installed[*]}")")
-  [[ ${#skipped[@]} -gt 0 ]] && parts+=("skipped: $(IFS=,; echo "${skipped[*]}")")
-  [[ ${#failed[@]} -gt 0 ]] && parts+=("failed: $(IFS=,; echo "${failed[*]}")")
+  [[ ${#installed[@]} -gt 0 ]] && parts+=("installed: $(join_by "," "${installed[@]}")")
+  [[ ${#skipped[@]} -gt 0 ]] && parts+=("skipped: $(join_by "," "${skipped[@]}")")
+  [[ ${#failed[@]} -gt 0 ]] && parts+=("failed: $(join_by "," "${failed[@]}")")
   json_result "$([[ ${#failed[@]} -gt 0 ]] && echo warn || echo ok)" "$(join_by ' | ' "${parts[@]}")"
 }
 

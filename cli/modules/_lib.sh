@@ -125,6 +125,7 @@ join_by() {
   (($#)) || return 0
   local out=$1
   shift
+  local item
   for item in "$@"; do out+="$sep$item"; done
   printf '%s' "$out"
 }
