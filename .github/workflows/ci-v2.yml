@@ -61,10 +61,10 @@ jobs:
       - name: Run unit tests
         run: bun test
 
-  # Builds both macOS binaries the way the release does and verifies their
-  # code signatures, so a Bun bump that breaks macOS signing (#321) fails here,
-  # not on users. Launching is not a check: runners start binaries that a
-  # normal Mac SIGKILLs.
+  # Runs the release's compile -> ad-hoc sign -> strict verify recipe for both
+  # macOS targets, so a Bun bump whose output can't be signed (#321, #325) fails
+  # here, not in the release. Launching is not a check: runners start binaries
+  # that a normal Mac SIGKILLs.
   compile-macos:
     strategy:
       matrix:
