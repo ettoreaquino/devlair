@@ -78,11 +78,14 @@ jobs:
             src/index.tsx \
             --outfile dist/devlair-cli-${{ matrix.os }}-${{ matrix.arch }}
 
-      # Bun 1.3.12 emitted darwin binaries with a malformed ad-hoc signature that
-      # Apple Silicon SIGKILLs on launch (#321). Refuse to publish one.
-      - name: Verify macOS code signature
+      # Bun's darwin output can carry a malformed (1.3.12, arm64) or stale (1.4.4,
+      # x64) signature; Apple Silicon SIGKILLs such binaries on launch (#321).
+      # Re-sign ad hoc and refuse to publish anything that doesn't verify.
+      - name: Sign and verify macOS binary
         if: matrix.os == 'darwin'
-        run: codesign --verify --strict --verbose=2 dist/devlair-cli-${{ matrix.os }}-${{ matrix.arch }}
+        run: |
+          codesign --force --sign - dist/devlair-cli-${{ matrix.os }}-${{ matrix.arch }}
+          codesign --verify --strict --verbose=2 dist/devlair-cli-${{ matrix.os }}-${{ matrix.arch }}
 
       # Every runner matches its target arch, so the binary must start here.
       - name: Smoke-test binary

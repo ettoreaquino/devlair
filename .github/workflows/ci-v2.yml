@@ -61,12 +61,19 @@ jobs:
       - name: Run unit tests
         run: bun test
 
-  # Builds the Apple Silicon binary the way the release does and verifies its
-  # code signature, so a Bun bump that breaks macOS signing (#321) fails here,
-  # not on users. Launching is not a check: runners start binaries that a
-  # normal Mac SIGKILLs.
+  # Runs the release's compile -> ad-hoc sign -> strict verify recipe for both
+  # macOS targets, so a Bun bump whose output can't be signed (#321, #325) fails
+  # here, not in the release. Launching is not a check: runners start binaries
+  # that a normal Mac SIGKILLs.
   compile-macos:
-    runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - runs-on: macos-latest
+            target: bun-darwin-arm64
+          - runs-on: macos-15-intel
+            target: bun-darwin-x64
+    runs-on: ${{ matrix.runs-on }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
@@ -76,7 +83,8 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Compile and verify signature
+      - name: Compile, sign and verify
         run: |
-          bun build --compile --target=bun-darwin-arm64 src/index.tsx --outfile dist/devlair
+          bun build --compile --target=${{ matrix.target }} src/index.tsx --outfile dist/devlair
+          codesign --force --sign - dist/devlair
           codesign --verify --strict --verbose=2 dist/devlair
