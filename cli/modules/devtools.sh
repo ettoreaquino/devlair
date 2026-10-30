@@ -42,7 +42,9 @@ do_run() {
   fi
 
   # ── uv ──────────────────────────────────────────────────────────────────────
-  if cmd_exists uv; then
+  # The astral installer puts uv in ~/.local/bin, which isn't on root's PATH
+  # when devlair runs under sudo.
+  if cmd_exists uv || [[ -x "$USER_HOME/.local/bin/uv" ]]; then
     skipped+=(uv)
   else
     json_progress "installing uv"
@@ -258,7 +260,7 @@ do_run() {
   [[ ${#installed[@]} -gt 0 ]] && parts+=("installed: $(IFS=,; echo "${installed[*]}")")
   [[ ${#skipped[@]} -gt 0 ]] && parts+=("skipped: $(IFS=,; echo "${skipped[*]}")")
   [[ ${#failed[@]} -gt 0 ]] && parts+=("failed: $(IFS=,; echo "${failed[*]}")")
-  json_result "$([[ ${#failed[@]} -gt 0 ]] && echo warn || echo ok)" "$(IFS=' | '; echo "${parts[*]}")"
+  json_result "$([[ ${#failed[@]} -gt 0 ]] && echo warn || echo ok)" "$(join_by ' | ' "${parts[@]}")"
 }
 
 do_check() {
@@ -333,7 +335,7 @@ do_uninstall() {
     json_result "skip" "nothing to remove"
     exit 2
   fi
-  json_result "ok" "removed: $(IFS=', '; echo "${removed[*]}")"
+  json_result "ok" "removed: $(join_by ', ' "${removed[@]}")"
 }
 
 case "$MODE" in

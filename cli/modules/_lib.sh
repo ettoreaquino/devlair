@@ -117,6 +117,18 @@ json_step() {
 # cmd_exists NAME -- check if a command is available on PATH.
 cmd_exists() { command -v "$1" >/dev/null 2>&1; }
 
+# join_by SEP ITEM... -- print ITEMs joined by the full SEP string.
+# IFS-based joins ("${arr[*]}") only use the first character of IFS.
+join_by() {
+  local sep=$1
+  shift
+  (($#)) || return 0
+  local out=$1
+  shift
+  for item in "$@"; do out+="$sep$item"; done
+  printf '%s' "$out"
+}
+
 # _is_root -- true when the effective UID is 0.
 # Caches the result in a string to avoid repeated subshell forks.
 _IS_ROOT_CACHED=""

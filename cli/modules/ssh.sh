@@ -165,13 +165,13 @@ do_uninstall() {
   fi
 
   local parts=()
-  [[ ${#removed[@]} -gt 0 ]] && parts+=("removed: $(IFS=', '; echo "${removed[*]}")")
-  [[ ${#kept[@]} -gt 0 ]] && parts+=("kept: $(IFS=', '; echo "${kept[*]}")")
+  [[ ${#removed[@]} -gt 0 ]] && parts+=("removed: $(join_by ', ' "${removed[@]}")")
+  [[ ${#kept[@]} -gt 0 ]] && parts+=("kept: $(join_by ', ' "${kept[@]}")")
   if [[ ${#parts[@]} -eq 0 ]]; then
     json_result "skip" "nothing to remove"
     exit 2
   fi
-  json_result "ok" "$(IFS=' | '; echo "${parts[*]}")"
+  json_result "ok" "$(join_by ' | ' "${parts[@]}")"
 }
 
 case "$MODE" in

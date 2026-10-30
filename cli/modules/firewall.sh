@@ -83,7 +83,7 @@ do_uninstall() {
     json_result "skip" "nothing to remove"
     exit 2
   fi
-  json_result "ok" "removed: $(IFS=', '; echo "${removed[*]}")"
+  json_result "ok" "removed: $(join_by ', ' "${removed[@]}")"
 }
 
 case "$MODE" in

@@ -171,7 +171,7 @@ do_uninstall() {
     removed+=("tailscale package")
   fi
 
-  json_result "ok" "$(IFS=', '; echo "${removed[*]}")"
+  json_result "ok" "$(join_by ', ' "${removed[@]}")"
 }
 
 case "$MODE" in
