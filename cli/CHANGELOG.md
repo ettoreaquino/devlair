@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.5.4](https://github.com/ettoreaquino/devlair/compare/v3.5.3...v3.5.4) (2026-10-30)
+
+
+### Bug Fixes
+
+* **modules:** detect user-installed uv under sudo and join results correctly ([#328](https://github.com/ettoreaquino/devlair/issues/328)) ([0aad680](https://github.com/ettoreaquino/devlair/commit/0aad680a92917993a7693c48460bcb684cf6223f))
+
 ## [3.5.3](https://github.com/ettoreaquino/devlair/compare/v3.5.2...v3.5.3) (2026-10-28)
 
 
