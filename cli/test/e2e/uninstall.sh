@@ -48,12 +48,13 @@ echo "$DEV_USER ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$DEV_USER
 ORIG_SHELL="$(dev_shell)"
 pass "created $DEV_USER (login shell: $ORIG_SHELL)"
 
-# Diagnostic only: modules no longer depend on git over https, but when it
-# breaks on a runner image (#323) the trace is the only way to see why.
+# Diagnostic only: the fzf and zimfw modules still use git over https, and
+# when that breaks on a runner image (#323) the trace is the only way to see
+# why. Run from the current cwd so cwd-stat failures reproduce.
 if ! sudo -u "$DEV_USER" git ls-remote -q https://github.com/tmux-plugins/tpm HEAD >/dev/null 2>&1; then
   warn "git over https fails as $DEV_USER; trace follows"
-  sudo -u "$DEV_USER" env GIT_TRACE=1 GIT_CURL_VERBOSE=1 \
-    git ls-remote https://github.com/tmux-plugins/tpm HEAD 2>&1 | sed 's/^/    /' | tail -n 80
+  sudo -u "$DEV_USER" env GIT_TRACE=1 GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null \
+    git ls-remote https://github.com/tmux-plugins/tpm HEAD 2>&1 | grep -vi 'authorization' | sed 's/^/    /' | tail -n 80
 fi
 
 # ── Build + stage like a real install ────────────────────────────────────────
@@ -90,9 +91,9 @@ grep -q "# ── devlair aliases ─" "$DEV_HOME/.zshrc" 2>/dev/null && pass ".
 jq -e '.original_shell' "$DEV_HOME/.devlair/state.json" >/dev/null 2>&1 && pass "state.json recorded original_shell ($(jq -r .original_shell "$DEV_HOME/.devlair/state.json"))" || fail "original_shell not recorded"
 has_cmd zsh && pass "zsh package installed by init" || fail "zsh not installed"
 
-# The module logs are the only record of why init failed, and uninstall
-# deletes them, so print them now.
+# uninstall deletes the logs, the only record of why init failed.
 if [[ "$FAILED" -ne 0 ]]; then
+  hdr "init module logs"
   for log in "$DEV_HOME"/.devlair/logs/*/*; do
     [[ -f "$log" ]] || continue
     printf '\n  --- %s\n' "$log"

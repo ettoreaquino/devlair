@@ -13,19 +13,35 @@ USER_HOME=$(ctx_get userHome)
 PLATFORM=$(ctx_get platform)
 MODE=${1:-run}
 
+# Plugins tmux.conf lists, in install order. Each comes from a pinned tarball.
+TMUX_PLUGINS=(tpm tmux-resurrect tmux-continuum)
+
+# plugin_entrypoint NAME -- the file whose presence marks a complete install.
+plugin_entrypoint() {
+  case "$1" in
+    tpm) echo tpm ;;
+    *)   echo "${1#tmux-}.tmux" ;;
+  esac
+}
+
 # install_plugin DIR NAME -- unpack the pinned tmux-plugins/NAME tarball into
-# DIR/NAME as the user. Leaves an existing install alone.
+# DIR/NAME as the user. Leaves a complete install alone; a directory without
+# its entrypoint (half-extracted) is removed and reinstalled.
 install_plugin() {
-  local dest="$1/$2" name=$2 tarball untar run=(bash -c)
-  [[ -d "$dest" ]] && return 0
+  local dest="$1/$2" name=$2 tarball untar rmdest
+  printf -v rmdest 'rm -rf -- %q' "$dest"
+  if [[ -d "$dest" ]]; then
+    [[ -e "$dest/$(plugin_entrypoint "$name")" ]] && return 0
+    _run_as_user "$rmdest" >&2
+  fi
   tarball=$(download_pinned "$name") || {
     json_result "fail" "$name failed verification"
     exit 1
   }
   printf -v untar 'mkdir -p %q && tar -xzf %q --strip-components=1 -C %q' "$dest" "$tarball" "$dest"
-  _is_root && run=(run_shell_as "$USERNAME")
-  if ! "${run[@]}" "$untar" >&2; then
-    rm -rf "$dest" "$tarball"
+  if ! _run_as_user "$untar" >&2; then
+    _run_as_user "$rmdest" >&2 || true
+    rm -f "$tarball"
     json_result "fail" "$name failed to unpack"
     exit 1
   fi
@@ -60,7 +76,7 @@ do_run() {
 
   json_progress "installing TPM plugins"
   local plugin
-  for plugin in tpm tmux-resurrect tmux-continuum; do
+  for plugin in "${TMUX_PLUGINS[@]}"; do
     install_plugin "$plugins_dir" "$plugin"
   done
 
