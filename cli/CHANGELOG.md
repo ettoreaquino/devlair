@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.5.5](https://github.com/ettoreaquino/devlair/compare/v3.5.4...v3.5.5) (2026-11-01)
+
+
+### Bug Fixes
+
+* **modules:** pin and checksum-verify every script-based tool install ([#330](https://github.com/ettoreaquino/devlair/issues/330)) ([335eda3](https://github.com/ettoreaquino/devlair/commit/335eda31dc7e25add01a5b18e227135ed0aae9f8))
+
 ## [3.5.4](https://github.com/ettoreaquino/devlair/compare/v3.5.3...v3.5.4) (2026-10-30)
 
 
