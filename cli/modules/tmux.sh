@@ -13,6 +13,26 @@ USER_HOME=$(ctx_get userHome)
 PLATFORM=$(ctx_get platform)
 MODE=${1:-run}
 
+# install_plugin DIR NAME -- unpack the pinned tmux-plugins/NAME tarball into
+# DIR/NAME as the user. Leaves an existing install alone.
+install_plugin() {
+  local dest="$1/$2" name=$2 tarball untar run=(bash -c)
+  [[ -d "$dest" ]] && return 0
+  tarball=$(download_pinned "$name") || {
+    json_result "fail" "$name failed verification"
+    exit 1
+  }
+  printf -v untar 'mkdir -p %q && tar -xzf %q --strip-components=1 -C %q' "$dest" "$tarball" "$dest"
+  _is_root && run=(run_shell_as "$USERNAME")
+  if ! "${run[@]}" "$untar" >&2; then
+    rm -rf "$dest" "$tarball"
+    json_result "fail" "$name failed to unpack"
+    exit 1
+  fi
+  rm -f "$tarball"
+  json_install "$name" "$(pin_get "$name" url)" true
+}
+
 do_run() {
   local conf="$USER_HOME/.tmux.conf"
 
@@ -30,32 +50,19 @@ do_run() {
   cp "$SCRIPT_DIR/configs/tmux.conf" "$conf"
   chown_user "$conf"
 
-  # TPM (tmux plugin manager)
+  # TPM (tmux plugin manager) and the plugins tmux.conf lists. Each comes from
+  # a pinned, checksum-verified tarball instead of a git clone, so TPM never
+  # has to fetch anything itself.
   local plugins_dir="$USER_HOME/.tmux/plugins"
   mkdir -p "$plugins_dir"
   chown_user "$USER_HOME/.tmux"
   chown_user "$plugins_dir"
 
-  local tpm_path="$plugins_dir/tpm"
-  if [[ ! -d "$tpm_path" ]]; then
-    json_progress "installing TPM"
-    if _is_root; then
-      run_as "$USERNAME" git clone https://github.com/tmux-plugins/tpm "$tpm_path" >&2
-    else
-      git clone https://github.com/tmux-plugins/tpm "$tpm_path" >&2
-    fi
-  fi
-
-  # Install TPM plugins (resurrect, continuum) non-interactively
-  local install_script="$tpm_path/bin/install_plugins"
-  if [[ -x "$install_script" ]]; then
-    json_progress "installing TPM plugins"
-    if _is_root; then
-      run_as "$USERNAME" "$install_script" >&2 || true
-    else
-      "$install_script" >&2 || true
-    fi
-  fi
+  json_progress "installing TPM plugins"
+  local plugin
+  for plugin in tpm tmux-resurrect tmux-continuum; do
+    install_plugin "$plugins_dir" "$plugin"
+  done
 
   json_result "ok" "Dracula theme + TPM/resurrect/clipboard applied"
 }
