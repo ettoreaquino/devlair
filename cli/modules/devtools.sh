@@ -34,6 +34,7 @@ _link_vscode_cli() {
 
 do_run() {
   local -a installed=() skipped=() failed=()
+  local script
 
   if [[ "$PLATFORM" == "macos" ]]; then
     ARCH=$(uname -m)
@@ -51,14 +52,15 @@ do_run() {
     if [[ "$PLATFORM" == "macos" ]]; then
       brew_install uv
       json_install "uv" "brew:uv" true
-    else
-      local script
-      script=$(download_script "https://astral.sh/uv/install.sh")
+      installed+=(uv)
+    elif script=$(download_pinned uv); then
       _run_as_user "INSTALLER_NO_MODIFY_PATH=1 bash \"$script\"" >&2
       rm -f "$script"
-      json_install "uv" "astral.sh" false
+      json_install "uv" "$(pin_get uv url)" true
+      installed+=(uv)
+    else
+      failed+=(uv)
     fi
-    installed+=(uv)
   fi
 
   # ── pyenv ───────────────────────────────────────────────────────────────────
@@ -66,31 +68,34 @@ do_run() {
     skipped+=(pyenv)
   else
     json_progress "installing pyenv"
+    local pyenv_source=""
     if [[ "$PLATFORM" == "macos" ]]; then
       brew_install pyenv
+      pyenv_source="brew:pyenv"
     else
       apt_install libssl-dev libbz2-dev libreadline-dev libsqlite3-dev \
         libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev \
         libffi-dev liblzma-dev
-      local script
-      script=$(download_script "https://pyenv.run")
-      _run_as_user "bash \"$script\"" >&2
-      rm -f "$script"
+      if script=$(download_pinned pyenv); then
+        _run_as_user "bash \"$script\"" >&2
+        rm -f "$script"
+        pyenv_source=$(pin_get pyenv url)
+      fi
     fi
-    json_progress "installing Python via pyenv"
-    _run_as_user "
-      export PYENV_ROOT=\"$USER_HOME/.pyenv\"
-      export PATH=\"\$PYENV_ROOT/bin:\$PATH\"
-      eval \"\$(pyenv init -)\"
-      pyenv install -s 3.12
-      pyenv global 3.12
-    " >&2
-    if [[ "$PLATFORM" == "macos" ]]; then
-      json_install "pyenv" "brew:pyenv" false
+    if [[ -n "$pyenv_source" ]]; then
+      json_progress "installing Python via pyenv"
+      _run_as_user "
+        export PYENV_ROOT=\"$USER_HOME/.pyenv\"
+        export PATH=\"\$PYENV_ROOT/bin:\$PATH\"
+        eval \"\$(pyenv init -)\"
+        pyenv install -s 3.12
+        pyenv global 3.12
+      " >&2
+      json_install "pyenv" "$pyenv_source" true
+      installed+=(pyenv)
     else
-      json_install "pyenv" "github.com/pyenv/pyenv" false
+      failed+=(pyenv)
     fi
-    installed+=(pyenv)
   fi
 
   # ── nvm / Node ──────────────────────────────────────────────────────────────
@@ -98,17 +103,19 @@ do_run() {
     skipped+=(nvm)
   else
     json_progress "installing nvm + Node LTS"
-    local script
-    script=$(download_script "https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh")
-    _run_as_user "export PROFILE=/dev/null && bash \"$script\"" >&2
-    rm -f "$script"
-    _run_as_user "
-      export NVM_DIR=\"$USER_HOME/.nvm\"
-      source \"\$NVM_DIR/nvm.sh\"
-      nvm install --lts
-    " >&2
-    json_install "nvm" "github.com/nvm-sh/nvm" false
-    installed+=(nvm+node)
+    if script=$(download_pinned nvm); then
+      _run_as_user "export PROFILE=/dev/null && bash \"$script\"" >&2
+      rm -f "$script"
+      _run_as_user "
+        export NVM_DIR=\"$USER_HOME/.nvm\"
+        source \"\$NVM_DIR/nvm.sh\"
+        nvm install --lts
+      " >&2
+      json_install "nvm" "$(pin_get nvm url)" true
+      installed+=(nvm+node)
+    else
+      failed+=(nvm)
+    fi
   fi
 
   # ── fzf ─────────────────────────────────────────────────────────────────────
@@ -218,14 +225,16 @@ do_run() {
     if [[ "$PLATFORM" == "macos" ]]; then
       brew_install bun
       json_install "bun" "brew:bun" true
-    else
-      local script
-      script=$(download_script "https://bun.sh/install")
-      _run_as_user "bash \"$script\"" >&2
+      installed+=(bun)
+    elif script=$(download_pinned bun); then
+      # The installer takes the release tag to install; without it, it fetches latest.
+      _run_as_user "bash \"$script\" \"$(pin_get bun version)\"" >&2
       rm -f "$script"
-      json_install "bun" "bun.sh" false
+      json_install "bun" "$(pin_get bun url)" true
+      installed+=(bun)
+    else
+      failed+=(bun)
     fi
-    installed+=(bun)
   fi
 
   # ── VS Code ──────────────────────────────────────────────────────────────────

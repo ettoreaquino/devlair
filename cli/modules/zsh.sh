@@ -106,14 +106,31 @@ EOF
 
   # Bootstrap zimfw and install modules as the user
   json_progress "installing zimfw plugins"
+  local zimfw="" zim_want zim_have="" zim_cp="" zim_fresh=false
+  zim_want=$(pin_get zimfw sha256)
+  [[ -f "$zim_home/zimfw.zsh" ]] && zim_have=$(sha256_file "$zim_home/zimfw.zsh")
+  if [[ "$zim_have" != "$zim_want" ]]; then
+    if zimfw=$(download_pinned zimfw); then
+      zim_fresh=true
+      zim_cp="cp \"$zimfw\" \"\$ZIM_HOME/zimfw.zsh\""
+    elif [[ -f "$zim_home/zimfw.zsh" ]]; then
+      echo "warning: pinned zimfw download failed; keeping existing $zim_home/zimfw.zsh" >&2
+    else
+      json_result "fail" "zimfw failed verification"
+      exit 1
+    fi
+  fi
   _run_as_user "
     export ZIM_HOME=\"$zim_home\"
     export ZDOTDIR=\"$USER_HOME\"
     mkdir -p \"\$ZIM_HOME\"
-    curl -fsSL --create-dirs -o \"\$ZIM_HOME/zimfw.zsh\" \
-        https://github.com/zimfw/zimfw/releases/latest/download/zimfw.zsh
+    $zim_cp
     zsh -c 'source \"\$ZIM_HOME/zimfw.zsh\" install' 2>&1 || true
   " >&2 || true
+  [[ -n "$zimfw" ]] && rm -f "$zimfw"
+  if [[ "$zim_fresh" == true ]]; then
+    json_install "zimfw" "$(pin_get zimfw url)" true
+  fi
 
   chown_user "$zim_home"
 

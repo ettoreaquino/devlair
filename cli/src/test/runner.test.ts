@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type RunResult, runModule } from "../lib/runner.js";
@@ -296,6 +296,40 @@ json_escape "$input"
   test("join_by joins with the full multi-character separator", () => {
     const { stdout } = runLibScript(`join_by " | " "a: 1" "b: 2" "c"; echo; join_by ", "; echo "<end>"`);
     expect(stdout).toBe("a: 1 | b: 2 | c\n<end>\n");
+  });
+
+  test("download_verified returns the file when the SHA-256 matches", () => {
+    const fixture = join(tmpDir, "good-installer.sh");
+    writeFileSync(fixture, "echo hi\n");
+    const sha = new Bun.CryptoHasher("sha256").update("echo hi\n").digest("hex");
+    const { stdout, code } = runLibScript(
+      `f=$(download_verified "file://${fixture}" ${sha}) && cat "$f" && rm -f "$f"`,
+    );
+    expect(code).toBe(0);
+    expect(stdout).toBe("echo hi\n");
+  });
+
+  test("download_verified fails closed on a tampered installer", () => {
+    const marker = join(tmpDir, "tampered-ran");
+    const fixture = join(tmpDir, "tampered-installer.sh");
+    writeFileSync(fixture, `touch "${marker}"\n`);
+    const { stdout, code } = runLibScript(
+      `f=$(download_verified "file://${fixture}" ${"0".repeat(64)}) || { json_result fail "installer failed verification"; exit 1; }
+bash "$f"`,
+    );
+    expect(code).toBe(1);
+    expect(JSON.parse(stdout.trim())).toEqual({
+      type: "result",
+      status: "fail",
+      detail: "installer failed verification",
+    });
+    expect(existsSync(marker)).toBe(false);
+  });
+
+  test("download_pinned fails for a tool with no pin", () => {
+    const { stdout, code } = runLibScript("download_pinned no-such-tool");
+    expect(code).not.toBe(0);
+    expect(stdout).toBe("");
   });
 
   test("json_progress with and without percent", () => {
