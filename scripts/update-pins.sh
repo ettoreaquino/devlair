@@ -4,8 +4,9 @@
 # Every third-party installer devlair executes is pinned there by URL and
 # SHA-256 (see download_pinned in cli/modules/_lib.sh). This resolves each
 # tool's newest release tag (or default-branch commit, for repos without
-# releases), downloads the installer from that immutable ref and records its
-# hash. claude.ai/install.sh has no versioned URL, so only its hash moves.
+# releases), downloads the installer (or tarball, for tmux plugins) from that
+# immutable ref and records its hash. claude.ai/install.sh has no versioned
+# URL, so only its hash moves.
 #
 # Usage: scripts/update-pins.sh   (needs gh, curl, jq and sha256sum)
 # Prints one "tool old -> new" line per changed pin; silent when up to date.
@@ -37,11 +38,14 @@ resolve() {
     homebrew) v=$(brew_sha); echo "$v $GH_RAW/Homebrew/install/$v/install.sh" ;;
     homebrew-uninstall) v=$(brew_sha); echo "$v $GH_RAW/Homebrew/install/$v/uninstall.sh" ;;
     zimfw) v=$(latest_tag zimfw/zimfw); echo "$v https://github.com/zimfw/zimfw/releases/download/$v/zimfw.zsh" ;;
+    # tmux plugins have no releases; pin the default-branch commit's tarball.
+    tpm | tmux-resurrect | tmux-continuum)
+      v=$(head_sha "tmux-plugins/$1"); echo "$v https://codeload.github.com/tmux-plugins/$1/tar.gz/$v" ;;
     *) echo "unknown tool: $1" >&2; return 1 ;;
   esac
 }
 
-TOOLS=(uv pyenv nvm bun claude tailscale homebrew homebrew-uninstall zimfw)
+TOOLS=(uv pyenv nvm bun claude tailscale homebrew homebrew-uninstall zimfw tpm tmux-resurrect tmux-continuum)
 
 tmp=$(mktemp)
 BREW_CACHE=$(mktemp)

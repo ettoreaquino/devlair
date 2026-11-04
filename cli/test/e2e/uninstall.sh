@@ -20,6 +20,7 @@ FAILED=0
 pass() { printf '  \033[32m✓\033[0m %s\n' "$1"; }
 fail() { printf '  \033[31m✗\033[0m %s\n' "$1"; FAILED=1; }
 hdr()  { printf '\n\033[1;35m== %s ==\033[0m\n' "$1"; }
+warn() { printf '  \033[33m!\033[0m %s\n' "$1"; }
 
 exists()  { [[ -e "$1" ]] && pass "exists: $1" || fail "missing: $1"; }
 absent()  { [[ ! -e "$1" ]] && pass "absent: $1" || fail "still present: $1"; }
@@ -47,6 +48,15 @@ echo "$DEV_USER ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$DEV_USER
 ORIG_SHELL="$(dev_shell)"
 pass "created $DEV_USER (login shell: $ORIG_SHELL)"
 
+# Diagnostic only: the fzf and zimfw modules still use git over https, and
+# when that breaks on a runner image (#323) the trace is the only way to see
+# why. Run from the current cwd so cwd-stat failures reproduce.
+if ! sudo -u "$DEV_USER" git ls-remote -q https://github.com/tmux-plugins/tpm HEAD >/dev/null 2>&1; then
+  warn "git over https fails as $DEV_USER; trace follows"
+  sudo -u "$DEV_USER" env GIT_TRACE=1 GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null \
+    git ls-remote https://github.com/tmux-plugins/tpm HEAD 2>&1 | grep -vi 'authorization' | sed 's/^/    /' | tail -n 80
+fi
+
 # ── Build + stage like a real install ────────────────────────────────────────
 hdr "Building + staging devlair"
 cp -r "$REPO_SRC/cli" "$WORK"
@@ -71,13 +81,25 @@ run_dl "init --only $MODULES" || fail "init exited non-zero"
 exists "$DEV_HOME/.zimrc"
 exists "$DEV_HOME/.zim"
 exists "$DEV_HOME/.tmux.conf"
-exists "$DEV_HOME/.tmux/plugins/tpm"
+exists "$DEV_HOME/.tmux/plugins/tpm/tpm"
+exists "$DEV_HOME/.tmux/plugins/tmux-resurrect/resurrect.tmux"
+exists "$DEV_HOME/.tmux/plugins/tmux-continuum/continuum.tmux"
 exists "$DEV_HOME/.devlair/state.json"
 grep -q "skip_global_compinit" "$DEV_HOME/.zshenv" 2>/dev/null && pass ".zshenv managed" || fail ".zshenv not managed"
 grep -q "# ── devlair aliases ─" "$DEV_HOME/.zshrc" 2>/dev/null && pass ".zshrc has aliases block" || fail ".zshrc missing aliases block"
 [[ "$(dev_shell)" == *zsh ]] && pass "login shell switched to zsh ($(dev_shell))" || fail "login shell not zsh: $(dev_shell)"
 jq -e '.original_shell' "$DEV_HOME/.devlair/state.json" >/dev/null 2>&1 && pass "state.json recorded original_shell ($(jq -r .original_shell "$DEV_HOME/.devlair/state.json"))" || fail "original_shell not recorded"
 has_cmd zsh && pass "zsh package installed by init" || fail "zsh not installed"
+
+# uninstall deletes the logs, the only record of why init failed.
+if [[ "$FAILED" -ne 0 ]]; then
+  hdr "init module logs"
+  for log in "$DEV_HOME"/.devlair/logs/*/*; do
+    [[ -f "$log" ]] || continue
+    printf '\n  --- %s\n' "$log"
+    tail -n 60 "$log" | sed 's/^/    /'
+  done
+fi
 
 # ── uninstall (keep sensitive, remove packages) ──────────────────────────────
 # --force is the non-interactive escape hatch; --yes now still shows a confirm.
