@@ -43,5 +43,20 @@
     "version": "v1.20.2",
     "url": "https://github.com/zimfw/zimfw/releases/download/v1.20.2/zimfw.zsh",
     "sha256": "918e8948d08346d5f1373ec628d858e4732fbbb9991b25c22d1a9b3443a2edc2"
+  },
+  "tpm": {
+    "version": "e261deb1b47614eed3400089ce7197dc68acc4eb",
+    "url": "https://codeload.github.com/tmux-plugins/tpm/tar.gz/e261deb1b47614eed3400089ce7197dc68acc4eb",
+    "sha256": "72d92c512270d4857e27519ac97b92a52cf149afe4d92f26860c710f60bbbe37"
+  },
+  "tmux-resurrect": {
+    "version": "cff343cf9e81983d3da0c8562b01616f12e8d548",
+    "url": "https://codeload.github.com/tmux-plugins/tmux-resurrect/tar.gz/cff343cf9e81983d3da0c8562b01616f12e8d548",
+    "sha256": "9f1dda18554291ee7f8a0f499e2af90bbadc2ebceb7a995bb13b76529fe0c5c9"
+  },
+  "tmux-continuum": {
+    "version": "0698e8f4b17d6454c71bf5212895ec055c578da0",
+    "url": "https://codeload.github.com/tmux-plugins/tmux-continuum/tar.gz/0698e8f4b17d6454c71bf5212895ec055c578da0",
+    "sha256": "a1b9a2f0715163472ca713679204a1ca55d3f845cf1c659ae04222db3553424f"
   }
 }
