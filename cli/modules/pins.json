@@ -1,8 +1,8 @@
 {
   "uv": {
-    "version": "0.13.6",
-    "url": "https://github.com/astral-sh/uv/releases/download/0.13.6/uv-installer.sh",
-    "sha256": "f7a56e7afaec49a3bcbc3ac3cdbe917e7c6ce30e0d815308a12e531aa5ef23b7"
+    "version": "0.13.10",
+    "url": "https://github.com/astral-sh/uv/releases/download/0.13.10/uv-installer.sh",
+    "sha256": "51781aafe6950cc659f79873e1bdca55fbb9da6e0ef650bf98093a0f0aaaf453"
   },
   "pyenv": {
     "version": "bdd89156f0e591558ca901c5984387dd993157f9",
@@ -10,9 +10,9 @@
     "sha256": "2bf587665219d2ed3e262fc2c3d9e6843b48f64435bc489d936f03e68b5f610d"
   },
   "nvm": {
-    "version": "v0.40.8",
-    "url": "https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.8/install.sh",
-    "sha256": "48a0eee9a60e07422dce0eb5774754c83889570ca1ee2566c516acbe8af03a9e"
+    "version": "v0.41.0",
+    "url": "https://raw.githubusercontent.com/nvm-sh/nvm/v0.41.0/install.sh",
+    "sha256": "045932fe05f0d4247c946f2ec0ec4026dbfd8ce88a5f67ea28d8ea833227f48b"
   },
   "bun": {
     "version": "bun-v1.4.4",
@@ -22,7 +22,7 @@
   "claude": {
     "version": "",
     "url": "https://claude.ai/install.sh",
-    "sha256": "3a68d3406cf674e17bed1733a4dcf37805e2e47d87417700007d7e1aa766a944"
+    "sha256": "2c5506d110560bf618bbe88f678f2c2a0047c86a9c6585fc84976120b1de0b44"
   },
   "tailscale": {
     "version": "v1.104.4",
@@ -30,19 +30,19 @@
     "sha256": "4207f322e10ad26b3054abe7c99dfb54da09843c8d0a50d0a82f8eff4972a0d1"
   },
   "homebrew": {
-    "version": "8c82c081753d4263da0cfe615ef8d9433425f22b",
-    "url": "https://raw.githubusercontent.com/Homebrew/install/8c82c081753d4263da0cfe615ef8d9433425f22b/install.sh",
-    "sha256": "5f333bbe53bc490e51e7ccb1df8779b3dd6ee73a1a7379efda216edb08ccb148"
+    "version": "870ddff5dbe61d293a8b4a763090d125e59048a1",
+    "url": "https://raw.githubusercontent.com/Homebrew/install/870ddff5dbe61d293a8b4a763090d125e59048a1/install.sh",
+    "sha256": "8fd2f1a5287a7c2e3d7362924c677edcc04c5a0e16448c77132d056bc88cf1ed"
   },
   "homebrew-uninstall": {
-    "version": "8c82c081753d4263da0cfe615ef8d9433425f22b",
-    "url": "https://raw.githubusercontent.com/Homebrew/install/8c82c081753d4263da0cfe615ef8d9433425f22b/uninstall.sh",
-    "sha256": "60cd24138f98095ae6e34fd5e5fae46a0f04971ef6ebb12cea6dac7bc681d25e"
+    "version": "870ddff5dbe61d293a8b4a763090d125e59048a1",
+    "url": "https://raw.githubusercontent.com/Homebrew/install/870ddff5dbe61d293a8b4a763090d125e59048a1/uninstall.sh",
+    "sha256": "7e5576d1200bdf4fbd1fe38513f129139473ec39f04890ff5c7f1d05480af78a"
   },
   "zimfw": {
-    "version": "v1.20.2",
-    "url": "https://github.com/zimfw/zimfw/releases/download/v1.20.2/zimfw.zsh",
-    "sha256": "918e8948d08346d5f1373ec628d858e4732fbbb9991b25c22d1a9b3443a2edc2"
+    "version": "v1.21.1",
+    "url": "https://github.com/zimfw/zimfw/releases/download/v1.21.1/zimfw.zsh",
+    "sha256": "486a3b5a6659a0eb3737f518ddd8686bbef70600582f364b7265df60a56d0e93"
   },
   "tpm": {
     "version": "e261deb1b47614eed3400089ce7197dc68acc4eb",
