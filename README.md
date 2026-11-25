@@ -121,6 +121,8 @@ SSH hardening, UFW firewall, Fail2Ban, and Tailscale VPN are set up out of the b
     tmx <name>                              Attach to a named session
     tmx new --name N                        Create a plain session
     tmx new --name N --claude               Session with Claude Code
+    tmx kill <name>...                      Kill sessions (no auto-restore)
+    tmx kill --all                          Kill every session (no auto-restore)
     Ctrl+A  y                               Claude Code popup (any session)
 
   Options:  --version -v  Show version    --help  Show this screen
@@ -175,7 +177,15 @@ tmx new --name work
 
 # Create session with Claude Code running
 tmx new --name work --claude
+
+# Kill sessions from outside them (exact names)
+tmx kill work scratch
+
+# Kill every session and the tmux server
+tmx kill --all
 ```
+
+`tmx kill` keeps tmux-continuum from bringing killed sessions back. continuum restores the last tmux-resurrect snapshot whenever a tmux server starts, and that snapshot only refreshes every 15 minutes. So while other sessions keep running, `tmx kill` saves a fresh snapshot right away. When nothing is left running, it removes the snapshot's `last` pointer, so the next `t` starts clean. Older snapshots stay in the resurrect directory. A plain `tmux kill-session` or `tmux kill-server` skips both steps, so killed sessions can come back.
 
 </details>
 
