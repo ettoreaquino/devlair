@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.5.6](https://github.com/ettoreaquino/devlair/compare/v3.5.5...v3.5.6) (2026-11-25)
+
+
+### Bug Fixes
+
+* **modules:** bump installer pins ([#333](https://github.com/ettoreaquino/devlair/issues/333)) ([507a1bc](https://github.com/ettoreaquino/devlair/commit/507a1bcc299d3472e54be68709e4320cf435c9ca))
+* **tmux:** install tpm and plugins from pinned tarballs instead of git ([#332](https://github.com/ettoreaquino/devlair/issues/332)) ([93baff0](https://github.com/ettoreaquino/devlair/commit/93baff0c259bd275e1c82c81b271d24af4047e7b))
+
 ## [3.5.5](https://github.com/ettoreaquino/devlair/compare/v3.5.4...v3.5.5) (2026-11-01)
 
 
