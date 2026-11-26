@@ -40,6 +40,8 @@ const HELP_SECTIONS: HelpSection[] = [
       { cmd: "tmx <name>", desc: "Attach to a named session" },
       { cmd: "tmx new --name N", desc: "Create a plain session" },
       { cmd: "tmx new --name N --claude", desc: "Session with Claude Code" },
+      { cmd: "tmx kill <name>...", desc: "Kill sessions (no auto-restore)" },
+      { cmd: "tmx kill --all", desc: "Kill every session (no auto-restore)" },
       { cmd: "Ctrl+A  y", desc: "Claude Code popup (any session)" },
     ],
   },

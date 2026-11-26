@@ -25,11 +25,47 @@ alias ts='tailscale status'
 alias t='tmux new-session -A -s dev'
 alias bcat='bat --paging=never'
 tmx() {
-  if [ "$1" = "new" ]; then
-    shift
-    ~/.devlair/bin/tmx-new "$@"
+  case "$1" in
+    new)  shift; ~/.devlair/bin/tmx-new "$@" ;;
+    kill) shift; _tmx_kill "$@" ;;
+    *)    tmux attach-session -t "$1" ;;
+  esac
+}
+
+# _tmx_kill NAME... | --all -- kill sessions so tmux-continuum can't bring them
+# back. continuum restores the last resurrect snapshot whenever a tmux server
+# starts, and that snapshot only refreshes every 15 minutes: re-save it while
+# the server lives, and drop its `last` pointer once no session is left.
+_tmx_kill() {
+  if [ $# -eq 0 ]; then
+    echo "Usage: tmx kill NAME... | tmx kill --all" >&2
+    return 1
+  fi
+  local dir s
+  # Resolve the snapshot dir the way tmux-resurrect does, while the server
+  # still answers option queries.
+  dir=$(tmux show-option -gqv @resurrect-dir 2>/dev/null)
+  if [ -z "$dir" ]; then
+    if [ -d "$HOME/.tmux/resurrect" ]; then
+      dir="$HOME/.tmux/resurrect"
+    else
+      dir="${XDG_DATA_HOME:-$HOME/.local/share}/tmux/resurrect"
+    fi
+  fi
+  dir=${dir/#\~/$HOME}
+  if [ "$1" = "--all" ]; then
+    tmux kill-server 2>/dev/null
   else
-    tmux attach-session -t "$1"
+    for s in "$@"; do
+      tmux kill-session -t "=$s" || return 1
+    done
+  fi
+  # Drop the pointer even when re-saving: save.sh names snapshots by the second
+  # and deletes a new one equal to `last`, so a same-second save would delete
+  # the file `last` points at.
+  rm -f "$dir/last"
+  if tmux list-sessions >/dev/null 2>&1; then
+    tmux run-shell "$HOME/.tmux/plugins/tmux-resurrect/scripts/save.sh quiet"
   fi
 }
 
