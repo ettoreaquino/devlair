@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.6.0](https://github.com/ettoreaquino/devlair/compare/v3.5.6...v3.6.0) (2026-11-26)
+
+
+### Features
+
+* **shell:** add tmx kill that survives continuum auto-restore ([#336](https://github.com/ettoreaquino/devlair/issues/336)) ([e5009e6](https://github.com/ettoreaquino/devlair/commit/e5009e655cfeffe4a22f9f09251d16631b0aae23))
+
 ## [3.5.6](https://github.com/ettoreaquino/devlair/compare/v3.5.5...v3.5.6) (2026-11-25)
 
 
